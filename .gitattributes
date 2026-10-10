@@ -1,0 +1,12 @@
+# Keep source code line endings consistent across Windows and Unix checkouts.
+* text=auto
+*.js text eol=lf
+*.cjs text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.lua text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.png binary
+*.ico binary

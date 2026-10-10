@@ -1,6 +1,6 @@
 # Cursor Bridge
 
-**Cursor Bridge v0.2.3** is a Windows-first Luau workbench connected to the **currently paired Roblox Studio place**. It comprises a local Electron/Monaco application and a Roblox Studio plugin with the existing Cursor V2 floating window. Studio remains the source of truth for the DataModel; the workbench does not run games or replace Studio's compiler.
+**Cursor Bridge v0.2.4** is a Windows-first Luau workbench connected to the **currently paired Roblox Studio place**. It comprises a local Electron/Monaco application and a Roblox Studio plugin with the existing Cursor V2 floating window. Studio remains the source of truth for the DataModel; the workbench does not run games or replace Studio's compiler.
 
 All connection traffic stays on `127.0.0.1:38471`. Source history, recovery snapshots, and unsynced drafts are stored locally on the PC.
 
@@ -22,9 +22,9 @@ To install or update the Studio plugin, first **close Roblox Studio**:
 PowerShell -ExecutionPolicy Bypass -File .\scripts\install-studio-plugin.ps1
 ```
 
-Start the desktop app, open Roblox Studio, click **Cursor Bridge V2** on the Plugins toolbar and enter the six-digit pairing code. Grant Studio permission to call the localhost HTTP endpoint when asked. Do not leave older Cursor Bridge plugin copies installed. **The Studio plugin from v0.2.1 is fully compatible with this update**; reinstalling the plugin is not required when upgrading only the Windows app from v0.2.1 to v0.2.3.
+Start the desktop app, open Roblox Studio, click **Cursor Bridge V2** on the Plugins toolbar and enter the six-digit pairing code. Grant Studio permission to call the localhost HTTP endpoint when asked. Do not leave older Cursor Bridge plugin copies installed. **The Studio plugin from v0.2.1 is fully compatible with this update**; reinstalling the plugin is not required when upgrading only the Windows app from v0.2.1 to v0.2.4.
 
-## Workbench v0.2.3
+## Workbench v0.2.4
 
 - **Compact, context-aware Explorer:** Roblox-class-specific original SVG artwork, Studio-like Camera/Terrain prominence under Workspace, correctly nested services, and stable sibling order based on `GetChildren()` metadata rather than alphabetical sorting. Studio-hidden/internal services are not mirrored.
 - **Low-distraction selection:** Click, Ctrl+Click, Shift+Click, keyboard range selection, and rectangular marquee selection by dragging from an empty portion of Explorer. The marquee uses tree offsets instead of measuring every node during each mouse movement. The selection toolbar occupies a permanent-height footer, so selecting objects does not shift the tree.
@@ -86,7 +86,7 @@ Browser tests simulate Studio responses; they do not validate live Roblox Studio
 
 ## Publishing and updates
 
-Read [docs/SETUP.md](docs/SETUP.md) before uploading to GitHub. Configure your actual GitHub repository in `package.json` (`build.publish[0]`); push source, `package-lock.json`, and a `v0.2.3` tag. The included GitHub Actions workflow compiles the installer and validates/uploads `CursorBridgeV2.rbxmx`. The installed desktop app can prompt for updates from GitHub Releases; Studio plugin upgrades are **not** currently automatic.
+Read [docs/SETUP.md](docs/SETUP.md) before uploading to GitHub. Configure your actual GitHub repository in `package.json` (`build.publish[0]`); push source, `package-lock.json`, and a `v0.2.4` tag. The included GitHub Actions workflow compiles the installer and validates/uploads `CursorBridgeV2.rbxmx`. The installed desktop app can prompt for updates from GitHub Releases; Studio plugin upgrades are **not** currently automatic.
 
 For architecture, security, and scope see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). For interface research and exact shortcut semantics see [docs/ENGINE_REFERENCE.md](docs/ENGINE_REFERENCE.md).
 

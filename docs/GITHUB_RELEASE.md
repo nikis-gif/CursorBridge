@@ -1,8 +1,10 @@
 # Publishing Cursor Bridge Windows releases
 
-The repository for this project is **https://github.com/nikis-gif/CursorBridge**. Release version: **v0.2.3**.
+The repository for this project is **https://github.com/nikis-gif/CursorBridge**. Release version: **v0.2.4**.
 
 ## First release from GitHub website (recommended)
+
+The earlier failed run reserved the `v0.2.3` tag. Do not rerun that historical job. Run the workflow on the updated `main` branch to publish `v0.2.4`.
 
 1. Open https://github.com/nikis-gif/CursorBridge/actions.
 2. Select **Build and publish Windows release**.
@@ -10,7 +12,7 @@ The repository for this project is **https://github.com/nikis-gif/CursorBridge**
 4. Wait for the Windows job to finish (it installs dependencies, runs tests and builds the Windows installer).
 5. Download the Windows NSIS `.exe` at https://github.com/nikis-gif/CursorBridge/releases/latest.
 
-The manual release workflow creates the matching `v0.2.3` Git tag if it is missing. It uploads the Roblox Studio `.rbxmx` and `latest.yml` alongside the installer. Do not upload the source ZIP in place of an installer.
+The manual release workflow creates the matching `v0.2.4` Git tag only after tests and builds succeed, if it is missing. It uploads the Roblox Studio `.rbxmx` and `latest.yml` alongside the installer. Do not upload the source ZIP in place of an installer.
 
 If Actions reports insufficient permissions, open **Settings > Actions > General > Workflow permissions** and enable **Read and write permissions** for `GITHUB_TOKEN`. The workflow requests `contents: write` itself.
 
@@ -24,7 +26,7 @@ Update the project source and increase the `package.json` version; push the chan
 
 ## Local Git workflow (alternative)
 
-# Publish Cursor Bridge v0.2.3 to GitHub
+# Publish Cursor Bridge v0.2.4 to GitHub
 
 This guide publishes the **Windows NSIS installer** to a public GitHub Release. Uploading the source ZIP alone does **not** build a Windows installer. GitHub Actions builds the installer on a Windows runner when a version tag is pushed.
 
@@ -65,7 +67,7 @@ The `repo` must match the GitHub repository you are about to create. `releaseTyp
 gh auth login
 git init -b main
 git add .
-git commit -m "Release Cursor Bridge v0.2.3"
+git commit -m "Release Cursor Bridge v0.2.4"
 gh repo create CursorBridge --public --source . --remote origin --push
 ```
 
@@ -85,8 +87,8 @@ In your repository, open **Settings > Actions > General**. Allow GitHub Actions 
 Push the matching release tag:
 
 ```powershell
-git tag v0.2.3
-git push origin v0.2.3
+git tag v0.2.4
+git push origin v0.2.4
 ```
 
 The workflow at `.github/workflows/release.yml` will:
@@ -98,7 +100,7 @@ The workflow at `.github/workflows/release.yml` will:
 5. Build and publish the Windows NSIS `.exe`, update metadata (`latest.yml`), and plugin file in **Releases**.
 6. Verify that the release is published, not a draft.
 
-Watch the **Actions** tab until the `windows-release` job succeeds. Then open **Releases > Cursor Bridge v0.2.3** (title may be the tag) and download the `.exe` installer under **Assets**. Run the installer, not the source-code ZIP.
+Watch the **Actions** tab until the `windows-release` job succeeds. Then open **Releases > Cursor Bridge v0.2.4** (title may be the tag) and download the `.exe` installer under **Assets**. Run the installer, not the source-code ZIP.
 
 Release URLs after publishing:
 
@@ -126,11 +128,11 @@ git commit -m "Update Cursor Bridge"
 git push origin main
 ```
 
-Read the new version from `package.json`, then create and push the **matching** `vX.Y.Z` tag. For example, after updating 0.2.3 to 0.2.4:
+Read the new version from `package.json`, then create and push the **matching** `vX.Y.Z` tag. For example, after updating 0.2.4 to 0.2.5:
 
 ```powershell
-git tag v0.2.4
-git push origin v0.2.4
+git tag v0.2.5
+git push origin v0.2.5
 ```
 
 If the Studio plugin changes, update the corresponding plugin version/configuration and regenerate the `.rbxmx` before tagging. Users of the installed Windows app can then check for updates; developer builds do not auto-update.
@@ -138,7 +140,7 @@ If the Studio plugin changes, update the corresponding plugin version/configurat
 ## Troubleshooting
 
 - **Workflow not triggered:** tags must start with `v`, and the tag must be pushed to GitHub. Check the **Actions** tab.
-- **Tag/version mismatch:** a `v0.2.3` tag requires `"version": "0.2.3"` in `package.json`.
+- **Tag/version mismatch:** a `v0.2.4` tag requires `"version": "0.2.4"` in `package.json`.
 - **Owner mismatch:** `build.publish[0].owner` and `.repo` must exactly identify the repository where the workflow is running.
 - **Permission denied when publishing:** check repository **Settings > Actions > General > Workflow permissions** and any organization-level restrictions.
 - **Only source archives are visible:** confirm the Windows workflow succeeded and that your Release is published with the `.exe` and `latest.yml` assets.

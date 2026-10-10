@@ -46,22 +46,6 @@ jobs:
           if ($releaseType -ne 'release') { throw 'releaseType must be release to publish public downloadable assets.' }
           "tag=$tag" >> $env:GITHUB_OUTPUT
 
-      - name: Create matching version tag for manual release
-        if: github.event_name == 'workflow_dispatch'
-        shell: pwsh
-        run: |
-          $tag = '${{ steps.release_meta.outputs.tag }}'
-          git fetch --tags
-          if ((git tag --list $tag) -eq $tag) {
-            $existingCommit = git rev-list -n 1 $tag
-            if ($existingCommit -ne '${{ github.sha }}') {
-              throw "The $tag tag points to another commit. Increment package.json version before publishing a new release."
-            }
-          } else {
-            git tag $tag
-            git push origin "refs/tags/$tag"
-          }
-
       - name: Install dependencies
         shell: pwsh
         run: |
@@ -79,6 +63,22 @@ jobs:
 
       - name: Validate Roblox XML plugin integrity
         run: python -m unittest discover -s tests -p test_plugin_build.py -v
+
+      - name: Create matching version tag for manual release
+        if: github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        run: |
+          $tag = '${{ steps.release_meta.outputs.tag }}'
+          git fetch --tags
+          if ((git tag --list $tag) -eq $tag) {
+            $existingCommit = git rev-list -n 1 $tag
+            if ($existingCommit -ne '${{ github.sha }}') {
+              throw "The $tag tag points to another commit. Increment package.json version before publishing a new release."
+            }
+          } else {
+            git tag $tag
+            git push origin "refs/tags/$tag"
+          }
 
       - name: Publish Windows installer and update metadata
         env:

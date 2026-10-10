@@ -1,6 +1,6 @@
 {
   "name": "cursor-bridge",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Local Roblox Studio-to-Windows Luau bridge with two-way synchronization and backups",
   "private": true,
   "author": "Cursor Bridge Contributors",

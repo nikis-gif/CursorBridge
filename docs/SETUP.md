@@ -52,7 +52,7 @@ The `owner` **must match** your actual GitHub account or organization, and the r
 gh auth login
 git init -b main
 git add .
-git commit -m "Release Cursor Bridge v0.2.3"
+git commit -m "Release Cursor Bridge v0.2.4"
 gh repo create CursorBridge --public --source . --remote origin --push
 ```
 
@@ -61,7 +61,7 @@ gh repo create CursorBridge --public --source . --remote origin --push
 ```powershell
 git init -b main
 git add .
-git commit -m "Release Cursor Bridge v0.2.3"
+git commit -m "Release Cursor Bridge v0.2.4"
 git remote add origin https://github.com/nikis-gif/CursorBridge.git
 git push -u origin main
 ```
@@ -75,8 +75,8 @@ Open your GitHub repository -> **Settings** -> **Actions** -> **General**. Ensur
 From PowerShell:
 
 ```powershell
-git tag v0.2.3
-git push origin v0.2.3
+git tag v0.2.4
+git push origin v0.2.4
 ```
 
 Open the repository's **Actions** tab, select **Build and publish Windows release**, and wait for the `windows-release` job. Its artifacts are published on **Releases** as an `.exe` installer, `latest.yml` and `CursorBridgeV2.rbxmx`. The first build can take several minutes.
@@ -85,7 +85,7 @@ Open the repository's **Actions** tab, select **Build and publish Windows releas
 
 ## 5. Publish subsequent updates
 
-Change code, build and test the plugin/app, and increment the semver version (example: `0.2.4`):
+Change code, build and test the plugin/app, and increment the semver version (example: `0.2.5`):
 
 ```powershell
 npm version patch --no-git-tag-version
@@ -93,10 +93,10 @@ npm version patch --no-git-tag-version
 python .\scripts\build_plugin.py
 npm test
 git add .
-git commit -m "Release 0.2.4"
+git commit -m "Release 0.2.5"
 git push origin main
-git tag v0.2.4
-git push origin v0.2.4
+git tag v0.2.5
+git push origin v0.2.5
 ```
 
 Every tagged release rebuilds the Windows installer and plugin. Installed Cursor Bridge Windows clients detect new public GitHub Releases, ask before downloading, then offer to restart and install. These updates are unavailable in `npm run dev` mode. **A plugin `.rbxmx` file is a separate install**; rebuild and reinstall the Studio plugin as needed.

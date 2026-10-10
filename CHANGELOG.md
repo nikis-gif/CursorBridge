@@ -1,3 +1,10 @@
+## 0.2.4 — Windows Release CI Compatibility
+
+- Fixed a platform-dependent Explorer regression test that expected LF-only source line endings. The assertion now also verifies that the offline guard clears cached Explorer rows and DOM under CRLF.
+- Added Git source line-ending rules to keep code consistent on Windows and Unix.
+- Moved manual release tag creation until after application tests, renderer build, plugin build, and XML validation, so a failed build does not reserve another release tag prematurely.
+- No changes to Studio synchronization, desktop editor behavior, plugin protocol, or UI. Roblox Studio plugin reinstall is not required.
+
 ## 0.2.3 — Editing and Sync Reliability
 
 - Prevented asynchronous draft recovery from replacing text typed immediately after opening a script. The model is shown without waiting for recovery I/O, and recovery is only offered if the document has not changed.

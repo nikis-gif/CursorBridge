@@ -57,7 +57,10 @@ test('offline and incomplete sessions cannot show cached Explorer data', () => {
   assert.ok(app.includes("$('explorerPane').hidden = !ready"));
   assert.ok(app.includes("$('codePanel').hidden = !ready || !selectedId"));
   assert.ok(app.includes("if (state.status.connected) for (const node of state.nodes)"));
-  assert.ok(app.includes('if (!canMutate()) {\n    treeRows = [];'));
+  // Match the actual offline guard, not a platform-specific LF line ending.
+  const offlineGuard = /function renderTree\(\)\s*\{\s*if\s*\(!canMutate\(\)\)\s*\{\s*treeRows\s*=\s*\[\s*\]\s*;\s*\$\('tree'\)\.replaceChildren\(\)\s*;/;
+  assert.match(app, offlineGuard, 'The Explorer must clear cached rows and DOM when not connected.');
+  assert.match(app.replace(/\r?\n/g, '\r\n'), offlineGuard, 'The same protection must work with Windows CRLF checkouts.');
 });
 
 test('Studio creation leaves Lua source intact and allows duplicate sibling names', () => {
