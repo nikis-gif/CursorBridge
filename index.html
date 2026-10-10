@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self' blob:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'none'" />
+  <title>Cursor Bridge</title>
+</head>
+<body data-theme="obsidian">
+<div id="app">
+  <header class="app-header">
+    <div class="brand-lockup"><img class="brand-mark" src="./CursorIcon.png" alt="" /><span class="brand-name">Cursor <span>Bridge</span></span><span class="brand-divider"></span><span class="brand-workspace" id="headerPlace">Workspace</span></div>
+    <div class="header-actions">
+      <button class="header-status" id="sessionToggle" aria-haspopup="true" aria-expanded="false" title="Session details"><span class="status-light" id="statusLight"></span><span id="connectionState">Waiting for Studio</span><span data-icon="chevron-down"></span></button>
+      <button class="quick-launcher" id="quickApplyLauncher" title="Quick Apply AI script bundle (Ctrl+L)" aria-label="Quick Apply"><span data-icon="edit"></span> Quick Apply <kbd>Ctrl L</kbd></button>
+      <button class="icon-button quiet" id="themeToggle" title="Appearance" aria-label="Appearance"><span data-icon="sliders"></span></button>
+    </div>
+  </header>
+  <div class="workbench">
+    <aside class="explorer-pane" id="explorerPane" hidden>
+      <div class="explorer-heading">
+        <div class="side-modes" role="tablist" aria-label="Sidebar views">
+          <button id="explorerView" class="side-mode active" type="button" role="tab" aria-selected="true" aria-controls="treeScroller" title="Explorer (Ctrl+Shift+E)">Explorer</button>
+          <button id="placeSearchView" class="side-mode" type="button" role="tab" aria-selected="false" aria-controls="placeSearchPanel" title="Find in Place (Ctrl+Shift+F)"><span data-icon="search"></span><span>Search</span></button>
+        </div>
+        <div class="toolbar" id="explorerToolbar"><button class="icon-button quiet" id="newNode" title="Create instance" aria-label="Create instance"><span data-icon="plus"></span></button><button class="icon-button quiet" id="collapseTree" title="Collapse all" aria-label="Collapse all"><span data-icon="collapse"></span></button><button class="icon-button quiet" id="explorerMore" title="Explorer actions" aria-label="Explorer actions"><span data-icon="more"></span></button></div>
+      </div>
+      <div class="search-wrap" id="explorerFilter"><span data-icon="search"></span><input id="treeSearch" type="search" placeholder="Filter instances" autocomplete="off" spellcheck="false" aria-label="Search instances" /><kbd>Ctrl K</kbd></div>
+      <div class="tree-scroller" id="treeScroller" role="tree" aria-label="Roblox Explorer"><div id="tree" class="tree"></div></div>
+      <section class="place-search-panel" id="placeSearchPanel" role="tabpanel" aria-label="Find in Place" hidden>
+        <div class="place-search-top"><label for="placeSearchInput">Find in Place</label><span>ALL SCRIPTS</span></div>
+        <div class="place-search-field"><span data-icon="search"></span><input id="placeSearchInput" type="search" placeholder="Search code in this Place" aria-label="Search code in all scripts" autocomplete="off" spellcheck="false" />
+          <button type="button" class="search-flag" id="searchMatchCase" aria-pressed="false" title="Match case">Aa</button>
+          <button type="button" class="search-flag" id="searchWholeWord" aria-pressed="false" title="Match whole word"><span class="whole-word">ab</span></button>
+          <button type="button" class="search-flag" id="searchRegex" aria-pressed="false" title="Use regular expression">.*</button>
+        </div>
+        <div class="place-search-bar"><span id="placeSearchSummary" role="status" aria-live="polite">Search every script in your connected Place.</span><div>
+          <button type="button" class="icon-button quiet small" id="placeSearchPrevious" title="Previous match (Shift+F4)" aria-label="Previous match" disabled><span data-icon="chevron-up"></span></button>
+          <button type="button" class="icon-button quiet small" id="placeSearchNext" title="Next match (F4)" aria-label="Next match" disabled><span data-icon="chevron-down"></span></button>
+        </div></div>
+        <div class="place-search-results" id="placeSearchResults" aria-label="Code search results"><div class="place-search-empty"><span data-icon="search"></span><p>Search across every script in your Place.</p><small>Results link directly to the matching line.</small></div></div>
+        <div class="place-search-footer"><span class="bottom-bullet connected"></span><span id="placeSearchPlace">Studio connected</span><kbd>Ctrl Shift F</kbd></div>
+      </section>
+      <div class="explorer-bottom" id="explorerBottom">
+        <span class="bottom-bullet" id="explorerLed"></span>
+        <span id="explorerSummary">Connected</span>
+        <div class="selection-actions" id="selectionActions" hidden>
+          <button class="mini-button" id="duplicateSelected" title="Duplicate selection (Ctrl+D)" aria-label="Duplicate selection"><span data-icon="duplicate"></span></button>
+          <button class="mini-button" id="moveSelected" title="Move selection" aria-label="Move selection"><span data-icon="move"></span></button>
+          <button class="mini-button" id="deleteSelected" title="Delete selection" aria-label="Delete selection"><span data-icon="trash"></span></button>
+          <button class="mini-button" id="clearSelection" title="Clear selection" aria-label="Clear selection"><span data-icon="close"></span></button>
+        </div>
+        <button class="icon-button quiet" id="explorerHelp" title="Keyboard shortcuts" aria-label="Keyboard shortcuts"><span data-icon="help"></span></button>
+      </div>
+    </aside>
+    <div class="resize-divider" id="resizeDivider" hidden title="Drag to resize the Explorer" role="separator" aria-label="Resize Explorer" aria-orientation="vertical" tabindex="0"></div>
+    <main class="editor-pane">
+      <div class="tabs" id="tabs" hidden><span class="tabs-placeholder">No scripts open</span></div>
+      <section class="welcome-panel" id="welcome">
+        <div class="welcome-mark"><img src="./CursorIcon.png" alt="" /></div>
+        <h1 id="welcomeTitle">Your Studio, connected.</h1>
+        <p id="welcomeDescription">Connect Roblox Studio to edit your Luau scripts with a live, synchronized Explorer.</p>
+        <div class="pairing-card" id="pairingCard"><div class="pairing-copy"><span>Pair with Roblox Studio</span><small>Enter this code in the Cursor Bridge plugin.</small></div><div class="pairing-code"><strong id="pairingCode">------</strong><button class="icon-button" id="copyCode" title="Copy pairing code" aria-label="Copy pairing code"><span data-icon="copy"></span></button></div></div>
+        <div class="welcome-tip" id="welcomeTip"><span data-icon="pointer"></span> Select a script to edit. Right-click an instance for more actions.</div>
+      </section>
+      <section class="code-panel" id="codePanel" hidden>
+        <div class="editor-topline"><span class="document-path" id="documentPath">game</span><div class="editor-actions"><span class="sync-indicator" id="syncIndicator">Synced</span><button class="tool-text" id="applyDraft" hidden>Apply draft</button><button class="tool-text" id="reloadStudio" hidden>Use Studio</button><button class="icon-button quiet" id="openStudio" title="Open in Roblox Studio" aria-label="Open in Studio"><span data-icon="open"></span></button><button class="icon-button quiet" id="viewBackups" title="Script history" aria-label="Script history"><span data-icon="history"></span></button></div></div>
+        <div class="monaco-host" id="monacoHost"></div>
+        <div class="editor-statusbar"><span id="scriptType">Luau</span><div><span id="cursorPosition">Ln 1, Col 1</span><span>UTF-8</span></div></div>
+      </section>
+    </main>
+  </div>
+  <div class="app-footer"><span id="bottomMessage">Waiting for local pairing</span><span id="appVersion">v0.2.2</span></div>
+
+  <div class="floating-panel session-panel" id="sessionPanel" hidden>
+    <div class="popover-heading">Studio session <button class="icon-button quiet small" id="closeSession" aria-label="Close session details"><span data-icon="close"></span></button></div>
+    <div class="session-place" id="placeName">No place connected</div><div class="session-meta" id="placeKey">Waiting for Studio</div>
+    <div class="session-stats"><span id="instanceStat">0 instances</span><span class="stat-separator">·</span><span id="scriptStat">0 scripts</span></div>
+    <div class="session-divider"></div>
+    <div class="session-note" id="lastSeen">Recovery workspace available when disconnected</div>
+    <button class="menu-row" id="openBackups"><span data-icon="history"></span> Open recovery folder</button>
+    <button class="menu-row" id="checkUpdates"><span data-icon="refresh"></span> Check for updates</button>
+    <button class="menu-row danger" id="disconnectButton" disabled><span data-icon="plug"></span> Disconnect Studio</button>
+  </div>
+  <div class="floating-panel theme-panel" id="themePanel" hidden>
+    <div class="popover-heading">Appearance & editor</div>
+    <div class="appearance-label">Workbench theme</div><div id="themeOptions" class="theme-options"></div>
+    <div class="appearance-divider"></div>
+    <label class="appearance-field"><span>Code colors</span><select id="codeThemeSetting" aria-label="Script editor color theme"><option value="auto">Follow workbench</option><option value="obsidian">Obsidian</option><option value="graphite">Graphite</option><option value="midnight">Midnight</option><option value="aurora">Aurora</option></select></label>
+    <label class="appearance-field"><span>Font</span><select id="fontFamilySetting" aria-label="Editor font"><option value="Cascadia Code, JetBrains Mono, Consolas, monospace">Cascadia Code</option><option value="JetBrains Mono, Consolas, monospace">JetBrains Mono</option><option value="Consolas, monospace">Consolas</option><option value="monospace">System Mono</option></select></label>
+    <label class="appearance-field"><span>Font size</span><input id="fontSizeSetting" type="number" min="11" max="24" step="1" aria-label="Editor font size" /></label>
+    <label class="appearance-field"><span>Word wrap</span><input id="wordWrapSetting" type="checkbox" aria-label="Wrap long lines" /></label>
+    <label class="appearance-field"><span>Minimap</span><input id="minimapSetting" type="checkbox" aria-label="Show code minimap" /></label>
+  </div>
+  <div class="floating-panel context-menu" id="contextMenu" role="menu" hidden></div>
+  <div class="floating-panel insert-menu" id="insertMenu" role="menu" aria-label="Insert an instance" hidden></div>
+  <div class="marquee" id="marquee" aria-hidden="true" hidden></div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <dialog id="quickApplyDialog" class="modal quick-apply-dialog" aria-labelledby="quickApplyTitle">
+    <div class="qa-header">
+      <div class="qa-heading"><span class="eyebrow">CURSOR BRIDGE / SCRIPT DELIVERY</span><h2 id="quickApplyTitle">Quick Apply<span class="qa-accent">.</span></h2><p>One AI response. Every script in the right place.</p></div>
+      <button type="button" class="icon-button quiet qa-close" data-close="quickApplyDialog" aria-label="Close Quick Apply"><span data-icon="close"></span></button>
+    </div>
+    <div class="qa-body">
+      <div class="qa-input-pane">
+        <div class="qa-pane-top"><label for="quickApplyText">AI script bundle <span class="qa-extension">.txt</span></label><button class="qa-inline" id="quickCopyFormat" type="button"><span data-icon="copy"></span> Copy AI format</button></div>
+        <textarea id="quickApplyText" class="qa-text" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="Paste the complete AI-generated TXT here…
+
+==================================================
+SCRIPT: Main
+PATH: game/ServerScriptService/Main
+STATUS: MODIFIED
+==================================================
+
+--!strict
+
+print("Updated")"></textarea>
+        <div class="qa-input-footer"><span id="quickApplySize">0 / 512 KiB</span><div><button class="qa-inline" id="quickApplyClear" type="button">Clear</button><label class="qa-file-button" for="quickApplyFile">Open .txt</label><input id="quickApplyFile" type="file" accept=".txt,text/plain" hidden /></div></div>
+      </div>
+      <div class="qa-preview-pane">
+        <div class="qa-pane-top"><span>Review changes</span><span class="qa-place" id="quickApplyPlace">No Studio session</span></div>
+        <div class="qa-summary" id="quickApplySummary" aria-live="polite"><div class="qa-hint"><span data-icon="check"></span><p>Paste a script bundle to preview every destination before updating your place.</p></div></div>
+        <div class="qa-entry-list" id="quickApplyEntries" role="list" aria-label="Script changes"></div>
+        <div class="qa-guardrail"><span data-icon="history"></span><span>Original scripts and the imported TXT are backed up before any change. Studio verifies every destination again.</span></div>
+      </div>
+    </div>
+    <div class="qa-footer"><span id="quickApplyMessage" role="status">Nothing is sent until you apply.</span><div class="qa-footer-actions"><button type="button" class="secondary-button" data-close="quickApplyDialog">Cancel</button><button id="quickApplyConfirm" class="primary-button" type="button" disabled>Apply to Studio <span data-icon="chevron"></span></button></div></div>
+  </dialog>
+  <dialog id="createDialog" class="modal"><form method="dialog" id="createForm"><div class="modal-top"><span class="eyebrow">NEW INSTANCE</span><button type="button" class="icon-button quiet" data-close="createDialog" aria-label="Close"><span data-icon="close"></span></button></div><h2>Create with a name</h2><label class="field-heading" for="createClass">Class</label><select id="createClass" class="field-input"><option value="Script">Script</option><option value="LocalScript">LocalScript</option><option value="ModuleScript">ModuleScript</option><option value="Folder">Folder</option></select><label class="field-heading" for="createName">Name</label><input id="createName" class="field-input" maxlength="100" required autocomplete="off" spellcheck="false" /><div class="destination-caption" id="createPath"></div><div class="modal-actions"><button type="button" class="secondary-button" data-close="createDialog">Cancel</button><button type="submit" class="primary-button" id="confirmCreate">Create</button></div></form></dialog>
+  <dialog id="renameDialog" class="modal"><form method="dialog" id="renameForm"><div class="modal-top"><span class="eyebrow">RENAME</span><button type="button" class="icon-button quiet" data-close="renameDialog" aria-label="Close"><span data-icon="close"></span></button></div><h2>Rename instance</h2><label class="field-heading" for="renameName">New name</label><input id="renameName" class="field-input" maxlength="100" required autocomplete="off" spellcheck="false"/><div class="modal-actions"><button type="button" class="secondary-button" data-close="renameDialog">Cancel</button><button type="submit" class="primary-button">Rename</button></div></form></dialog>
+  <dialog id="deleteDialog" class="modal"><form method="dialog" id="deleteForm"><div class="modal-top"><span class="eyebrow danger-text">REMOVE INSTANCES</span><button type="button" class="icon-button quiet" data-close="deleteDialog" aria-label="Close"><span data-icon="close"></span></button></div><h2 id="deleteTitle">Delete selected instances?</h2><p id="deleteDescription" class="modal-description">Script versions will be backed up before the operation is sent to Studio. This can also remove descendants.</p><div class="modal-actions"><button type="button" class="secondary-button" data-close="deleteDialog">Cancel</button><button type="submit" class="danger-button">Delete in Studio</button></div></form></dialog>
+  <dialog id="moveDialog" class="modal move-modal"><div class="modal-top"><span class="eyebrow">MOVE INSTANCES</span><button type="button" class="icon-button quiet" data-close="moveDialog" aria-label="Close"><span data-icon="close"></span></button></div><h2>Choose a destination</h2><div class="search-wrap picker-search"><span data-icon="search"></span><input id="destinationSearch" type="search" placeholder="Find a folder, model, or service" autocomplete="off" /></div><div class="destination-list" id="destinationList" role="listbox" aria-label="Destination"></div><div class="modal-actions"><button type="button" class="secondary-button" data-close="moveDialog">Cancel</button><button class="primary-button" id="confirmMove" disabled>Move here</button></div></dialog>
+  <dialog id="historyDialog" class="modal history-dialog"><div class="modal-top"><span class="eyebrow">LOCAL RECOVERY</span><button type="button" class="icon-button quiet" data-close="historyDialog" aria-label="Close"><span data-icon="close"></span></button></div><h2>Script history</h2><p class="modal-description">Opening a snapshot never overwrites Studio. Review and apply it as a local draft.</p><div class="history-entries" id="historyEntries"></div></dialog>
+  <dialog id="quickOpenDialog" class="modal quick-open" aria-label="Quick Open"><div class="quick-open-eyebrow">QUICK OPEN <span>·</span> SCRIPTS IN THIS PLACE</div><div class="quick-open-heading"><span data-icon="search"></span><input id="quickOpenSearch" type="search" placeholder="Search by name, path or name:line" aria-label="Quick open script" autocomplete="off" spellcheck="false" aria-controls="quickOpenResults" /><kbd>Esc</kbd></div><div class="quick-open-meta"><span id="quickOpenCount">Scripts in this Place</span><span>↑↓ Select <span class="quick-dot">·</span> Enter Open</span></div><div id="quickOpenResults" class="quick-results" role="listbox" aria-label="Matching scripts"></div></dialog>
+  <dialog id="shortcutsDialog" class="modal shortcuts-modal"><div class="modal-top"><span class="eyebrow">WORKBENCH SHORTCUTS</span><button type="button" class="icon-button quiet" data-close="shortcutsDialog" aria-label="Close"><span data-icon="close"></span></button></div><h2>Keyboard & mouse</h2><div class="shortcut-grid">
+  <span>Select contiguous range</span><kbd>Shift + Click</kbd>
+  <span>Add or remove selection</span><kbd>Ctrl + Click</kbd>
+  <span>Select a rectangular area</span><kbd>Drag from empty space</kbd>
+  <span>Move objects into a parent</span><kbd>Drag selected rows</kbd>
+  <span>Copy / Cut / Paste</span><kbd>Ctrl C / X / V</kbd>
+  <span>Paste into selection</span><kbd>Ctrl Shift V</kbd>
+  <span>Duplicate</span><kbd>Ctrl D</kbd>
+  <span>Insert object</span><kbd>Ctrl I</kbd>
+  <span>Rename / Delete</span><kbd>F2 / Delete</kbd>
+  <span>Explorer search</span><kbd>Ctrl Shift X</kbd>
+  <span>Quick Apply AI bundle</span><kbd>Ctrl L</kbd>
+  <span>Quick open script</span><kbd>Ctrl P</kbd>
+  <span>Find code in every script</span><kbd>Ctrl Shift F</kbd>
+  <span>Return to Explorer</span><kbd>Ctrl Shift E</kbd>
+  <span>Next / previous search match</span><kbd>F4 / Shift F4</kbd>
+  <span>Close / reopen tab</span><kbd>Ctrl W / Ctrl Shift T</kbd>
+  <span>Switch script tabs</span><kbd>Ctrl Tab</kbd>
+  <span>Reveal active script</span><kbd>Ctrl Alt K</kbd>
+  </div></dialog>
+</div>
+<script type="module" src="./renderer/app.js"></script>
+</body>
+</html>

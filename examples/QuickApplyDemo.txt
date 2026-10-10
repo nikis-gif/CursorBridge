@@ -1,0 +1,16 @@
+==================================================
+SCRIPT: QuickApplyDemo
+PATH: game/ServerScriptService/CursorBridgeDemos/QuickApplyDemo
+STATUS: NEW
+CLASS: ModuleScript
+==================================================
+
+--!strict
+
+local QuickApplyDemo = {}
+
+function QuickApplyDemo.Greet(): string
+    return "Hello from Cursor Bridge"
+end
+
+return QuickApplyDemo

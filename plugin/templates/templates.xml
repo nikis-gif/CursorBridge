@@ -1,0 +1,279 @@
+<?xml version='1.0' encoding='utf-8'?>
+<templates>
+  <Item class="Model" referent="RBX849333FEE8834C429A6C19D06B842A8A" template="Model">
+    <Properties>
+      <token name="LevelOfDetail">0</token>
+      <CoordinateFrame name="ModelMeshCFrame">
+        <X>0</X>
+        <Y>0</Y>
+        <Z>0</Z>
+        <R00>1</R00>
+        <R01>0</R01>
+        <R02>0</R02>
+        <R10>0</R10>
+        <R11>1</R11>
+        <R12>0</R12>
+        <R20>0</R20>
+        <R21>0</R21>
+        <R22>1</R22>
+      </CoordinateFrame>
+      <SharedString name="ModelMeshData">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+      <Vector3 name="ModelMeshSize">
+        <X>0</X>
+        <Y>0</Y>
+        <Z>0</Z>
+      </Vector3>
+      <token name="ModelStreamingMode">0</token>
+      <bool name="NeedsPivotMigration">false</bool>
+      <Ref name="PrimaryPart">null</Ref>
+      <float name="ScaleFactor">1</float>
+      <SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+      <OptionalCoordinateFrame name="WorldPivotData">
+        <CFrame>
+          <X>0</X>
+          <Y>0</Y>
+          <Z>0</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>0</R21>
+          <R22>1</R22>
+        </CFrame>
+      </OptionalCoordinateFrame>
+      <BinaryString name="AttributesSerialize" />
+      <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+      <bool name="DefinesCapabilities">false</bool>
+      <string name="Name">CursorEasyV2</string>
+      <BinaryString name="SerializedOverrides" />
+      <int64 name="SourceAssetId">-1</int64>
+      <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+    </Properties>
+  </Item>
+  <Item class="Script" referent="RBX67F30D82C60F444390B77808F98D0559" template="Script">
+    <Properties>
+      <ProtectedString name="Source">--!strict
+
+local RunService = game:GetService("RunService")
+
+-- Hard guard: imported plugin models must never run as game scripts.
+if RunService:IsRunning() then
+	return
+end
+
+local pluginContext: Plugin? = plugin
+if pluginContext == nil then
+	return
+end
+
+local Root = script.Parent
+local PLUGIN_ICON = "rbxassetid://96262651806386"
+
+local toolbar = pluginContext:CreateToolbar("Cursor Easy V2")
+local button = toolbar:CreateButton(
+	"CursorEasyV2Toggle",
+	"Open Cursor Easy V2",
+	PLUGIN_ICON,
+	"Easy V2"
+)
+button.ClickableWhenViewportHidden = true
+
+local controller: any = nil
+local visibilityConnection: RBXScriptConnection? = nil
+local initializing = false
+local alive = true
+
+local function reportFailure(stage: string, message: any)
+	warn(string.format("[Cursor Easy V2] %s failed:\n%s", stage, tostring(message)))
+end
+
+local function destroyController()
+	if visibilityConnection then
+		visibilityConnection:Disconnect()
+		visibilityConnection = nil
+	end
+
+	if controller then
+		local activeController = controller
+		controller = nil
+		local ok, err = xpcall(function()
+			activeController:Destroy()
+		end, debug.traceback)
+		if not ok then
+			reportFailure("shutdown", err)
+		end
+	end
+
+	button:SetActive(false)
+end
+
+local function initializeController(): boolean
+	if RunService:IsRunning() then
+		return false
+	end
+	if controller then
+		return true
+	end
+	if initializing then
+		return false
+	end
+
+	initializing = true
+	local builtController: any = nil
+	local ok, err = xpcall(function()
+		local EasyController = require(Root.Controllers.EasyController)
+		builtController = EasyController.new(pluginContext)
+	end, debug.traceback)
+
+	if not ok or not builtController then
+		initializing = false
+		reportFailure("bootstrap", err)
+		return false
+	end
+
+	if RunService:IsRunning() then
+		initializing = false
+		builtController:Destroy()
+		return false
+	end
+
+	controller = builtController
+	visibilityConnection = controller:GetVisibilityChangedSignal():Connect(function(visible: boolean)
+		button:SetActive(visible)
+	end)
+
+	local startOk, startErr = xpcall(function()
+		controller:Start()
+	end, debug.traceback)
+	if not startOk then
+		reportFailure("startup", startErr)
+	end
+
+	initializing = false
+	return true
+end
+
+button.Click:Connect(function()
+	if RunService:IsRunning() or not initializeController() then
+		return
+	end
+
+	local ok, err = xpcall(function()
+		controller:Toggle()
+	end, debug.traceback)
+	if not ok then
+		reportFailure("toggle", err)
+	end
+end)
+
+-- Stop all plugin behavior as soon as Studio starts simulating.
+task.spawn(function()
+	local wasRunning = RunService:IsRunning()
+	while alive do
+		local running = RunService:IsRunning()
+		if running and (not wasRunning or controller ~= nil) then
+			destroyController()
+		end
+		wasRunning = running
+		task.wait(0.1)
+	end
+end)
+
+pluginContext.Unloading:Connect(function()
+	alive = false
+	destroyController()
+end)
+</ProtectedString>
+      <bool name="Disabled">false</bool>
+      <Content name="LinkedSource">
+        <null />
+      </Content>
+      <token name="RunContext">0</token>
+      <string name="ScriptGuid">{3420DCAD-3E70-4289-A8F5-04449499001C}</string>
+      <BinaryString name="AttributesSerialize" />
+      <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+      <bool name="DefinesCapabilities">false</bool>
+      <string name="Name">Main</string>
+      <BinaryString name="SerializedOverrides" />
+      <int64 name="SourceAssetId">-1</int64>
+      <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+    </Properties>
+  </Item>
+  <Item class="Folder" referent="RBX0900BBA944804C68A7D4F78E8D78622C" template="Folder">
+    <Properties>
+      <Color3 name="IconTint">
+        <R>0</R>
+        <G>0</G>
+        <B>0</B>
+      </Color3>
+      <BinaryString name="AttributesSerialize" />
+      <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+      <bool name="DefinesCapabilities">false</bool>
+      <string name="Name">Packages</string>
+      <BinaryString name="SerializedOverrides" />
+      <int64 name="SourceAssetId">-1</int64>
+      <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+    </Properties>
+  </Item>
+  <Item class="ModuleScript" referent="RBXA71073DC151642F787404F7190DA86CF" template="ModuleScript">
+    <Properties>
+      <Content name="LinkedSource">
+        <null />
+      </Content>
+      <ProtectedString name="Source">--!strict
+
+export type Task = RBXScriptConnection | Instance | (() -&gt; ())
+
+local Maid = {}
+Maid.__index = Maid
+
+export type Maid = typeof(setmetatable({
+	_tasks = {} :: {Task},
+}, Maid))
+
+function Maid.new(): Maid
+	return setmetatable({
+		_tasks = {},
+	}, Maid)
+end
+
+function Maid.Give(self: Maid, task: Task): Task
+	table.insert(self._tasks, task)
+	return task
+end
+
+function Maid.Cleanup(self: Maid)
+	for index = #self._tasks, 1, -1 do
+		local task = self._tasks[index]
+		self._tasks[index] = nil
+
+		if typeof(task) == "RBXScriptConnection" then
+			(task :: RBXScriptConnection):Disconnect()
+		elseif typeof(task) == "Instance" then
+			(task :: Instance):Destroy()
+		else
+			(task :: () -&gt; ())()
+		end
+	end
+end
+
+function Maid.Destroy(self: Maid)
+	self:Cleanup()
+end
+
+return Maid
+</ProtectedString>
+      <string name="ScriptGuid">{D24E563E-7CD1-41B2-ABBC-27FCECB4DCF1}</string>
+      <BinaryString name="AttributesSerialize" />
+      <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+      <bool name="DefinesCapabilities">false</bool>
+      <string name="Name">Maid</string>
+      <BinaryString name="SerializedOverrides" />
+      <int64 name="SourceAssetId">-1</int64>
+      <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+    </Properties>
+  </Item>
+</templates>

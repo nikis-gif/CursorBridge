@@ -1,0 +1,4862 @@
+<?xml version='1.0' encoding='utf-8'?>
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+  <Meta name="ExplicitAutoJoints">true</Meta>
+  <External>null</External>
+  <External>nil</External>
+  <Item class="Model" referent="RBXFEEC924D18F04E33A9E3727003C947DB">
+    <Properties>
+      <token name="LevelOfDetail">0</token>
+      <CoordinateFrame name="ModelMeshCFrame">
+        <X>0</X>
+        <Y>0</Y>
+        <Z>0</Z>
+        <R00>1</R00>
+        <R01>0</R01>
+        <R02>0</R02>
+        <R10>0</R10>
+        <R11>1</R11>
+        <R12>0</R12>
+        <R20>0</R20>
+        <R21>0</R21>
+        <R22>1</R22>
+      </CoordinateFrame>
+      <SharedString name="ModelMeshData">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+      <Vector3 name="ModelMeshSize">
+        <X>0</X>
+        <Y>0</Y>
+        <Z>0</Z>
+      </Vector3>
+      <token name="ModelStreamingMode">0</token>
+      <bool name="NeedsPivotMigration">false</bool>
+      <Ref name="PrimaryPart">null</Ref>
+      <float name="ScaleFactor">1</float>
+      <SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+      <OptionalCoordinateFrame name="WorldPivotData">
+        <CFrame>
+          <X>0</X>
+          <Y>0</Y>
+          <Z>0</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>0</R21>
+          <R22>1</R22>
+        </CFrame>
+      </OptionalCoordinateFrame>
+      <BinaryString name="AttributesSerialize"></BinaryString>
+      <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+      <bool name="DefinesCapabilities">false</bool>
+      <string name="Name">CursorBridgeV2</string>
+      <BinaryString name="SerializedOverrides"></BinaryString>
+      <int64 name="SourceAssetId">-1</int64>
+      <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+    </Properties>
+    <Item class="Script" referent="RBXC5F1CFB16C3641A9AC07FE3D8E914BA9">
+      <Properties>
+        <ProtectedString name="Source">--!strict
+
+local RunService = game:GetService("RunService")
+
+-- Imported plugin models must not execute as ordinary game scripts.
+if RunService:IsRunning() then
+	return
+end
+
+local pluginContext: Plugin? = plugin
+if pluginContext == nil then
+	return
+end
+
+local Root = script.Parent
+local PLUGIN_ICON = "rbxassetid://132318313203288"
+
+local toolbar = pluginContext:CreateToolbar("Cursor Bridge V2")
+local button = toolbar:CreateButton(
+	"CursorBridgeV2Toggle",
+	"Open Cursor Bridge V2",
+	PLUGIN_ICON,
+	"Bridge V2"
+)
+button.ClickableWhenViewportHidden = true
+
+local controller: any = nil
+local visibilityConnection: RBXScriptConnection? = nil
+local initializing = false
+local alive = true
+
+local function reportFailure(stage: string, message: any)
+	warn(string.format("[Cursor Bridge V2] %s failed:\n%s", stage, tostring(message)))
+end
+
+local function destroyController()
+	if visibilityConnection then
+		visibilityConnection:Disconnect()
+		visibilityConnection = nil
+	end
+
+	if controller then
+		local activeController = controller
+		controller = nil
+		local ok, err = xpcall(function()
+			activeController:Destroy()
+		end, debug.traceback)
+		if not ok then
+			reportFailure("shutdown", err)
+		end
+	end
+
+	button:SetActive(false)
+end
+
+local function initializeController(): boolean
+	if RunService:IsRunning() or initializing then
+		return false
+	end
+	if controller then
+		return true
+	end
+
+	initializing = true
+	local builtController: any = nil
+	local ok, err = xpcall(function()
+		local BridgeController = require(Root.Controllers.BridgeController)
+		builtController = BridgeController.new(pluginContext :: Plugin)
+	end, debug.traceback)
+	if not ok or not builtController then
+		initializing = false
+		reportFailure("bootstrap", err)
+		return false
+	end
+
+	if RunService:IsRunning() then
+		initializing = false
+		builtController:Destroy()
+		return false
+	end
+
+	controller = builtController
+	visibilityConnection = controller:GetVisibilityChangedSignal():Connect(function(visible: boolean)
+		button:SetActive(visible)
+	end)
+
+	local started, startErr = xpcall(function()
+		controller:Start()
+	end, debug.traceback)
+	initializing = false
+	if not started then
+		reportFailure("startup", startErr)
+		destroyController()
+		return false
+	end
+	return true
+end
+
+button.Click:Connect(function()
+	if RunService:IsRunning() or not initializeController() then
+		return
+	end
+
+	local ok, err = xpcall(function()
+		controller:Toggle()
+	end, debug.traceback)
+	if not ok then
+		reportFailure("toggle", err)
+	end
+end)
+
+-- Match the other Cursor V2 plugins: release all UI and connections for Play Test.
+task.spawn(function()
+	while alive do
+		if RunService:IsRunning() and controller ~= nil then
+			destroyController()
+		end
+		task.wait(0.1)
+	end
+end)
+
+pluginContext.Unloading:Connect(function()
+	alive = false
+	destroyController()
+end)
+</ProtectedString>
+        <bool name="Disabled">false</bool>
+        <Content name="LinkedSource">
+          <null></null>
+        </Content>
+        <token name="RunContext">0</token>
+        <string name="ScriptGuid">{4F7E6F04-B41E-4E0F-A7EC-25525599A480}</string>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <bool name="DefinesCapabilities">false</bool>
+        <string name="Name">Main</string>
+        <BinaryString name="SerializedOverrides"></BinaryString>
+        <int64 name="SourceAssetId">-1</int64>
+        <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+      </Properties>
+    </Item>
+    <Item class="Folder" referent="RBX43C2AF8C82B940579B1F2B141F481A7C">
+      <Properties>
+        <Color3 name="IconTint">
+          <R>0</R>
+          <G>0</G>
+          <B>0</B>
+        </Color3>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <bool name="DefinesCapabilities">false</bool>
+        <string name="Name">Packages</string>
+        <BinaryString name="SerializedOverrides"></BinaryString>
+        <int64 name="SourceAssetId">-1</int64>
+        <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+      </Properties>
+      <Item class="ModuleScript" referent="RBX2D325D6949D84ADF9B066D08B9398319">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+export type Task = RBXScriptConnection | Instance | (() -&gt; ())
+
+local Maid = {}
+Maid.__index = Maid
+
+export type Maid = typeof(setmetatable({
+	_tasks = {} :: {Task},
+}, Maid))
+
+function Maid.new(): Maid
+	return setmetatable({
+		_tasks = {},
+	}, Maid)
+end
+
+function Maid.Give(self: Maid, task: Task): Task
+	table.insert(self._tasks, task)
+	return task
+end
+
+function Maid.Cleanup(self: Maid)
+	for index = #self._tasks, 1, -1 do
+		local task = self._tasks[index]
+		self._tasks[index] = nil
+
+		if typeof(task) == "RBXScriptConnection" then
+			(task :: RBXScriptConnection):Disconnect()
+		elseif typeof(task) == "Instance" then
+			(task :: Instance):Destroy()
+		else
+			(task :: () -&gt; ())()
+		end
+	end
+end
+
+function Maid.Destroy(self: Maid)
+	self:Cleanup()
+end
+
+return Maid
+</ProtectedString>
+          <string name="ScriptGuid">{89B8C81E-C1D6-4142-BDA9-25F59B7E82D9}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">Maid</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Folder" referent="RBX72A78DFCF4194C9B8F0E8DCCC9FEDB04">
+      <Properties>
+        <Color3 name="IconTint">
+          <R>0</R>
+          <G>0</G>
+          <B>0</B>
+        </Color3>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <bool name="DefinesCapabilities">false</bool>
+        <string name="Name">UI</string>
+        <BinaryString name="SerializedOverrides"></BinaryString>
+        <int64 name="SourceAssetId">-1</int64>
+        <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+      </Properties>
+      <Item class="ModuleScript" referent="RBX29268AB669D145D99FC570D4DBC9BD49">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+-- Cursor V2 semantic design tokens.
+-- Every plugin consumes this exact contract so visual behavior stays consistent.
+local Theme: {[string]: any} = {}
+
+local BASE: {[string]: Color3} = {
+	Background = Color3.fromRGB(9, 10, 12),
+	Surface = Color3.fromRGB(14, 15, 18),
+	SurfaceRaised = Color3.fromRGB(19, 20, 24),
+	SurfaceHover = Color3.fromRGB(25, 27, 32),
+	SurfaceActive = Color3.fromRGB(31, 33, 39),
+	SurfaceSelected = Color3.fromRGB(37, 40, 47),
+	SurfaceDisabled = Color3.fromRGB(18, 19, 22),
+	Overlay = Color3.fromRGB(7, 8, 10),
+	GradientTop = Color3.fromRGB(22, 23, 27),
+	GradientBottom = Color3.fromRGB(16, 17, 20),
+	Border = Color3.fromRGB(53, 56, 64),
+	BorderSoft = Color3.fromRGB(35, 38, 44),
+	BorderStrong = Color3.fromRGB(77, 81, 91),
+	Text = Color3.fromRGB(242, 243, 245),
+	TextMuted = Color3.fromRGB(165, 169, 178),
+	TextFaint = Color3.fromRGB(104, 109, 120),
+	TextDisabled = Color3.fromRGB(73, 77, 86),
+	Focus = Color3.fromRGB(228, 231, 237),
+	Accent = Color3.fromRGB(235, 237, 241),
+	AccentHover = Color3.fromRGB(255, 255, 255),
+	AccentSoft = Color3.fromRGB(49, 52, 60),
+	AccentFaint = Color3.fromRGB(28, 30, 35),
+	AccentText = Color3.fromRGB(12, 13, 16),
+	Secondary = Color3.fromRGB(146, 151, 162),
+	SecondarySoft = Color3.fromRGB(40, 43, 50),
+	Ring = Color3.fromRGB(225, 228, 234),
+	Success = Color3.fromRGB(101, 189, 132),
+	Danger = Color3.fromRGB(224, 102, 112),
+	Warning = Color3.fromRGB(219, 169, 85),
+	Timeline = Color3.fromRGB(10, 11, 13),
+	TimelineGrid = Color3.fromRGB(31, 34, 39),
+	TimelineGridStrong = Color3.fromRGB(53, 57, 65),
+	TimelineRow = Color3.fromRGB(17, 18, 21),
+	TimelineRowAlt = Color3.fromRGB(14, 15, 18),
+	Keyframe = Color3.fromRGB(218, 221, 227),
+	KeyframeSelected = Color3.fromRGB(255, 255, 255),
+	Playhead = Color3.fromRGB(238, 240, 244),
+	Hover = Color3.fromRGB(25, 27, 32),
+	Selection = Color3.fromRGB(67, 71, 82),
+	AxisX = Color3.fromRGB(224, 84, 90),
+	AxisY = Color3.fromRGB(87, 183, 116),
+	AxisZ = Color3.fromRGB(85, 128, 216),
+	EaseLinear = Color3.fromRGB(222, 224, 228),
+	EaseConstant = Color3.fromRGB(128, 130, 136),
+	EaseSine = Color3.fromRGB(120, 158, 190),
+	EaseQuad = Color3.fromRGB(183, 158, 112),
+	EaseCubic = Color3.fromRGB(194, 135, 103),
+	EaseQuart = Color3.fromRGB(150, 130, 170),
+	EaseQuint = Color3.fromRGB(177, 124, 151),
+	EaseExponential = Color3.fromRGB(192, 108, 99),
+	EaseCircular = Color3.fromRGB(105, 164, 153),
+	EaseBack = Color3.fromRGB(132, 117, 175),
+	EaseBounce = Color3.fromRGB(135, 164, 107),
+	EaseElastic = Color3.fromRGB(105, 162, 176),
+}
+
+local PRESETS: {[string]: {[string]: Color3}} = {
+	Graphite = {},
+	Midnight = {
+		Background = Color3.fromRGB(7, 10, 15),
+		Surface = Color3.fromRGB(11, 15, 22),
+		SurfaceRaised = Color3.fromRGB(16, 21, 30),
+		SurfaceHover = Color3.fromRGB(22, 29, 40),
+		SurfaceActive = Color3.fromRGB(29, 37, 51),
+		SurfaceSelected = Color3.fromRGB(35, 45, 61),
+		Border = Color3.fromRGB(48, 59, 77),
+		BorderSoft = Color3.fromRGB(31, 39, 52),
+		BorderStrong = Color3.fromRGB(72, 87, 112),
+		Text = Color3.fromRGB(239, 243, 250),
+		TextMuted = Color3.fromRGB(158, 170, 190),
+		TextFaint = Color3.fromRGB(96, 110, 132),
+		Accent = Color3.fromRGB(197, 216, 255),
+		AccentHover = Color3.fromRGB(225, 235, 255),
+		AccentSoft = Color3.fromRGB(43, 56, 78),
+		AccentFaint = Color3.fromRGB(22, 30, 43),
+		AccentText = Color3.fromRGB(11, 16, 24),
+		Secondary = Color3.fromRGB(126, 151, 188),
+		SecondarySoft = Color3.fromRGB(34, 46, 63),
+		Ring = Color3.fromRGB(197, 216, 255),
+		Timeline = Color3.fromRGB(8, 11, 16),
+		TimelineGrid = Color3.fromRGB(26, 34, 46),
+		TimelineGridStrong = Color3.fromRGB(46, 58, 76),
+		TimelineRow = Color3.fromRGB(14, 19, 27),
+		TimelineRowAlt = Color3.fromRGB(11, 15, 22),
+		Playhead = Color3.fromRGB(207, 222, 255),
+		Selection = Color3.fromRGB(58, 72, 96),
+	},
+	Obsidian = {
+		Background = Color3.fromRGB(4, 4, 5),
+		Surface = Color3.fromRGB(8, 8, 10),
+		SurfaceRaised = Color3.fromRGB(13, 13, 16),
+		SurfaceHover = Color3.fromRGB(20, 20, 24),
+		SurfaceActive = Color3.fromRGB(27, 27, 32),
+		SurfaceSelected = Color3.fromRGB(34, 34, 40),
+		SurfaceDisabled = Color3.fromRGB(11, 11, 13),
+		Overlay = Color3.fromRGB(2, 2, 3),
+		Border = Color3.fromRGB(48, 48, 55),
+		BorderSoft = Color3.fromRGB(28, 28, 33),
+		BorderStrong = Color3.fromRGB(79, 79, 89),
+		Text = Color3.fromRGB(248, 248, 249),
+		TextMuted = Color3.fromRGB(176, 176, 183),
+		TextFaint = Color3.fromRGB(105, 105, 115),
+		Accent = Color3.fromRGB(250, 250, 251),
+		AccentHover = Color3.fromRGB(255, 255, 255),
+		AccentSoft = Color3.fromRGB(48, 48, 55),
+		AccentFaint = Color3.fromRGB(22, 22, 26),
+		AccentText = Color3.fromRGB(6, 6, 8),
+		Secondary = Color3.fromRGB(145, 145, 153),
+		SecondarySoft = Color3.fromRGB(37, 37, 43),
+		Ring = Color3.fromRGB(245, 245, 247),
+		Timeline = Color3.fromRGB(5, 5, 6),
+		TimelineGrid = Color3.fromRGB(24, 24, 28),
+		TimelineGridStrong = Color3.fromRGB(45, 45, 51),
+		TimelineRow = Color3.fromRGB(11, 11, 13),
+		TimelineRowAlt = Color3.fromRGB(8, 8, 10),
+	},
+	Monochrome = {
+		Background = Color3.fromRGB(10, 10, 10),
+		Surface = Color3.fromRGB(16, 16, 16),
+		SurfaceRaised = Color3.fromRGB(22, 22, 22),
+		SurfaceHover = Color3.fromRGB(30, 30, 30),
+		SurfaceActive = Color3.fromRGB(38, 38, 38),
+		SurfaceSelected = Color3.fromRGB(45, 45, 45),
+		Border = Color3.fromRGB(58, 58, 58),
+		BorderSoft = Color3.fromRGB(39, 39, 39),
+		BorderStrong = Color3.fromRGB(86, 86, 86),
+		Text = Color3.fromRGB(245, 245, 245),
+		TextMuted = Color3.fromRGB(169, 169, 169),
+		TextFaint = Color3.fromRGB(108, 108, 108),
+		Accent = Color3.fromRGB(236, 236, 236),
+		AccentHover = Color3.fromRGB(255, 255, 255),
+		AccentSoft = Color3.fromRGB(53, 53, 53),
+		AccentFaint = Color3.fromRGB(29, 29, 29),
+		AccentText = Color3.fromRGB(12, 12, 12),
+		Secondary = Color3.fromRGB(148, 148, 148),
+		SecondarySoft = Color3.fromRGB(43, 43, 43),
+		Ring = Color3.fromRGB(236, 236, 236),
+	},
+	Aurora = {
+		Background = Color3.fromRGB(7, 10, 13),
+		Surface = Color3.fromRGB(12, 16, 20),
+		SurfaceRaised = Color3.fromRGB(18, 23, 29),
+		SurfaceHover = Color3.fromRGB(24, 32, 39),
+		SurfaceActive = Color3.fromRGB(31, 40, 49),
+		SurfaceSelected = Color3.fromRGB(38, 49, 59),
+		Border = Color3.fromRGB(47, 65, 74),
+		BorderSoft = Color3.fromRGB(31, 44, 51),
+		BorderStrong = Color3.fromRGB(66, 96, 105),
+		Text = Color3.fromRGB(239, 247, 247),
+		TextMuted = Color3.fromRGB(158, 181, 182),
+		TextFaint = Color3.fromRGB(95, 120, 122),
+		Accent = Color3.fromRGB(116, 232, 214),
+		AccentHover = Color3.fromRGB(151, 245, 231),
+		AccentSoft = Color3.fromRGB(35, 75, 73),
+		AccentFaint = Color3.fromRGB(18, 39, 39),
+		AccentText = Color3.fromRGB(7, 20, 20),
+		Secondary = Color3.fromRGB(157, 132, 232),
+		SecondarySoft = Color3.fromRGB(48, 40, 75),
+		Ring = Color3.fromRGB(130, 236, 218),
+		Playhead = Color3.fromRGB(130, 236, 218),
+		Selection = Color3.fromRGB(40, 91, 87),
+	},
+	Rainbow = {
+		-- The editor stays dark. Only semantic accents animate.
+		Background = Color3.fromRGB(8, 9, 11),
+		Surface = Color3.fromRGB(13, 14, 17),
+		SurfaceRaised = Color3.fromRGB(19, 20, 24),
+		SurfaceHover = Color3.fromRGB(26, 27, 32),
+		SurfaceActive = Color3.fromRGB(33, 34, 40),
+		SurfaceSelected = Color3.fromRGB(40, 41, 48),
+		Border = Color3.fromRGB(55, 58, 66),
+		BorderSoft = Color3.fromRGB(36, 38, 44),
+		BorderStrong = Color3.fromRGB(82, 86, 96),
+		Accent = Color3.fromRGB(255, 105, 135),
+		AccentHover = Color3.fromRGB(255, 137, 163),
+		AccentSoft = Color3.fromRGB(79, 39, 52),
+		AccentFaint = Color3.fromRGB(41, 23, 29),
+		AccentText = Color3.fromRGB(12, 13, 15),
+		Secondary = Color3.fromRGB(102, 196, 236),
+		SecondarySoft = Color3.fromRGB(34, 57, 68),
+		Ring = Color3.fromRGB(255, 137, 163),
+		Playhead = Color3.fromRGB(255, 105, 135),
+		Selection = Color3.fromRGB(82, 43, 55),
+		KeyframeSelected = Color3.fromRGB(255, 181, 91),
+	},
+}
+
+local LEGACY_ALIASES = {
+	Amethyst = "Aurora",
+	Ember = "Obsidian",
+}
+
+Theme.PresetNames = table.freeze({"Graphite", "Midnight", "Obsidian", "Monochrome", "Aurora", "Rainbow"})
+Theme.ActivePreset = "Obsidian"
+Theme.ReduceMotion = false
+Theme.AnimationsEnabled = true
+
+Theme.RadiusSmall = 4
+Theme.RadiusMedium = 6
+Theme.RadiusLarge = 8
+Theme.RadiusXLarge = 10
+Theme.ControlHeight = 26
+Theme.Spacing4 = 4
+Theme.Spacing8 = 8
+Theme.Spacing12 = 12
+Theme.Spacing16 = 16
+Theme.Spacing24 = 24
+Theme.Spacing32 = 32
+-- Compatibility tokens used by existing V1-derived layout code.
+Theme.Spacing2 = 2
+Theme.Spacing6 = 6
+Theme.MotionFast = 0.10
+Theme.MotionNormal = 0.16
+Theme.MotionPanel = 0.20
+Theme.LayerBase = 1
+Theme.LayerFloating = 100
+Theme.LayerMenu = 170
+Theme.LayerTooltip = 500
+
+local function refreshAliases()
+	Theme.SurfaceSecondary = Theme.SurfaceRaised
+	Theme.TextPrimary = Theme.Text
+	Theme.TextSecondary = Theme.TextMuted
+	Theme.AccentSecondary = Theme.Secondary
+	Theme.Error = Theme.Danger
+	Theme.Hover = Theme.SurfaceHover
+	Theme.Selected = Theme.SurfaceSelected
+	Theme.Disabled = Theme.SurfaceDisabled
+end
+
+function Theme.GetColorSnapshot(): {[string]: Color3}
+	local snapshot: {[string]: Color3} = {}
+	for key, value in Theme do
+		if typeof(value) == "Color3" then
+			snapshot[key] = value
+		end
+	end
+	return snapshot
+end
+
+function Theme.GetActivePreset(): string
+	return Theme.ActivePreset
+end
+
+function Theme.IsAnimatedPreset(name: string?): boolean
+	return name == "Rainbow"
+end
+
+function Theme.ApplyRainbowHue(hue: number)
+	if Theme.ActivePreset ~= "Rainbow" then
+		return
+	end
+
+	local wrapped = hue % 1
+	local accent = Color3.fromHSV(wrapped, 0.72, 1)
+	local accentHover = Color3.fromHSV((wrapped + 0.025) % 1, 0.58, 1)
+	local secondary = Color3.fromHSV((wrapped + 0.53) % 1, 0.52, 0.94)
+	Theme.Accent = accent
+	Theme.AccentHover = accentHover
+	Theme.AccentSoft = accent:Lerp(Theme.SurfaceRaised, 0.70)
+	Theme.AccentFaint = accent:Lerp(Theme.Background, 0.86)
+	Theme.Focus = accent
+	Theme.Ring = accentHover
+	Theme.Secondary = secondary
+	Theme.SecondarySoft = secondary:Lerp(Theme.SurfaceRaised, 0.76)
+	Theme.Playhead = accent
+	Theme.Selection = accent:Lerp(Theme.Surface, 0.58)
+	Theme.KeyframeSelected = Color3.fromHSV((wrapped + 0.13) % 1, 0.62, 1)
+	refreshAliases()
+end
+
+function Theme.ApplyPreset(name: string?): string
+	local requested = name or "Obsidian"
+	local presetName = LEGACY_ALIASES[requested] or requested
+	if PRESETS[presetName] == nil then
+		presetName = "Obsidian"
+	end
+
+	for key, value in BASE do
+		Theme[key] = value
+	end
+	for key, value in PRESETS[presetName] do
+		Theme[key] = value
+	end
+	Theme.ActivePreset = presetName
+	refreshAliases()
+	return presetName
+end
+
+Theme.ApplyPreset("Obsidian")
+
+return Theme
+</ProtectedString>
+          <string name="ScriptGuid">{D187D60A-6B19-4FA3-BF68-510D212818D3}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">Theme</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX60804728635C412DBC04DA4232213FDB">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local Root = script.Parent.Parent
+local Theme = require(Root.UI.Theme)
+
+local Primitives = {}
+
+export type ButtonVariant = "Primary" | "Secondary" | "Ghost" | "Danger"
+
+local function make(className: string, properties: {[string]: any}, parent: Instance?): any
+	local object = Instance.new(className)
+	for key, value in properties do
+		(object :: any)[key] = value
+	end
+	if parent then
+		object.Parent = parent
+	end
+	return object
+end
+
+function Primitives.Corner(parent: Instance, radius: number?)
+	make("UICorner", {CornerRadius = UDim.new(0, radius or Theme.RadiusMedium)}, parent)
+end
+
+function Primitives.Stroke(parent: Instance, color: Color3?, thickness: number?): UIStroke
+	return make("UIStroke", {
+		Color = color or Theme.BorderSoft,
+		Thickness = thickness or 1,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+	}, parent)
+end
+
+function Primitives.Label(parent: Instance, text: string, size: number, color: Color3?, medium: boolean?): TextLabel
+	return make("TextLabel", {
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Text = text,
+		TextColor3 = color or Theme.Text,
+		TextSize = size,
+		Font = if medium then Enum.Font.GothamMedium else Enum.Font.Gotham,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Center,
+	}, parent)
+end
+
+local function buttonColors(variant: ButtonVariant): (Color3, Color3, Color3)
+	if variant == "Primary" then
+		return Theme.Accent, Theme.AccentText, Theme.AccentHover
+	elseif variant == "Danger" then
+		return Theme.SurfaceRaised, Theme.Danger, Theme.SurfaceHover
+	elseif variant == "Ghost" then
+		return Theme.Surface, Theme.TextMuted, Theme.SurfaceHover
+	end
+	return Theme.SurfaceRaised, Theme.TextMuted, Theme.SurfaceHover
+end
+
+local activeButtonTweens: {[TextButton]: any} = setmetatable({}, {__mode = "k"}) :: any
+
+local function readButtonColor(object: TextButton, attributeName: string, fallback: Color3): Color3
+	local value = object:GetAttribute(attributeName)
+	return if typeof(value) == "Color3" then value else fallback
+end
+
+local function readButtonNumber(object: TextButton, attributeName: string, fallback: number): number
+	local value = object:GetAttribute(attributeName)
+	return if typeof(value) == "number" then value else fallback
+end
+
+local function cancelButtonTween(object: TextButton)
+	local tween = activeButtonTweens[object]
+	if tween then
+		tween:Cancel()
+		activeButtonTweens[object] = nil
+	end
+end
+
+local function resolveButtonVisual(object: TextButton): (Color3, Color3, number)
+	local hovered = object:GetAttribute("CursorHovered") == true
+	local pressed = object:GetAttribute("CursorPressed") == true
+	local background = readButtonColor(object, "CursorBaseBackground", object.BackgroundColor3)
+	local foreground = readButtonColor(object, "CursorBaseForeground", object.TextColor3)
+	local transparency = readButtonNumber(object, "CursorBaseTransparency", object.BackgroundTransparency)
+
+	if hovered then
+		background = readButtonColor(object, "CursorHoverBackground", background)
+		foreground = readButtonColor(object, "CursorHoverForeground", foreground)
+		transparency = readButtonNumber(object, "CursorHoverTransparency", transparency)
+	end
+	if pressed then
+		background = Theme.SurfaceActive
+	end
+
+	return background, foreground, transparency
+end
+
+local function renderButtonVisual(object: TextButton, animate: boolean)
+	cancelButtonTween(object)
+	local background, foreground, transparency = resolveButtonVisual(object)
+	if not animate or Theme.MotionFast &lt;= 0 or Theme.ReduceMotion == true or Theme.AnimationsEnabled == false then
+		object.BackgroundColor3 = background
+		object.TextColor3 = foreground
+		object.BackgroundTransparency = transparency
+		return
+	end
+
+	local tween = TweenService:Create(
+		object,
+		TweenInfo.new(Theme.MotionFast, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{
+			BackgroundColor3 = background,
+			TextColor3 = foreground,
+			BackgroundTransparency = transparency,
+		}
+	)
+	activeButtonTweens[object] = tween
+	tween:Play()
+end
+
+function Primitives.SetButtonVisual(
+	object: TextButton,
+	background: Color3,
+	foreground: Color3,
+	hoverBackground: Color3?,
+	hoverForeground: Color3?
+)
+	object:SetAttribute("CursorBaseBackground", background)
+	object:SetAttribute("CursorBaseForeground", foreground)
+	object:SetAttribute("CursorHoverBackground", hoverBackground or Theme.SurfaceHover)
+	object:SetAttribute("CursorHoverForeground", hoverForeground or Theme.Text)
+	renderButtonVisual(object, false)
+end
+
+function Primitives.SetButtonTransparency(object: TextButton, baseTransparency: number, hoverTransparency: number)
+	object:SetAttribute("CursorBaseTransparency", math.clamp(baseTransparency, 0, 1))
+	object:SetAttribute("CursorHoverTransparency", math.clamp(hoverTransparency, 0, 1))
+	renderButtonVisual(object, false)
+end
+
+function Primitives.RefreshButtonVisual(object: TextButton, animate: boolean?)
+	renderButtonVisual(object, animate == true)
+end
+
+function Primitives.Button(parent: Instance, text: string, width: number, variant: ButtonVariant?): TextButton
+	local style = variant or "Secondary"
+	local background, foreground, hover = buttonColors(style)
+	local object = make("TextButton", {
+		AutoButtonColor = false,
+		BackgroundColor3 = background,
+		BorderSizePixel = 0,
+		Size = UDim2.fromOffset(width, Theme.ControlHeight),
+		Text = text,
+		TextColor3 = foreground,
+		TextSize = 10,
+		Font = Enum.Font.GothamMedium,
+		Selectable = true,
+	}, parent)
+	Primitives.Corner(object, Theme.RadiusSmall)
+	local outline = Primitives.Stroke(object, if style == "Primary" then Theme.BorderStrong else Theme.BorderSoft)
+	outline.Transparency = if style == "Ghost" then 0.55 else 0
+	object:SetAttribute("CursorHovered", false)
+	object:SetAttribute("CursorPressed", false)
+	Primitives.SetButtonVisual(
+		object,
+		background,
+		foreground,
+		hover,
+		if style == "Primary" then Theme.AccentText else Theme.Text
+	)
+	Primitives.SetButtonTransparency(object, 0, 0)
+
+	object.MouseEnter:Connect(function()
+		if not object.Active then
+			return
+		end
+		object:SetAttribute("CursorHovered", true)
+		renderButtonVisual(object, true)
+	end)
+	object.MouseLeave:Connect(function()
+		object:SetAttribute("CursorHovered", false)
+		object:SetAttribute("CursorPressed", false)
+		renderButtonVisual(object, true)
+	end)
+	object.MouseButton1Down:Connect(function()
+		object:SetAttribute("CursorPressed", true)
+		renderButtonVisual(object, false)
+	end)
+	object.MouseButton1Up:Connect(function()
+		object:SetAttribute("CursorPressed", false)
+		renderButtonVisual(object, true)
+	end)
+	object.SelectionGained:Connect(function()
+		outline.Color = Theme.Focus
+		outline.Transparency = 0
+	end)
+	object.SelectionLost:Connect(function()
+		outline.Color = if style == "Primary" then Theme.BorderStrong else Theme.BorderSoft
+		outline.Transparency = if style == "Ghost" then 0.55 else 0
+	end)
+	object.Destroying:Connect(function()
+		cancelButtonTween(object)
+	end)
+	return object
+end
+
+function Primitives.Input(parent: Instance, placeholder: string, width: number): TextBox
+	local box = make("TextBox", {
+		BackgroundColor3 = Theme.Background,
+		BorderSizePixel = 0,
+		Size = UDim2.fromOffset(width, Theme.ControlHeight),
+		ClearTextOnFocus = false,
+		PlaceholderText = placeholder,
+		PlaceholderColor3 = Theme.TextFaint,
+		Text = "",
+		TextColor3 = Theme.Text,
+		TextSize = 10,
+		Font = Enum.Font.Gotham,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, parent)
+	Primitives.Corner(box, Theme.RadiusSmall)
+	make("UIPadding", {
+		PaddingLeft = UDim.new(0, 9),
+		PaddingRight = UDim.new(0, 9),
+	}, box)
+	local outline = Primitives.Stroke(box, Theme.BorderSoft)
+	box.Focused:Connect(function()
+		local duration = if Theme.ReduceMotion == true or Theme.AnimationsEnabled == false then 0 else Theme.MotionFast
+		if duration &lt;= 0 then
+			outline.Color = Theme.BorderStrong
+		else
+			TweenService:Create(outline, TweenInfo.new(duration), {Color = Theme.BorderStrong}):Play()
+		end
+	end)
+	box.FocusLost:Connect(function()
+		local duration = if Theme.ReduceMotion == true or Theme.AnimationsEnabled == false then 0 else Theme.MotionFast
+		if duration &lt;= 0 then
+			outline.Color = Theme.BorderSoft
+		else
+			TweenService:Create(outline, TweenInfo.new(duration), {Color = Theme.BorderSoft}):Play()
+		end
+	end)
+	return box
+end
+
+function Primitives.Icon(parent: Instance, kind: string, size: number?): Frame
+	local extent = size or 14
+	local host = make("Frame", {
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Size = UDim2.fromOffset(extent, extent),
+	}, parent)
+	local function line(rotation: number, width: number, x: number, y: number)
+		make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundColor3 = Theme.TextMuted,
+			BorderSizePixel = 0,
+			Position = UDim2.fromOffset(x, y),
+			Rotation = rotation,
+			Size = UDim2.fromOffset(width, 1),
+		}, host)
+	end
+	if kind == "Close" then
+		line(45, extent - 4, math.floor(extent / 2), math.floor(extent / 2))
+		line(-45, extent - 4, math.floor(extent / 2), math.floor(extent / 2))
+	elseif kind == "Minimize" then
+		line(0, extent - 4, math.floor(extent / 2), math.floor(extent / 2) + 2)
+	elseif kind == "More" then
+		for offset = -4, 4, 4 do
+			local dot = make("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				BackgroundColor3 = Theme.TextMuted,
+				BorderSizePixel = 0,
+				Position = UDim2.fromOffset(math.floor(extent / 2) + offset, math.floor(extent / 2)),
+				Size = UDim2.fromOffset(2, 2),
+			}, host)
+			Primitives.Corner(dot, 100)
+		end
+	elseif kind == "Settings" then
+		local center = math.floor(extent / 2)
+		local ring = make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			Position = UDim2.fromOffset(center, center),
+			Size = UDim2.fromOffset(math.max(7, extent - 5), math.max(7, extent - 5)),
+		}, host)
+		Primitives.Corner(ring, 100)
+		Primitives.Stroke(ring, Theme.TextMuted, 1)
+		local dot = make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundColor3 = Theme.TextMuted,
+			BorderSizePixel = 0,
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromOffset(3, 3),
+		}, ring)
+		Primitives.Corner(dot, 100)
+	elseif kind == "Search" then
+		local center = math.floor(extent * 0.42)
+		local lens = make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			Position = UDim2.fromOffset(center, center),
+			Size = UDim2.fromOffset(math.max(6, extent - 6), math.max(6, extent - 6)),
+		}, host)
+		Primitives.Corner(lens, 100)
+		Primitives.Stroke(lens, Theme.TextMuted, 1)
+		line(45, math.max(4, math.floor(extent * 0.38)), math.floor(extent * 0.72), math.floor(extent * 0.72))
+	elseif kind == "Refresh" then
+		local center = math.floor(extent / 2)
+		local ring = make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			Position = UDim2.fromOffset(center, center),
+			Size = UDim2.fromOffset(math.max(7, extent - 4), math.max(7, extent - 4)),
+		}, host)
+		Primitives.Corner(ring, 100)
+		Primitives.Stroke(ring, Theme.TextMuted, 1)
+		local mask = make("Frame", {
+			BackgroundColor3 = Theme.SurfaceRaised,
+			BorderSizePixel = 0,
+			Position = UDim2.fromOffset(math.floor(extent * 0.58), 0),
+			Size = UDim2.fromOffset(math.max(4, math.floor(extent * 0.42)), math.max(4, math.floor(extent * 0.32))),
+		}, host)
+		mask.BackgroundTransparency = 0
+		line(-35, 5, math.floor(extent * 0.72), math.floor(extent * 0.25))
+		line(55, 4, math.floor(extent * 0.82), math.floor(extent * 0.33))
+	end
+	return host
+end
+
+function Primitives.SetChevronExpanded(host: Frame, expanded: boolean, reduceMotion: boolean?)
+	local a = host:FindFirstChild("A")
+	local b = host:FindFirstChild("B")
+	if not a or not b or not a:IsA("Frame") or not b:IsA("Frame") then
+		return
+	end
+	local aPosition = if expanded then UDim2.fromScale(0.39, 0.48) else UDim2.fromScale(0.48, 0.36)
+	local bPosition = if expanded then UDim2.fromScale(0.61, 0.48) else UDim2.fromScale(0.48, 0.64)
+	local aRotation = 45
+	local bRotation = -45
+	local duration = if reduceMotion == true or Theme.ReduceMotion == true or Theme.AnimationsEnabled == false then 0 else Theme.MotionFast
+	if duration &lt;= 0 then
+		a.Position = aPosition
+		b.Position = bPosition
+		a.Rotation = aRotation
+		b.Rotation = bRotation
+		return
+	end
+	local info = TweenInfo.new(duration, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+	TweenService:Create(a, info, {Position = aPosition, Rotation = aRotation}):Play()
+	TweenService:Create(b, info, {Position = bPosition, Rotation = bRotation}):Play()
+end
+
+function Primitives.Chevron(parent: Instance, expanded: boolean, size: number?): Frame
+	local host = make("Frame", {
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Size = UDim2.fromOffset(size or 12, size or 12),
+	}, parent)
+	make("Frame", {
+		Name = "A",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = Theme.TextFaint,
+		BorderSizePixel = 0,
+		Position = UDim2.fromScale(0.48, 0.36),
+		Size = UDim2.fromOffset(6, 1),
+		Rotation = 45,
+	}, host)
+	make("Frame", {
+		Name = "B",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = Theme.TextFaint,
+		BorderSizePixel = 0,
+		Position = UDim2.fromScale(0.48, 0.64),
+		Size = UDim2.fromOffset(6, 1),
+		Rotation = -45,
+	}, host)
+	Primitives.SetChevronExpanded(host, expanded, true)
+	return host
+end
+
+function Primitives.Eye(parent: Instance, visible: boolean, size: number?): Frame
+	local extent = size or 14
+	local host = make("Frame", {
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Size = UDim2.fromOffset(extent, extent),
+	}, parent)
+	local ring = make("Frame", {
+		Name = "Ring",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(extent - 3, math.max(6, extent - 7)),
+	}, host)
+	Primitives.Corner(ring, 100)
+	Primitives.Stroke(ring, if visible then Theme.TextMuted else Theme.TextFaint, 1)
+	local pupil = make("Frame", {
+		Name = "Pupil",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = if visible then Theme.TextMuted else Theme.TextFaint,
+		BorderSizePixel = 0,
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(3, 3),
+		Visible = visible,
+	}, ring)
+	Primitives.Corner(pupil, 100)
+	if not visible then
+		make("Frame", {
+			Name = "Slash",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundColor3 = Theme.TextFaint,
+			BorderSizePixel = 0,
+			Position = UDim2.fromScale(0.5, 0.5),
+			Rotation = -35,
+			Size = UDim2.fromOffset(extent - 1, 1),
+		}, host)
+	end
+	return host
+end
+
+function Primitives.SetCanvasGroupVisible(group: CanvasGroup, visible: boolean, reduceMotion: boolean?)
+	local motionDisabled = reduceMotion == true or Theme.ReduceMotion == true or Theme.AnimationsEnabled == false
+	local duration = if motionDisabled then 0 else Theme.MotionNormal
+
+	local rawToken = group:GetAttribute("CursorVisibilityToken")
+	local token = (if typeof(rawToken) == "number" then rawToken else 0) + 1
+	group:SetAttribute("CursorVisibilityToken", token)
+	group:SetAttribute("CursorTargetVisible", visible)
+	group.Interactable = visible
+
+	if visible then
+		group.Visible = true
+		if duration &lt;= 0 then
+			group.GroupTransparency = 0
+			return
+		end
+		group.GroupTransparency = math.min(group.GroupTransparency, 0.96)
+		TweenService:Create(group, TweenInfo.new(duration, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			GroupTransparency = 0,
+		}):Play()
+		return
+	end
+
+	if duration &lt;= 0 then
+		group.GroupTransparency = 1
+		group.Visible = false
+		return
+	end
+
+	TweenService:Create(group, TweenInfo.new(duration * 0.75, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		GroupTransparency = 1,
+	}):Play()
+	task.delay(duration * 0.8, function()
+		if not group.Parent then
+			return
+		end
+		if group:GetAttribute("CursorVisibilityToken") ~= token then
+			return
+		end
+		if group:GetAttribute("CursorTargetVisible") == false then
+			group.Visible = false
+		end
+	end)
+end
+
+function Primitives.AttachTooltip(gui: GuiObject, screenGui: ScreenGui, text: string, reduceMotion: () -&gt; boolean)
+	local tooltip = make("CanvasGroup", {
+		Name = "Tooltip",
+		BackgroundColor3 = Theme.Overlay,
+		BorderSizePixel = 0,
+		GroupTransparency = 1,
+		Visible = false,
+		Interactable = false,
+		Size = UDim2.fromOffset(math.max(64, #text * 6 + 18), 26),
+		ZIndex = 500,
+	}, screenGui)
+	tooltip:SetAttribute("CursorTooltip", true)
+	Primitives.Corner(tooltip, Theme.RadiusSmall)
+	Primitives.Stroke(tooltip, Theme.BorderSoft)
+
+	local label = Primitives.Label(tooltip, text, 9, Theme.TextMuted, false)
+	label.Position = UDim2.fromOffset(8, 0)
+	label.Size = UDim2.new(1, -16, 1, 0)
+	label.ZIndex = 501
+
+	local hoverToken = 0
+	local hovering = false
+	local watchConnection: RBXScriptConnection? = nil
+	local destroyed = false
+
+	local function disconnectWatch()
+		if watchConnection then
+			watchConnection:Disconnect()
+			watchConnection = nil
+		end
+	end
+
+	local function isEffectivelyVisible(): boolean
+		if destroyed or not screenGui.Enabled or not gui:IsDescendantOf(screenGui) then
+			return false
+		end
+
+		local current: Instance? = gui
+		while current and current ~= screenGui do
+			if current:IsA("GuiObject") and not current.Visible then
+				return false
+			end
+			if current:IsA("CanvasGroup") and current.GroupTransparency &gt;= 0.995 then
+				return false
+			end
+			current = current.Parent
+		end
+
+		return current == screenGui and gui.AbsoluteSize.X &gt; 0 and gui.AbsoluteSize.Y &gt; 0
+	end
+
+	local function isMouseInside(): boolean
+		local mouse = UserInputService:GetMouseLocation()
+		local position = gui.AbsolutePosition
+		local size = gui.AbsoluteSize
+		return mouse.X &gt;= position.X
+			and mouse.X &lt;= position.X + size.X
+			and mouse.Y &gt;= position.Y
+			and mouse.Y &lt;= position.Y + size.Y
+	end
+
+	local function hideTooltip()
+		disconnectWatch()
+		if tooltip.Parent then
+			-- Tooltips are transient; hide immediately so stale hints never linger.
+			Primitives.SetCanvasGroupVisible(tooltip, false, true)
+		end
+	end
+
+	local function startWatch()
+		disconnectWatch()
+		watchConnection = RunService.Heartbeat:Connect(function()
+			if not hovering or not isEffectivelyVisible() or not isMouseInside() then
+				hovering = false
+				hoverToken += 1
+				hideTooltip()
+			end
+		end)
+	end
+
+	gui.MouseEnter:Connect(function()
+		hovering = true
+		hoverToken += 1
+		local token = hoverToken
+
+		task.delay(0.38, function()
+			if destroyed or token ~= hoverToken or not hovering or not isEffectivelyVisible() or not isMouseInside() then
+				return
+			end
+
+			-- Only one tooltip may be visible at a time.
+			for _, child in screenGui:GetChildren() do
+				if child ~= tooltip and child:IsA("CanvasGroup") and child:GetAttribute("CursorTooltip") == true then
+					Primitives.SetCanvasGroupVisible(child, false, true)
+				end
+			end
+
+			local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
+			local x = math.clamp(
+				gui.AbsolutePosition.X + gui.AbsoluteSize.X * 0.5 - tooltip.AbsoluteSize.X * 0.5,
+				6,
+				math.max(6, viewport.X - tooltip.AbsoluteSize.X - 6)
+			)
+			local y = gui.AbsolutePosition.Y + gui.AbsoluteSize.Y + 6
+			if y + tooltip.AbsoluteSize.Y &gt; viewport.Y - 6 then
+				y = gui.AbsolutePosition.Y - tooltip.AbsoluteSize.Y - 6
+			end
+
+			tooltip.Position = UDim2.fromOffset(x, math.max(6, y))
+			Primitives.SetCanvasGroupVisible(tooltip, true, reduceMotion())
+			startWatch()
+		end)
+	end)
+
+	gui.MouseLeave:Connect(function()
+		hovering = false
+		hoverToken += 1
+		hideTooltip()
+	end)
+
+	gui.Destroying:Connect(function()
+		destroyed = true
+		hovering = false
+		hoverToken += 1
+		disconnectWatch()
+		if tooltip.Parent then
+			tooltip:Destroy()
+		end
+	end)
+end
+
+
+function Primitives.Divider(parent: Instance, vertical: boolean?): Frame
+	return make("Frame", {
+		BackgroundColor3 = Theme.BorderSoft,
+		BackgroundTransparency = 0.22,
+		BorderSizePixel = 0,
+		Size = if vertical then UDim2.new(0, 1, 1, 0) else UDim2.new(1, 0, 0, 1),
+	}, parent)
+end
+
+function Primitives.Card(parent: Instance, height: number?): Frame
+	local card = make("Frame", {
+		BackgroundColor3 = Theme.SurfaceRaised,
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, 0, 0, height or 96),
+		ClipsDescendants = true,
+	}, parent)
+	Primitives.Corner(card, Theme.RadiusLarge)
+	Primitives.Stroke(card, Theme.BorderSoft)
+	return card
+end
+
+function Primitives.Badge(parent: Instance, text: string, tone: string?): TextLabel
+	local color = Theme.TextMuted
+	local background = Theme.SurfaceActive
+	if tone == "success" then
+		color = Theme.Success
+		background = Theme.Success:Lerp(Theme.Surface, 0.82)
+	elseif tone == "warning" then
+		color = Theme.Warning
+		background = Theme.Warning:Lerp(Theme.Surface, 0.84)
+	elseif tone == "danger" then
+		color = Theme.Danger
+		background = Theme.Danger:Lerp(Theme.Surface, 0.84)
+	elseif tone == "accent" then
+		color = Theme.Accent
+		background = Theme.AccentFaint
+	end
+	local badge = make("TextLabel", {
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundColor3 = background,
+		BorderSizePixel = 0,
+		Size = UDim2.fromOffset(0, 20),
+		Text = text,
+		TextColor3 = color,
+		TextSize = 8,
+		Font = Enum.Font.GothamMedium,
+	}, parent)
+	Primitives.Corner(badge, Theme.RadiusSmall)
+	make("UIPadding", {
+		PaddingLeft = UDim.new(0, 7),
+		PaddingRight = UDim.new(0, 7),
+	}, badge)
+	return badge
+end
+
+function Primitives.SectionHeader(parent: Instance, titleText: string, descriptionText: string?): Frame
+	local height = if descriptionText and descriptionText ~= "" then 42 else 24
+	local host = make("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, height),
+	}, parent)
+	local title = Primitives.Label(host, titleText, 11, Theme.Text, true)
+	title.Size = UDim2.new(1, 0, 0, 20)
+	if descriptionText and descriptionText ~= "" then
+		local description = Primitives.Label(host, descriptionText, 8, Theme.TextFaint, false)
+		description.Position = UDim2.fromOffset(0, 21)
+		description.Size = UDim2.new(1, 0, 0, 17)
+		description.TextTruncate = Enum.TextTruncate.AtEnd
+	end
+	return host
+end
+
+function Primitives.SearchInput(parent: Instance, placeholder: string, width: number): (Frame, TextBox)
+	local host = make("Frame", {
+		BackgroundColor3 = Theme.Background,
+		BorderSizePixel = 0,
+		Size = UDim2.fromOffset(width, 32),
+	}, parent)
+	Primitives.Corner(host, Theme.RadiusMedium)
+	local outline = Primitives.Stroke(host, Theme.BorderSoft)
+	local icon = Primitives.Icon(host, "Search", 13)
+	icon.Position = UDim2.fromOffset(10, 9)
+	local input = make("TextBox", {
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ClearTextOnFocus = false,
+		PlaceholderText = placeholder,
+		PlaceholderColor3 = Theme.TextFaint,
+		Text = "",
+		TextColor3 = Theme.Text,
+		TextSize = 10,
+		Font = Enum.Font.Gotham,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Position = UDim2.fromOffset(31, 0),
+		Size = UDim2.new(1, -39, 1, 0),
+	}, host)
+	input.Focused:Connect(function()
+		outline.Color = Theme.Focus
+	end)
+	input.FocusLost:Connect(function()
+		outline.Color = Theme.BorderSoft
+	end)
+	return host, input
+end
+
+function Primitives.EmptyState(parent: Instance, titleText: string, descriptionText: string): Frame
+	local host = make("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+	}, parent)
+	local marker = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = Theme.SurfaceRaised,
+		BorderSizePixel = 0,
+		Position = UDim2.new(0.5, 0, 0.5, -22),
+		Size = UDim2.fromOffset(28, 28),
+	}, host)
+	Primitives.Corner(marker, 14)
+	Primitives.Stroke(marker, Theme.BorderSoft)
+	local dot = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = Theme.TextFaint,
+		BorderSizePixel = 0,
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(4, 4),
+	}, marker)
+	Primitives.Corner(dot, 2)
+	local title = Primitives.Label(host, titleText, 11, Theme.Text, true)
+	title.AnchorPoint = Vector2.new(0.5, 0.5)
+	title.Position = UDim2.new(0.5, 0, 0.5, 2)
+	title.Size = UDim2.new(1, -40, 0, 20)
+	title.TextXAlignment = Enum.TextXAlignment.Center
+	local description = Primitives.Label(host, descriptionText, 8, Theme.TextFaint, false)
+	description.AnchorPoint = Vector2.new(0.5, 0)
+	description.Position = UDim2.new(0.5, 0, 0.5, 15)
+	description.Size = UDim2.new(1, -50, 0, 36)
+	description.TextWrapped = true
+	description.TextXAlignment = Enum.TextXAlignment.Center
+	description.TextYAlignment = Enum.TextYAlignment.Top
+	return host
+end
+
+function Primitives.SetButtonEnabled(object: TextButton, enabled: boolean)
+	object.Active = enabled
+	object.Selectable = enabled
+	object:SetAttribute("CursorDisabled", not enabled)
+	if enabled then
+		object.TextTransparency = 0
+		Primitives.RefreshButtonVisual(object, false)
+	else
+		object.BackgroundColor3 = Theme.SurfaceDisabled
+		object.TextColor3 = Theme.TextDisabled
+		object.TextTransparency = 0.05
+	end
+end
+
+return table.freeze(Primitives)
+</ProtectedString>
+          <string name="ScriptGuid">{7987DF7E-AFFE-44CF-8EEF-9610EBDB4683}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">Primitives</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBXA413F18DB5CA4302ADC817857D8CC68A">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+local UserInputService = game:GetService("UserInputService")
+
+local Root = script.Parent.Parent
+local Theme = require(Root.UI.Theme)
+local Primitives = require(Root.UI.Primitives)
+
+local CursorShell = {}
+CursorShell.__index = CursorShell
+
+export type CursorShell = typeof(setmetatable({
+	_screenGui = nil :: ScreenGui?,
+	_window = nil :: Frame?,
+	_settings = nil :: any,
+	_themeService = nil :: any,
+	_commands = nil :: any,
+	_shortcuts = nil :: any,
+	_notifications = nil :: any,
+	_settingsButton = nil :: TextButton?,
+	_settingsPopover = nil :: CanvasGroup?,
+	_themeValue = nil :: TextLabel?,
+	_toggleButtons = {} :: {[string]: TextButton},
+	_connections = {} :: {RBXScriptConnection},
+	_shortcutCleanup = {} :: {() -&gt; ()},
+}, CursorShell))
+
+local function make(className: string, properties: {[string]: any}, parent: Instance?): any
+	local object = Instance.new(className)
+	for key, value in properties do
+		(object :: any)[key] = value
+	end
+	if parent then
+		object.Parent = parent
+	end
+	return object
+end
+
+local function bind(self: CursorShell, connection: RBXScriptConnection)
+	table.insert(self._connections, connection)
+end
+
+local function addPadding(parent: Instance, left: number, right: number, top: number, bottom: number)
+	make("UIPadding", {
+		PaddingLeft = UDim.new(0, left),
+		PaddingRight = UDim.new(0, right),
+		PaddingTop = UDim.new(0, top),
+		PaddingBottom = UDim.new(0, bottom),
+	}, parent)
+end
+
+local function setGuiZIndex(root: Instance, zIndex: number)
+	if root:IsA("GuiObject") then
+		root.ZIndex = zIndex
+	end
+	for _, descendant in root:GetDescendants() do
+		if descendant:IsA("GuiObject") then
+			descendant.ZIndex = zIndex
+		end
+	end
+end
+
+function CursorShell.new(
+	screenGui: ScreenGui,
+	window: Frame,
+	settingsService: any,
+	themeService: any,
+	commandService: any,
+	shortcutService: any,
+	notificationService: any
+): CursorShell
+	local self = setmetatable({
+		_screenGui = screenGui,
+		_window = window,
+		_settings = settingsService,
+		_themeService = themeService,
+		_commands = commandService,
+		_shortcuts = shortcutService,
+		_notifications = notificationService,
+		_settingsButton = nil,
+		_settingsPopover = nil,
+		_themeValue = nil,
+		_toggleButtons = {},
+		_connections = {},
+		_shortcutCleanup = {},
+	}, CursorShell)
+
+	self:_buildSettingsPopover()
+	self:_syncShortcuts()
+
+	bind(self, commandService:GetChangedSignal():Connect(function()
+		self:_syncShortcuts()
+	end))
+	bind(self, settingsService:GetChangedSignal():Connect(function()
+		self:_refreshSettingsVisuals()
+	end))
+	bind(self, UserInputService.InputBegan:Connect(function(input)
+		if input.UserInputType ~= Enum.UserInputType.MouseButton1 then
+			return
+		end
+		local popover = self._settingsPopover
+		local button = self._settingsButton
+		if not popover or not popover.Visible or not button then
+			return
+		end
+		local point = UserInputService:GetMouseLocation()
+		local popoverMin = popover.AbsolutePosition
+		local popoverMax = popoverMin + popover.AbsoluteSize
+		local buttonMin = button.AbsolutePosition
+		local buttonMax = buttonMin + button.AbsoluteSize
+		local insidePopover = point.X &gt;= popoverMin.X and point.X &lt;= popoverMax.X and point.Y &gt;= popoverMin.Y and point.Y &lt;= popoverMax.Y
+		local insideButton = point.X &gt;= buttonMin.X and point.X &lt;= buttonMax.X and point.Y &gt;= buttonMin.Y and point.Y &lt;= buttonMax.Y
+		if not insidePopover and not insideButton then
+			self:SetSettingsVisible(false)
+		end
+	end))
+
+	self:_refreshSettingsVisuals()
+	return self
+end
+
+function CursorShell:_buildSettingsPopover()
+	local window = self._window
+	local screenGui = self._screenGui
+	if not window or not screenGui then
+		return
+	end
+
+	local titleBar = window:FindFirstChild("TitleBar", true)
+	if not titleBar or not titleBar:IsA("GuiObject") then
+		return
+	end
+
+	local button = Primitives.Button(titleBar, "", 26, "Ghost")
+	button.Name = "SettingsButton"
+	button.AnchorPoint = Vector2.new(1, 0.5)
+	button.Position = UDim2.new(1, -62, 0.5, 0)
+	button.Size = UDim2.fromOffset(26, 24)
+	button.BackgroundTransparency = 1
+	button.ZIndex = 75
+	Primitives.SetButtonTransparency(button, 1, 0)
+	local icon = Primitives.Icon(button, "Settings", 13)
+	icon.AnchorPoint = Vector2.new(0.5, 0.5)
+	icon.Position = UDim2.fromScale(0.5, 0.5)
+	setGuiZIndex(icon, 76)
+	Primitives.AttachTooltip(button, screenGui, "Settings", function()
+		return Theme.ReduceMotion == true
+	end)
+	self._settingsButton = button
+
+	local popover = make("CanvasGroup", {
+		Name = "SettingsPopover",
+		AnchorPoint = Vector2.new(1, 0),
+		BackgroundColor3 = Theme.SurfaceRaised,
+		BorderSizePixel = 0,
+		GroupTransparency = 1,
+		Interactable = false,
+		Visible = false,
+		Position = UDim2.new(1, -8, 0, 30),
+		Size = UDim2.fromOffset(232, 238),
+		ZIndex = 620,
+	}, window)
+	Primitives.Corner(popover, Theme.RadiusMedium)
+	Primitives.Stroke(popover, Theme.BorderStrong)
+	self._settingsPopover = popover
+
+	local heading = Primitives.Label(popover, "Settings", 10, Theme.Text, true)
+	heading.Position = UDim2.fromOffset(12, 8)
+	heading.Size = UDim2.new(1, -24, 0, 18)
+	heading.ZIndex = 621
+
+	local productName = tostring(self._settings:Get("Product.Name") or "Cursor V2")
+	local subtitleText = if string.find(productName, "DataStore", 1, true) then "DataStore preferences"
+		elseif string.find(productName, "Animator", 1, true) then "Animator preferences"
+		else "Easy preferences"
+	local subtitle = Primitives.Label(popover, subtitleText, 7, Theme.TextFaint, false)
+	subtitle.Position = UDim2.fromOffset(12, 24)
+	subtitle.Size = UDim2.new(1, -24, 0, 14)
+	subtitle.ZIndex = 621
+
+	local divider = Primitives.Divider(popover, false)
+	divider.Position = UDim2.fromOffset(0, 44)
+	divider.ZIndex = 621
+
+	local themeRow = make("Frame", {
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(10, 52),
+		Size = UDim2.new(1, -20, 0, 32),
+		ZIndex = 621,
+	}, popover)
+	local themeLabel = Primitives.Label(themeRow, "Theme", 8, Theme.TextMuted, false)
+	themeLabel.Size = UDim2.new(0, 76, 1, 0)
+	themeLabel.ZIndex = 622
+	local previousTheme = Primitives.Button(themeRow, "‹", 24, "Ghost")
+	previousTheme.AnchorPoint = Vector2.new(1, 0.5)
+	previousTheme.Position = UDim2.new(1, -118, 0.5, 0)
+	previousTheme.Size = UDim2.fromOffset(24, 24)
+	previousTheme.TextSize = 14
+	previousTheme.ZIndex = 622
+	local themeValue = Primitives.Label(themeRow, "Obsidian", 8, Theme.Text, true)
+	themeValue.AnchorPoint = Vector2.new(1, 0.5)
+	themeValue.Position = UDim2.new(1, -28, 0.5, 0)
+	themeValue.Size = UDim2.fromOffset(86, 24)
+	themeValue.TextXAlignment = Enum.TextXAlignment.Center
+	themeValue.ZIndex = 622
+	local nextTheme = Primitives.Button(themeRow, "›", 24, "Ghost")
+	nextTheme.AnchorPoint = Vector2.new(1, 0.5)
+	nextTheme.Position = UDim2.new(1, 0, 0.5, 0)
+	nextTheme.Size = UDim2.fromOffset(24, 24)
+	nextTheme.TextSize = 14
+	nextTheme.ZIndex = 622
+	self._themeValue = themeValue
+
+	local rowY = 88
+	local function makeToggleRow(path: string, labelText: string)
+		local row = make("Frame", {
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(10, rowY),
+			Size = UDim2.new(1, -20, 0, 30),
+			ZIndex = 621,
+		}, popover)
+		rowY += 31
+		local label = Primitives.Label(row, labelText, 8, Theme.TextMuted, false)
+		label.Size = UDim2.new(1, -64, 1, 0)
+		label.ZIndex = 622
+		local toggle = Primitives.Button(row, "Off", 52, "Secondary")
+		toggle.AnchorPoint = Vector2.new(1, 0.5)
+		toggle.Position = UDim2.new(1, 0, 0.5, 0)
+		toggle.Size = UDim2.fromOffset(52, 24)
+		toggle.ZIndex = 622
+		self._toggleButtons[path] = toggle
+		bind(self, toggle.MouseButton1Click:Connect(function()
+			local current = self._settings:Get(path) == true
+			self._settings:Set(path, not current)
+			if path == "Appearance.ReduceMotion" then
+				Theme.ReduceMotion = not current
+			elseif path == "Appearance.Animations" then
+				Theme.AnimationsEnabled = not current
+			end
+			self:_refreshSettingsVisuals()
+		end))
+	end
+
+	makeToggleRow("Appearance.ReduceMotion", "Reduce motion")
+	makeToggleRow("Appearance.Animations", "UI animations")
+	makeToggleRow("Behavior.ShowTooltips", "Tooltips")
+	if string.find(productName, "DataStore", 1, true) then
+		makeToggleRow("Behavior.ConfirmDestructiveActions", "Confirm deletes")
+	else
+		makeToggleRow("Behavior.RestoreSession", "Restore session")
+	end
+
+	local reset = Primitives.Button(popover, "Reset preferences", 118, "Ghost")
+	reset.AnchorPoint = Vector2.new(0, 1)
+	reset.Position = UDim2.new(0, 10, 1, -8)
+	reset.Size = UDim2.fromOffset(118, 24)
+	reset.TextXAlignment = Enum.TextXAlignment.Left
+	reset.ZIndex = 622
+	addPadding(reset, 5, 5, 0, 0)
+	bind(self, reset.MouseButton1Click:Connect(function()
+		self._settings:Reset("Appearance")
+		self._settings:Reset("Behavior")
+		self._themeService:SetPreset("Obsidian", screenGui)
+		Theme.ReduceMotion = self._settings:Get("Appearance.ReduceMotion") == true
+		Theme.AnimationsEnabled = self._settings:Get("Appearance.Animations") ~= false
+		self:_refreshSettingsVisuals()
+		if self._notifications then
+			self._notifications:Show("Preferences reset")
+		end
+	end))
+
+	local function cycleTheme(direction: number)
+		local names = self._themeService:GetPresetNames()
+		if #names == 0 then
+			return
+		end
+		local current = self._themeService:GetActivePreset()
+		local index = table.find(names, current) or 1
+		local nextIndex = ((index - 1 + direction) % #names) + 1
+		self._themeService:SetPreset(names[nextIndex], screenGui)
+		self:_refreshSettingsVisuals()
+	end
+	bind(self, previousTheme.MouseButton1Click:Connect(function() cycleTheme(-1) end))
+	bind(self, nextTheme.MouseButton1Click:Connect(function() cycleTheme(1) end))
+	bind(self, button.MouseButton1Click:Connect(function()
+		self:SetSettingsVisible(not popover.Visible)
+	end))
+end
+
+function CursorShell:_refreshSettingsVisuals()
+	local themeValue = self._themeValue
+	if themeValue then
+		themeValue.Text = self._themeService:GetActivePreset()
+	end
+	for path, button in self._toggleButtons do
+		local enabled = self._settings:Get(path) == true
+		button.Text = if enabled then "On" else "Off"
+		Primitives.SetButtonVisual(
+			button,
+			if enabled then Theme.AccentSoft else Theme.Background,
+			if enabled then Theme.Text else Theme.TextMuted,
+			Theme.SurfaceHover,
+			Theme.Text
+		)
+	end
+end
+
+function CursorShell:_syncShortcuts()
+	for _, cleanup in self._shortcutCleanup do
+		cleanup()
+	end
+	table.clear(self._shortcutCleanup)
+
+	local settingsCleanup = self._shortcuts:Register({
+		id = "cursor.settings",
+		chord = "Ctrl+,",
+		callback = function()
+			self:SetSettingsVisible(not (self._settingsPopover and self._settingsPopover.Visible or false))
+		end,
+	})
+	table.insert(self._shortcutCleanup, settingsCleanup)
+
+	for _, command in self._commands:GetAll() do
+		local chord = command.shortcut
+		if chord and chord ~= "" then
+			local commandId = command.id
+			local cleanup = self._shortcuts:Register({
+				id = "command." .. commandId,
+				chord = chord,
+				callback = function()
+					local ok, err = self._commands:Execute(commandId)
+					if not ok and self._notifications then
+						self._notifications:Show(err or "Action failed", "danger")
+					end
+				end,
+				isEnabled = command.isEnabled,
+			})
+			table.insert(self._shortcutCleanup, cleanup)
+		end
+	end
+end
+
+function CursorShell:SetSettingsVisible(visible: boolean)
+	local popover = self._settingsPopover
+	if not popover then
+		return
+	end
+	if visible then
+		self:_refreshSettingsVisuals()
+	end
+	Primitives.SetCanvasGroupVisible(popover, visible, false)
+end
+
+function CursorShell:ToggleSettings()
+	self:SetSettingsVisible(not (self._settingsPopover and self._settingsPopover.Visible or false))
+end
+
+function CursorShell:Destroy()
+	for _, connection in self._connections do
+		connection:Disconnect()
+	end
+	table.clear(self._connections)
+	for _, cleanup in self._shortcutCleanup do
+		cleanup()
+	end
+	table.clear(self._shortcutCleanup)
+	local popover = self._settingsPopover
+	self._settingsPopover = nil
+	if popover then
+		popover:Destroy()
+	end
+	local button = self._settingsButton
+	self._settingsButton = nil
+	if button then
+		button:Destroy()
+	end
+end
+
+return CursorShell
+</ProtectedString>
+          <string name="ScriptGuid">{623584B1-6C9A-471C-8503-5850F51DF163}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">CursorShell</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBXFB3C23E406F04BBCA03AC4650CEC537D">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+
+local Root = script.Parent.Parent
+local Theme = require(Root.UI.Theme)
+local Primitives = require(Root.UI.Primitives)
+
+local PLUGIN_ICON = "rbxassetid://132318313203288"
+local GUI_NAME = "CursorBridgeV2UI"
+local DEFAULT_SIZE = Vector2.new(548, 356)
+local MIN_SIZE = Vector2.new(470, 312)
+local MAX_SIZE = Vector2.new(760, 510)
+local TITLE_HEIGHT = 30
+local FOOTER_HEIGHT = 28
+local SIDEBAR_WIDTH = 208
+
+local BridgeWindow = {}
+BridgeWindow.__index = BridgeWindow
+
+local function make(className: string, properties: {[string]: any}, parent: Instance?): any
+	local object = Instance.new(className)
+	for key, value in properties do
+		(object :: any)[key] = value
+	end
+	if parent then
+		object.Parent = parent
+	end
+	return object
+end
+
+local function bind(self: any, connection: RBXScriptConnection)
+	table.insert(self._connections, connection)
+end
+
+local function addPadding(parent: Instance, left: number, right: number, top: number, bottom: number)
+	make("UIPadding", {
+		PaddingLeft = UDim.new(0, left),
+		PaddingRight = UDim.new(0, right),
+		PaddingTop = UDim.new(0, top),
+		PaddingBottom = UDim.new(0, bottom),
+	}, parent)
+end
+
+local function divider(parent: Instance, y: number)
+	make("Frame", {
+		BackgroundColor3 = Theme.BorderSoft,
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 10, 0, y),
+		Size = UDim2.new(1, -20, 0, 1),
+	}, parent)
+end
+
+local function note(parent: Instance, value: string, y: number, color: Color3?): TextLabel
+	local label = Primitives.Label(parent, value, 9, color or Theme.TextMuted, false)
+	label.Position = UDim2.new(0, 12, 0, y)
+	label.Size = UDim2.new(1, -24, 0, 34)
+	label.TextWrapped = true
+	label.TextYAlignment = Enum.TextYAlignment.Top
+	return label
+end
+
+function BridgeWindow.new(_pluginObject: Plugin)
+	local previous = CoreGui:FindFirstChild(GUI_NAME)
+	if previous then
+		previous:Destroy()
+	end
+
+	local screenGui = make("ScreenGui", {
+		Name = GUI_NAME,
+		IgnoreGuiInset = true,
+		ResetOnSpawn = false,
+		DisplayOrder = 425,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+		Enabled = false,
+	}, CoreGui)
+
+	local window = make("Frame", {
+		Name = "Window",
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Position = UDim2.fromOffset(78, 82),
+		Size = UDim2.fromOffset(DEFAULT_SIZE.X, DEFAULT_SIZE.Y),
+		ClipsDescendants = false,
+	}, screenGui)
+
+	local chrome = make("Frame", {
+		Name = "WindowChrome",
+		BackgroundColor3 = Theme.Surface,
+		BorderSizePixel = 0,
+		ClipsDescendants = true,
+		Size = UDim2.fromScale(1, 1),
+	}, window)
+	Primitives.Corner(chrome, Theme.RadiusLarge)
+	Primitives.Stroke(chrome, Theme.Border)
+
+	local titleBar = make("Frame", {
+		Name = "TitleBar",
+		Active = true,
+		BackgroundColor3 = Theme.SurfaceRaised,
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, 0, 0, TITLE_HEIGHT),
+	}, chrome)
+	Primitives.Corner(titleBar, Theme.RadiusLarge)
+	make("Frame", {
+		BackgroundColor3 = Theme.SurfaceRaised,
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 0, 1, -10),
+		Size = UDim2.new(1, 0, 0, 10),
+	}, titleBar)
+	local titleDivider = Primitives.Divider(titleBar, false)
+	titleDivider.Position = UDim2.new(0, 0, 1, -1)
+
+	make("ImageLabel", {
+		Name = "CursorIcon",
+		BackgroundTransparency = 1,
+		Image = PLUGIN_ICON,
+		Position = UDim2.fromOffset(9, 7),
+		Size = UDim2.fromOffset(16, 16),
+	}, titleBar)
+	local title = Primitives.Label(titleBar, "Cursor Bridge V2", 10, Theme.Text, true)
+	title.Position = UDim2.fromOffset(32, 0)
+	title.Size = UDim2.new(1, -162, 1, 0)
+	title.TextTruncate = Enum.TextTruncate.AtEnd
+
+	local minimize = Primitives.Button(titleBar, "", 26, "Ghost")
+	minimize.Name = "MinimizeButton"
+	minimize.Position = UDim2.new(1, -91, 0, 3)
+	minimize.Size = UDim2.fromOffset(26, 24)
+	minimize.BackgroundTransparency = 1
+	local minimizeIcon = Primitives.Icon(minimize, "Minimize", 12)
+	minimizeIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+	minimizeIcon.Position = UDim2.fromScale(0.5, 0.5)
+
+	local close = Primitives.Button(titleBar, "", 26, "Ghost")
+	close.Name = "CloseButton"
+	close.Position = UDim2.new(1, -28, 0, 3)
+	close.Size = UDim2.fromOffset(26, 24)
+	close.BackgroundTransparency = 1
+	local closeIcon = Primitives.Icon(close, "Close", 12)
+	closeIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+	closeIcon.Position = UDim2.fromScale(0.5, 0.5)
+
+	local body = make("Frame", {
+		Name = "Body",
+		BackgroundColor3 = Theme.Surface,
+		BorderSizePixel = 0,
+		Position = UDim2.fromOffset(0, TITLE_HEIGHT),
+		Size = UDim2.new(1, 0, 1, -TITLE_HEIGHT),
+		ClipsDescendants = true,
+	}, chrome)
+
+	local heading = Primitives.Label(body, "STUDIO CONNECTION", 9, Theme.TextMuted, true)
+	heading.Position = UDim2.fromOffset(13, 8)
+	heading.Size = UDim2.new(1, -160, 0, 20)
+	local subtitle = Primitives.Label(body, "Secure local synchronization", 8, Theme.TextFaint, false)
+	subtitle.Position = UDim2.fromOffset(13, 26)
+	subtitle.Size = UDim2.new(1, -160, 0, 16)
+
+	local marker = Primitives.Badge(body, "LOCAL ONLY", "neutral")
+	marker.AnchorPoint = Vector2.new(1, 0)
+	marker.Position = UDim2.new(1, -13, 0, 14)
+	marker.Size = UDim2.fromOffset(86, 22)
+
+	local sidebar = make("Frame", {
+		Name = "ConnectionPanel",
+		BackgroundColor3 = Theme.SurfaceRaised,
+		BorderSizePixel = 0,
+		Position = UDim2.fromOffset(12, 54),
+		Size = UDim2.new(0, SIDEBAR_WIDTH, 1, -(54 + FOOTER_HEIGHT + 12)),
+		ClipsDescendants = true,
+	}, body)
+	Primitives.Corner(sidebar, Theme.RadiusMedium)
+	Primitives.Stroke(sidebar, Theme.BorderSoft)
+
+	local pairingTitle = Primitives.Label(sidebar, "PAIR WITH DESKTOP", 9, Theme.Text, true)
+	pairingTitle.Position = UDim2.fromOffset(12, 11)
+	pairingTitle.Size = UDim2.new(1, -24, 0, 22)
+	note(sidebar, "Enter the code from Cursor Bridge for Windows.", 38)
+
+	local codeBox = Primitives.Input(sidebar, "000000", SIDEBAR_WIDTH - 24)
+	codeBox.Name = "PairingCode"
+	codeBox.Position = UDim2.fromOffset(12, 83)
+	codeBox.Size = UDim2.new(1, -24, 0, 32)
+	codeBox.Font = Enum.Font.Code
+	codeBox.TextSize = 16
+	codeBox.TextXAlignment = Enum.TextXAlignment.Center
+	codeBox.Text = ""
+
+	local connect = Primitives.Button(sidebar, "Connect", SIDEBAR_WIDTH - 24, "Primary")
+	connect.Name = "ConnectButton"
+	connect.Position = UDim2.fromOffset(12, 125)
+	connect.Size = UDim2.new(1, -24, 0, 30)
+
+	local disconnect = Primitives.Button(sidebar, "Disconnect", SIDEBAR_WIDTH - 24, "Danger")
+	disconnect.Name = "DisconnectButton"
+	disconnect.Position = connect.Position
+	disconnect.Size = connect.Size
+	disconnect.Visible = false
+
+	divider(sidebar, 168)
+	local hostTitle = Primitives.Label(sidebar, "ENDPOINT", 8, Theme.TextFaint, true)
+	hostTitle.Position = UDim2.fromOffset(12, 176)
+	hostTitle.Size = UDim2.new(1, -24, 0, 18)
+	local hostValue = Primitives.Label(sidebar, "127.0.0.1:38471", 10, Theme.TextMuted, false)
+	hostValue.Position = UDim2.fromOffset(12, 196)
+	hostValue.Size = UDim2.new(1, -24, 0, 20)
+
+	local details = make("Frame", {
+		Name = "SessionPanel",
+		BackgroundColor3 = Theme.SurfaceRaised,
+		BorderSizePixel = 0,
+		Position = UDim2.fromOffset(SIDEBAR_WIDTH + 23, 54),
+		Size = UDim2.new(1, -(SIDEBAR_WIDTH + 35), 1, -(54 + FOOTER_HEIGHT + 12)),
+		ClipsDescendants = true,
+	}, body)
+	Primitives.Corner(details, Theme.RadiusMedium)
+	Primitives.Stroke(details, Theme.BorderSoft)
+
+	local statusTitle = Primitives.Label(details, "SESSION STATUS", 9, Theme.Text, true)
+	statusTitle.Position = UDim2.fromOffset(12, 11)
+	statusTitle.Size = UDim2.new(1, -100, 0, 22)
+	local statusBadge = Primitives.Badge(details, "IDLE", "neutral")
+	statusBadge.AnchorPoint = Vector2.new(1, 0)
+	statusBadge.Position = UDim2.new(1, -11, 0, 11)
+	statusBadge.Size = UDim2.fromOffset(48, 20)
+
+	local status = Primitives.Label(details, "Disconnected", 10, Theme.TextMuted, false)
+	status.Name = "SessionStatus"
+	status.Position = UDim2.fromOffset(12, 40)
+	status.Size = UDim2.new(1, -24, 0, 40)
+	status.TextWrapped = true
+	status.TextYAlignment = Enum.TextYAlignment.Top
+
+	divider(details, 88)
+	local row1 = Primitives.Label(details, "EXPLORER MIRROR", 9, Theme.Text, true)
+	row1.Position = UDim2.fromOffset(12, 100)
+	row1.Size = UDim2.new(1, -24, 0, 19)
+	note(details, "Track scripts, folders, and instance paths.", 120)
+	local row2 = Primitives.Label(details, "BIDIRECTIONAL EDITS", 9, Theme.Text, true)
+	row2.Position = UDim2.fromOffset(12, 157)
+	row2.Size = UDim2.new(1, -24, 0, 18)
+	note(details, "Keep Studio and the desktop app in sync.", 178)
+
+	local footer = make("Frame", {
+		Name = "Footer",
+		BackgroundColor3 = Theme.SurfaceRaised,
+		BorderSizePixel = 0,
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 0, 1, 0),
+		Size = UDim2.new(1, 0, 0, FOOTER_HEIGHT),
+	}, body)
+	Primitives.Corner(footer, Theme.RadiusLarge)
+	make("Frame", {
+		BackgroundColor3 = Theme.SurfaceRaised,
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, 0, 0, 8),
+	}, footer)
+	local footerDivider = Primitives.Divider(footer, false)
+	footerDivider.Position = UDim2.new(0, 0, 0, 0)
+	local footerLabel = Primitives.Label(footer, "One active Studio session  /  Live monitoring", 8, Theme.TextFaint, false)
+	footerLabel.Position = UDim2.fromOffset(12, 0)
+	footerLabel.Size = UDim2.new(1, -24, 1, 0)
+
+	local resizeGrip = make("TextButton", {
+		Name = "ResizeGrip",
+		AnchorPoint = Vector2.new(1, 1),
+		AutoButtonColor = false,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Position = UDim2.fromScale(1, 1),
+		Size = UDim2.fromOffset(20, 20),
+		Text = "",
+		ZIndex = 520,
+	}, window)
+	for offset = 0, 2 do
+		make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundColor3 = Theme.TextFaint,
+			BorderSizePixel = 0,
+			Position = UDim2.new(1, -5 - offset * 4, 1, -5),
+			Rotation = -45,
+			Size = UDim2.fromOffset(8, 1),
+			ZIndex = 521,
+		}, resizeGrip)
+	end
+
+	local self = setmetatable({
+		_screenGui = screenGui,
+		_window = window,
+		_body = body,
+		_resizeGrip = resizeGrip,
+		_minimized = false,
+		_restoreSize = window.Size,
+		_connected = false,
+		_busy = false,
+		_status = status,
+		_statusBadge = statusBadge,
+		_visibleChanged = Instance.new("BindableEvent"),
+		_closeRequested = Instance.new("BindableEvent"),
+		_connections = {} :: {RBXScriptConnection},
+		CodeBox = codeBox,
+		ConnectButton = connect,
+		DisconnectButton = disconnect,
+	}, BridgeWindow)
+
+	bind(self, close.MouseButton1Click:Connect(function()
+		self._closeRequested:Fire()
+	end))
+	bind(self, minimize.MouseButton1Click:Connect(function()
+		self:_toggleMinimized()
+	end))
+
+	local dragging = false
+	local dragOrigin = Vector2.zero
+	local windowOrigin = Vector2.zero
+	bind(self, titleBar.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragOrigin = UserInputService:GetMouseLocation()
+			windowOrigin = Vector2.new(window.Position.X.Offset, window.Position.Y.Offset)
+		end
+	end))
+	bind(self, UserInputService.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local delta = UserInputService:GetMouseLocation() - dragOrigin
+			window.Position = UDim2.fromOffset(windowOrigin.X + delta.X, windowOrigin.Y + delta.Y)
+		end
+	end))
+	bind(self, UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end))
+
+	local resizing = false
+	local resizeOrigin = Vector2.zero
+	local sizeOrigin = Vector2.zero
+	bind(self, resizeGrip.MouseButton1Down:Connect(function()
+		resizing = true
+		resizeOrigin = UserInputService:GetMouseLocation()
+		sizeOrigin = window.AbsoluteSize
+	end))
+	bind(self, UserInputService.InputChanged:Connect(function(input)
+		if resizing and input.UserInputType == Enum.UserInputType.MouseMovement and not self._minimized then
+			local delta = UserInputService:GetMouseLocation() - resizeOrigin
+			window.Size = UDim2.fromOffset(
+				math.clamp(sizeOrigin.X + delta.X, MIN_SIZE.X, MAX_SIZE.X),
+				math.clamp(sizeOrigin.Y + delta.Y, MIN_SIZE.Y, MAX_SIZE.Y)
+			)
+			self._restoreSize = window.Size
+		end
+	end))
+	bind(self, UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			resizing = false
+		end
+	end))
+
+	return self
+end
+
+function BridgeWindow:_toggleMinimized()
+	local window = self._window
+	if not window then
+		return
+	end
+	self._minimized = not self._minimized
+	if self._minimized then
+		self._restoreSize = window.Size
+		window.Size = UDim2.fromOffset(math.max(MIN_SIZE.X, window.AbsoluteSize.X), TITLE_HEIGHT)
+	else
+		window.Size = self._restoreSize
+	end
+	self._body.Visible = not self._minimized
+	self._resizeGrip.Visible = not self._minimized
+end
+
+function BridgeWindow:SetBusy(busy: boolean)
+	self._busy = busy
+	self.ConnectButton.Text = if busy then "Connecting..." else "Connect"
+	self.ConnectButton.Active = not busy
+	self.CodeBox.TextEditable = not busy and not self._connected
+end
+
+function BridgeWindow:SetConnected(connected: boolean)
+	self._connected = connected
+	self.ConnectButton.Visible = not connected
+	self.DisconnectButton.Visible = connected
+	self.CodeBox.TextEditable = not connected and not self._busy
+	self._statusBadge.Text = if connected then "LIVE" else "IDLE"
+	self._statusBadge.TextColor3 = if connected then Theme.Success else Theme.TextMuted
+end
+
+function BridgeWindow:SetStatus(message: string)
+	self._status.Text = message
+	local lowered = string.lower(message)
+	local warning = string.find(lowered, "failed", 1, true)
+		or string.find(lowered, "interruption", 1, true)
+		or string.find(lowered, "expired", 1, true)
+		or string.find(lowered, "unavailable", 1, true)
+		or string.find(lowered, "could not", 1, true)
+		or string.find(lowered, "limit", 1, true)
+	self._status.TextColor3 = if warning then Theme.Warning else if self._connected then Theme.Success else Theme.TextMuted
+end
+
+function BridgeWindow:SetVisible(visible: boolean)
+	if not self._screenGui or self._screenGui.Enabled == visible then
+		return
+	end
+	self._screenGui.Enabled = visible
+	self._visibleChanged:Fire(visible)
+end
+
+function BridgeWindow:IsVisible(): boolean
+	return self._screenGui ~= nil and self._screenGui.Enabled
+end
+
+function BridgeWindow:GetScreenGui(): ScreenGui
+	assert(self._screenGui, "Bridge screen gui is unavailable")
+	return self._screenGui
+end
+
+function BridgeWindow:GetWindow(): Frame
+	assert(self._window, "Bridge window is unavailable")
+	return self._window
+end
+
+function BridgeWindow:GetVisibilityChangedSignal(): RBXScriptSignal
+	return self._visibleChanged.Event
+end
+
+function BridgeWindow:GetCloseRequestedSignal(): RBXScriptSignal
+	return self._closeRequested.Event
+end
+
+function BridgeWindow:Destroy()
+	for _, connection in self._connections do
+		connection:Disconnect()
+	end
+	table.clear(self._connections)
+	self._visibleChanged:Destroy()
+	self._closeRequested:Destroy()
+	self._screenGui = nil
+	self._window = nil
+	local current = CoreGui:FindFirstChild(GUI_NAME)
+	if current then
+		current:Destroy()
+	end
+end
+
+return BridgeWindow
+</ProtectedString>
+          <string name="ScriptGuid">{8018D651-58F4-4616-8C9B-0E49C521C59E}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">BridgeWindow</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Folder" referent="RBX3B5AD77344E14ACAA364B12D02F0D6FE">
+      <Properties>
+        <Color3 name="IconTint">
+          <R>0</R>
+          <G>0</G>
+          <B>0</B>
+        </Color3>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <bool name="DefinesCapabilities">false</bool>
+        <string name="Name">Services</string>
+        <BinaryString name="SerializedOverrides"></BinaryString>
+        <int64 name="SourceAssetId">-1</int64>
+        <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+      </Properties>
+      <Item class="ModuleScript" referent="RBX8BA3BBC9F6E5433BB339BA2629F7C8FC">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local ScriptEditorService = game:GetService("ScriptEditorService")
+
+local Defaults = require(script.Parent.Parent.Config.Defaults)
+local HierarchyMutations = require(script.Parent.HierarchyMutations)
+local QuickApply = require(script.Parent.QuickApply)
+
+local StudioBridge = {}
+StudioBridge.__index = StudioBridge
+
+local MANAGED_CLASSES: {[string]: boolean} = {
+	Workspace = true,
+	ReplicatedFirst = true,
+	ReplicatedStorage = true,
+	ServerScriptService = true,
+	ServerStorage = true,
+	StarterGui = true,
+	StarterPack = true,
+	StarterPlayer = true,
+	Lighting = true,
+	SoundService = true,
+	Teams = true,
+	Chat = true,
+	TextChatService = true,
+	Players = true,
+	TestService = true,
+	LocalizationService = true,
+	MaterialService = true,
+}
+
+local function isScript(instance: Instance): boolean
+	return instance:IsA("LuaSourceContainer")
+end
+
+local function getPlaceKey(): string
+	return string.format("%s-%s", tostring(game.GameId), tostring(game.PlaceId))
+end
+
+function StudioBridge.new()
+	local self = setmetatable({}, StudioBridge)
+	self.StateChanged = Instance.new("BindableEvent")
+	self._alive = true
+	self._connected = false
+	self._connecting = false
+	self._token = nil :: string?
+	self._sessionId = nil :: string?
+	self._studioRunId = HttpService:GenerateGUID(false)
+	self._placeKey = getPlaceKey()
+	self._placeName = game.Name
+	self._sequence = 0
+	self._inFlightBatch = nil
+	self._queue = {} :: {any}
+	self._queueHead = 1
+	self._sourceQueue = {} :: {[string]: Instance}
+	self._results = {} :: {any}
+	self._lastSources = {} :: {[string]: string}
+	self._scriptIds = {} :: {string}
+	self._auditIndex = 0
+	self._handledOps = {} :: {[string]: boolean}
+	self._instanceIds = setmetatable({}, { __mode = "k" }) :: {[Instance]: string}
+	self._instances = {} :: {[string]: Instance}
+	self._siblingOrder = setmetatable({}, { __mode = "k" }) :: {[Instance]: number}
+	self._connections = {} :: {[string]: {RBXScriptConnection}}
+	self._globalConnections = {} :: {RBXScriptConnection}
+	self._status = "Disconnected"
+	return self
+end
+
+function StudioBridge:_notify(status: string)
+	self._status = status
+	self.StateChanged:Fire(status)
+end
+
+function StudioBridge:_request(endpoint: string, body: any, token: string?): any
+	local headers: {[string]: string} = {
+		["Content-Type"] = "application/json",
+		["X-Cursor-Bridge"] = "1",
+	}
+	if token then
+		headers.Authorization = "Bearer " .. token
+	end
+	local succeeded, response = pcall(function()
+		return HttpService:RequestAsync({
+			Url = Defaults.ServerURL .. endpoint,
+			Method = "POST",
+			Headers = headers,
+			Body = HttpService:JSONEncode(body),
+		})
+	end)
+	if not succeeded then
+		error("Local application unavailable: " .. tostring(response))
+	end
+	local decodedOK, decoded = pcall(function()
+		return HttpService:JSONDecode(response.Body)
+	end)
+	if not decodedOK or typeof(decoded) ~= "table" then
+		error("Cursor Bridge returned an invalid response.")
+	end
+	if not response.Success or decoded.ok ~= true then
+		error(string.format("Bridge HTTP %s: %s", tostring(response.StatusCode), tostring(decoded.error)))
+	end
+	return decoded
+end
+
+function StudioBridge:_idFor(instance: Instance): string
+	local existing = self._instanceIds[instance]
+	if existing then
+		-- Reparenting preserves identity, but removed mappings must be reattached.
+		self._instances[existing] = instance
+		return existing
+	end
+	local identifier = HttpService:GenerateGUID(false)
+	self._instanceIds[instance] = identifier
+	self._instances[identifier] = instance
+	return identifier
+end
+
+function StudioBridge:_isManaged(instance: Instance): boolean
+	local current: Instance? = instance
+	while current and current.Parent and current.Parent ~= game do
+		current = current.Parent
+	end
+	return current ~= nil and current.Parent == game and MANAGED_CLASSES[current.ClassName] == true
+end
+
+function StudioBridge:_editorSource(instance: Instance): string?
+	if not isScript(instance) then
+		return nil
+	end
+	local success, source = pcall(function()
+		return ScriptEditorService:GetEditorSource(instance :: LuaSourceContainer)
+	end)
+	if not success or typeof(source) ~= "string" then
+		warn("[Cursor Bridge] Could not read script: " .. instance:GetFullName())
+		return nil
+	end
+	if #source &gt; Defaults.MaxScriptBytes then
+		warn("[Cursor Bridge] Script exceeds the source size limit: " .. instance:GetFullName())
+		return nil
+	end
+	return source
+end
+
+function StudioBridge:_enqueueOperation(op: any)
+	if #self._queue - self._queueHead &gt; Defaults.MaxPendingOperations then
+		self:_notify("Queue limit reached; disconnecting to avoid memory exhaustion.")
+		self:Disconnect(false)
+		return
+	end
+	table.insert(self._queue, op)
+end
+
+function StudioBridge:_sourceChanged(instance: Instance)
+	if not self._connected or not self:_isManaged(instance) then
+		return
+	end
+	local identifier = self:_idFor(instance)
+	self._sourceQueue[identifier] = instance
+end
+
+function StudioBridge:_indexSiblingOrder(parent: Instance)
+	for index, child in parent:GetChildren() do
+		self._siblingOrder[child] = index
+	end
+end
+
+function StudioBridge:_metadata(instance: Instance, includeSource: boolean): any
+	local parent = instance.Parent
+	if parent and self._siblingOrder[instance] == nil then
+		self:_indexSiblingOrder(parent)
+	end
+	local result: any = {
+		siblingOrder = self._siblingOrder[instance] or 1,
+		id = self:_idFor(instance),
+		parentId = parent == game and "game" or (if parent then self:_idFor(parent) else "game"),
+		name = instance.Name,
+		className = instance.ClassName,
+	}
+	if isScript(instance) and includeSource then
+		local source = self:_editorSource(instance)
+		if source then
+			result.source = source
+			self._lastSources[result.id] = source
+		else
+			result.sourceAvailable = false
+		end
+	end
+	return result
+end
+
+function StudioBridge:_unwatch(instance: Instance)
+	local id = self._instanceIds[instance]
+	if not id then
+		return
+	end
+	local connections = self._connections[id]
+	if connections then
+		for _, connection in connections do
+			connection:Disconnect()
+		end
+	end
+	self._connections[id] = nil
+	if isScript(instance) then
+		local index = table.find(self._scriptIds, id)
+		if index then
+			table.remove(self._scriptIds, index)
+			self._auditIndex = math.min(self._auditIndex, #self._scriptIds)
+		end
+	end
+	self._sourceQueue[id] = nil
+	self._instances[id] = nil
+	self._lastSources[id] = nil
+end
+
+function StudioBridge:_observe(instance: Instance)
+	if not self:_isManaged(instance) then
+		return
+	end
+	local id = self:_idFor(instance)
+	if self._connections[id] then
+		return
+	end
+	local connections: {RBXScriptConnection} = {}
+	table.insert(connections, instance:GetPropertyChangedSignal("Name"):Connect(function()
+		if self._connected and self:_isManaged(instance) then
+			self:_enqueueOperation({ type = "upsert", node = self:_metadata(instance, false) })
+		end
+	end))
+	-- Parent changes within the DataModel are not guaranteed to fire a game-level
+	-- descendant event. Capture moves independently to retain exact hierarchy.
+	table.insert(connections, instance:GetPropertyChangedSignal("Parent"):Connect(function()
+		if not self._connected then return end
+		if self:_isManaged(instance) then
+			local parent = instance.Parent
+			if parent then self:_indexSiblingOrder(parent) end
+			self:_enqueueOperation({ type = "upsert", node = self:_metadata(instance, false) })
+		else
+			self:_enqueueOperation({ type = "remove", id = id })
+		end
+	end))
+	if isScript(instance) then
+		table.insert(self._scriptIds, id)
+		local ok, signal = pcall(function()
+			return instance:GetPropertyChangedSignal("Source")
+		end)
+		if ok then
+			table.insert(connections, signal:Connect(function()
+				self:_sourceChanged(instance)
+			end))
+		end
+	end
+	self._connections[id] = connections
+end
+
+function StudioBridge:_watchChanges()
+	table.insert(self._globalConnections, game.DescendantAdded:Connect(function(instance: Instance)
+		if not self._connected or not self:_isManaged(instance) then
+			return
+		end
+		local parent = instance.Parent
+		if parent then self:_indexSiblingOrder(parent) end
+		local function track(target: Instance)
+			local id = self:_idFor(target)
+			if self._connections[id] then return end
+			self:_observe(target)
+			self:_enqueueOperation({ type = "upsert", node = self:_metadata(target, true) })
+		end
+		track(instance)
+		for _, descendant in instance:GetDescendants() do track(descendant) end
+	end))
+	table.insert(self._globalConnections, game.DescendantRemoving:Connect(function(instance: Instance)
+		local id = self._instanceIds[instance]
+		local descendants = instance:GetDescendants()
+		task.defer(function()
+			if not self._connected then return end
+			if self:_isManaged(instance) then
+				-- Reparented within the place: keep stable ids and descendant watchers.
+				if id then self:_enqueueOperation({ type = "upsert", node = self:_metadata(instance, false) }) end
+				return
+			end
+			if id and self._connections[id] then
+				self:_enqueueOperation({ type = "remove", id = id })
+			end
+			self:_unwatch(instance)
+			for _, descendant in descendants do self:_unwatch(descendant) end
+		end)
+	end))
+	table.insert(self._globalConnections, ScriptEditorService.TextDocumentDidChange:Connect(function(document: ScriptDocument)
+		local ok, instance = pcall(function()
+			return document:GetScript()
+		end)
+		if ok and instance and self:_isManaged(instance) then
+			self:_sourceChanged(instance)
+		end
+	end))
+	table.insert(self._globalConnections, ScriptEditorService.TextDocumentDidOpen:Connect(function(document: ScriptDocument)
+		local ok, instance = pcall(function()
+			return document:GetScript()
+		end)
+		if ok and instance then self:_sourceChanged(instance) end
+	end))
+	table.insert(self._globalConnections, ScriptEditorService.TextDocumentDidClose:Connect(function(document: ScriptDocument)
+		local ok, instance = pcall(function()
+			return document:GetScript()
+		end)
+		if ok and instance then self:_sourceChanged(instance) end
+	end))
+end
+
+function StudioBridge:_flushSources()
+	for id, instance in self._sourceQueue do
+		self._sourceQueue[id] = nil
+		if instance.Parent and self:_isManaged(instance) then
+			local source = self:_editorSource(instance)
+			if source and source ~= self._lastSources[id] then
+				self._lastSources[id] = source
+				self:_enqueueOperation({ type = "source", id = id, source = source })
+			end
+		end
+	end
+end
+
+function StudioBridge:_auditChanges()
+	if #self._scriptIds == 0 then return end
+	for _ = 1, math.min(20, #self._scriptIds) do
+		self._auditIndex = (self._auditIndex % #self._scriptIds) + 1
+		local id = self._scriptIds[self._auditIndex]
+		local instance = self._instances[id]
+		if instance and self:_isManaged(instance) then
+			local source = self:_editorSource(instance)
+			if source and source ~= self._lastSources[id] then
+				self._sourceQueue[id] = instance
+			end
+		end
+	end
+end
+
+function StudioBridge:_nextBatch(): {any}?
+	self:_flushSources()
+	if self._queueHead &gt; #self._queue and #self._results == 0 then
+		return nil
+	end
+	local ops: {any} = {}
+	local bytes = 2
+	-- Results must precede observer notifications to avoid false write conflicts.
+	while #self._results &gt; 0 and #ops &lt; Defaults.MaxOperationsPerBatch do
+		local op = self._results[1]
+		local encoded = HttpService:JSONEncode(op)
+		if #ops &gt; 0 and bytes + #encoded &gt; Defaults.MaxBatchBytes then break end
+		table.insert(ops, table.remove(self._results, 1))
+		bytes += #encoded + 1
+	end
+	while self._queueHead &lt;= #self._queue and #ops &lt; Defaults.MaxOperationsPerBatch do
+		local op = self._queue[self._queueHead]
+		local encoded = HttpService:JSONEncode(op)
+		if #ops &gt; 0 and bytes + #encoded &gt; Defaults.MaxBatchBytes then break end
+		table.insert(ops, op)
+		self._queueHead += 1
+		bytes += #encoded + 1
+	end
+	if self._queueHead &gt; #self._queue then
+		self._queue = {}
+		self._queueHead = 1
+	end
+	return ops
+end
+
+function StudioBridge:_sendNextBatch()
+	local ops = self._inFlightBatch or self:_nextBatch()
+	if not ops or #ops == 0 then return end
+	self._inFlightBatch = ops
+	local sequence = self._sequence + 1
+	local data = self:_request("/v1/changes", { sequence = sequence, ops = ops }, self._token)
+	if data.receivedSequence ~= sequence then
+		error("The server did not acknowledge the expected batch.")
+	end
+	self._sequence = sequence
+	self._inFlightBatch = nil
+end
+
+function StudioBridge:_applyCommand(command: any)
+	if typeof(command) ~= "table" or typeof(command.opId) ~= "string" then return end
+	if self._handledOps[command.opId] then return end
+	self._handledOps[command.opId] = true
+	if command.type == "quickApply" then
+		local commandSessionId = self._sessionId
+		-- An AI bundle can contain several yielding script-editor writes.
+		-- Run it separately so heartbeat polling stays responsive.
+		task.spawn(function()
+			local ok, reply = pcall(function()
+				return QuickApply.Execute(command, self._instances, function(target: Instance)
+					return self:_isManaged(target)
+				end, function(target: Instance)
+					return self:_idFor(target)
+				end, function(): boolean
+					return self._alive and self._connected and self._sessionId == commandSessionId
+						and not RunService:IsRunning() and getPlaceKey() == self._placeKey
+				end)
+			end)
+			if not ok then
+				reply = {type = "quickApplyResult", opId = command.opId, status = "error",
+					results = {{index = -1, status = "error", message = tostring(reply)}}}
+			end
+			if self._alive and self._connected then
+				table.insert(self._results, reply)
+				for _, entry in command.entries do
+					if entry.action == "modify" and entry.scriptId then
+						local target = self._instances[entry.scriptId]
+						if target then self:_sourceChanged(target) end
+					end
+				end
+			end
+		end)
+		return
+	end
+	if command.type == "mutate" then
+		local ok, result = pcall(function()
+			return HierarchyMutations.Execute(command, self._instances, function(target: Instance)
+				return self:_isManaged(target)
+			end, function(target: Instance)
+				return self:_idFor(target)
+			end)
+		end)
+		if not ok then
+			result = { type = "mutationResult", opId = command.opId, status = "error",
+				results = {{ id = "", status = "error", message = tostring(result) }} }
+		end
+		table.insert(self._results, result)
+		return
+	end
+	local instance = self._instances[command.scriptId]
+	local result: any = { type = "result", opId = command.opId, id = command.scriptId, status = "error" }
+	if not instance or not instance.Parent or not isScript(instance) then
+		result.status = "missing"
+	elseif command.type == "open" then
+		local success, opened, message = pcall(function()
+			return ScriptEditorService:OpenScriptDocumentAsync(instance :: LuaSourceContainer, {})
+		end)
+		result.status = if success and opened then "applied" else "error"
+		if result.status == "error" then warn("[Cursor Bridge] Open failed: " .. tostring(message)) end
+	elseif command.type == "write" and typeof(command.expectedSource) == "string" and typeof(command.newSource) == "string" then
+		local before = self:_editorSource(instance)
+		if before ~= command.expectedSource then
+			result.status = "conflict"
+			result.source = before
+		elseif #command.newSource &gt; Defaults.MaxScriptBytes then
+			result.status = "error"
+		else
+			local updated = false
+			local succeeded, message = pcall(function()
+				ScriptEditorService:UpdateSourceAsync(instance :: LuaSourceContainer, function(currentSource: string): string?
+					if currentSource ~= command.expectedSource then return nil end
+					updated = true
+					return command.newSource
+				end)
+			end)
+			local after = self:_editorSource(instance)
+			if succeeded and updated and after == command.newSource then
+				result.status = "applied"
+				result.source = after
+				self._lastSources[command.scriptId] = after
+				self._sourceQueue[command.scriptId] = nil
+			else
+				result.status = if succeeded then "conflict" else "error"
+				result.source = after
+				warn("[Cursor Bridge] Studio edit not applied: " .. tostring(message))
+			end
+		end
+	end
+	table.insert(self._results, result)
+end
+
+function StudioBridge:_syncLoop()
+	local failures = 0
+	while self._alive and self._connected do
+		if RunService:IsRunning() or getPlaceKey() ~= self._placeKey or game.Name ~= self._placeName then
+			self:_notify("Place changed or Play Test started. Session released.")
+			self:Disconnect(true)
+			return
+		end
+		local succeeded, err = pcall(function()
+			self:_auditChanges()
+			self:_sendNextBatch()
+			local poll = self:_request("/v1/poll", {}, self._token)
+			for _, command in poll.commands do
+				self:_applyCommand(command)
+			end
+		end)
+		-- The plugin may unload while a local HTTP request is in flight.
+		if not self._alive or not self._connected then
+			return
+		end
+		if succeeded then
+			failures = 0
+			if self._status ~= "Connected" then self:_notify("Connected") end
+		else
+			failures += 1
+			if failures == 1 or failures % 3 == 0 then
+				warn("[Cursor Bridge] " .. tostring(err))
+				self:_notify("Network interruption: reconnecting...")
+			end
+			if failures &gt;= Defaults.MaxNetworkFailures then
+				self:_notify("Disconnected: network/session expired. Re-pair to continue.")
+				self:Disconnect(false)
+				return
+			end
+		end
+		task.wait(Defaults.PollInterval)
+	end
+end
+
+function StudioBridge:Connect(pairingCode: string): (boolean, string)
+	if not self._alive then
+		return false, "Bridge plugin was shut down."
+	end
+	if self._connected or self._connecting then
+		return false, "A connection is already active."
+	end
+	if not string.match(pairingCode, "^%d%d%d%d%d%d$") then
+		return false, "Enter the six-digit code from the Windows app."
+	end
+	if RunService:IsRunning() then
+		return false, "Stop Play Test before pairing."
+	end
+	self._connecting = true
+	self:_notify("Pairing...")
+	local succeeded, result = pcall(function()
+		return self:_request("/v1/pair", {
+			code = pairingCode,
+			studioRunId = self._studioRunId,
+			placeKey = getPlaceKey(),
+			placeName = game.Name,
+		}, nil)
+	end)
+	self._connecting = false
+	if not self._alive then
+		-- A pairing request may complete after Studio unloads the plugin.
+		if succeeded and typeof(result) == "table" and typeof(result.token) == "string" then
+			task.spawn(function()
+				pcall(function() self:_request("/v1/disconnect", {}, result.token) end)
+			end)
+		end
+		return false, "Bridge plugin was shut down during pairing."
+	end
+	if not succeeded then
+		self:_notify("Connection failed: " .. tostring(result))
+		return false, tostring(result)
+	end
+	self._connected = true
+	self._token = result.token
+	self._sessionId = result.sessionId
+	self._placeKey = getPlaceKey()
+	self._placeName = game.Name
+	self._sequence = 0
+	self._inFlightBatch = nil
+	self._queue = {}
+	self._queueHead = 1
+	self._sourceQueue = {}
+	self._results = {}
+	self._handledOps = {}
+	self:_enqueueOperation({ type = "reset" })
+	self:_watchChanges()
+	-- Start the network heartbeat before scanning potentially large places.
+	task.spawn(function()
+		self:_syncLoop()
+	end)
+	local count = 0
+	self:_indexSiblingOrder(game)
+	for _, root in game:GetChildren() do
+		if not self._alive or not self._connected then
+			return false, "Bridge was disconnected during indexing."
+		end
+		if MANAGED_CLASSES[root.ClassName] then
+			self:_observe(root)
+			self:_enqueueOperation({ type = "upsert", node = self:_metadata(root, true) })
+			count += 1
+			for _, descendant in root:GetDescendants() do
+				if not self._alive or not self._connected then
+					return false, "Bridge was disconnected during indexing."
+				end
+				if count &gt;= Defaults.MaxNodes then
+					warn("[Cursor Bridge] Maximum instance count reached. Explorer is incomplete.")
+					break
+				end
+				self:_observe(descendant)
+				self:_enqueueOperation({ type = "upsert", node = self:_metadata(descendant, true) })
+				count += 1
+				if count % 200 == 0 then task.wait() end
+			end
+		end
+		if count &gt;= Defaults.MaxNodes then break end
+	end
+	self:_enqueueOperation({ type = "ready" })
+	self:_notify(string.format("Indexing %d instances...", count))
+	return true, "Pairing completed."
+end
+
+function StudioBridge:IsConnected(): boolean
+	return self._connected == true
+end
+
+function StudioBridge:Disconnect(notifyServer: boolean?)
+	local token = self._token
+	self._connected = false
+	self._token = nil
+	self._sessionId = nil
+	for _, connection in self._globalConnections do connection:Disconnect() end
+	self._globalConnections = {}
+	for _, connections in self._connections do
+		for _, connection in connections do connection:Disconnect() end
+	end
+	self._connections = {}
+	self._instances = {}
+	self._siblingOrder = setmetatable({}, { __mode = "k" }) :: {[Instance]: number}
+	self._instanceIds = setmetatable({}, { __mode = "k" }) :: {[Instance]: string}
+	self._lastSources = {}
+	self._scriptIds = {}
+	self._auditIndex = 0
+	self._queue = {}
+	self._queueHead = 1
+	self._sourceQueue = {}
+	self._results = {}
+	self._inFlightBatch = nil
+	if notifyServer and token then
+		task.spawn(function()
+			pcall(function() self:_request("/v1/disconnect", {}, token) end)
+		end)
+	end
+	self:_notify("Disconnected")
+end
+
+function StudioBridge:Destroy()
+	self._alive = false
+	self:Disconnect(true)
+	self.StateChanged:Destroy()
+end
+
+return StudioBridge
+</ProtectedString>
+          <string name="ScriptGuid">{0221B61B-3651-4A0C-8771-BDFCBBAC6AC1}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">StudioBridge</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX3BA2BF8E05024C4B80DBC7D5F7DE1745">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+-- All hierarchy mutations run in Roblox Studio, never on the mirrored desktop tree.
+-- Optimistic metadata checks protect against edits from Explorer or other plugins.
+local ChangeHistoryService = game:GetService("ChangeHistoryService")
+local HttpService = game:GetService("HttpService")
+local ScriptEditorService = game:GetService("ScriptEditorService")
+local RunService = game:GetService("RunService")
+
+local HierarchyMutations = {}
+
+local ALLOWED_CLASSES: {[string]: boolean} = {
+	Script = true,
+	LocalScript = true,
+	ModuleScript = true,
+	Folder = true,
+	Model = true,
+	Part = true,
+	MeshPart = true,
+	SpawnLocation = true,
+	Attachment = true,
+	Configuration = true,
+	RemoteEvent = true,
+	RemoteFunction = true,
+	BindableEvent = true,
+	BindableFunction = true,
+	BoolValue = true,
+	IntValue = true,
+	NumberValue = true,
+	StringValue = true,
+	ObjectValue = true,
+	ScreenGui = true,
+	Frame = true,
+	TextLabel = true,
+	TextButton = true,
+	ImageLabel = true,
+	ImageButton = true,
+	UIListLayout = true,
+	UICorner = true,
+	UIPadding = true,
+	Sound = true,
+	Animation = true,
+}
+
+local function scriptSource(target: Instance): string?
+	if not target:IsA("LuaSourceContainer") then return nil end
+	local ok, source = pcall(function()
+		return ScriptEditorService:GetEditorSource(target :: LuaSourceContainer)
+	end)
+	if ok and typeof(source) == "string" then return source end
+	return nil
+end
+
+local function updateSource(target: Instance, source: string): boolean
+	local ok = pcall(function()
+		ScriptEditorService:UpdateSourceAsync(target :: LuaSourceContainer, function(_current: string): string
+			return source
+		end)
+	end)
+	return ok
+end
+
+local function fingerprint(source: string): string
+	local a = 1
+	local b = 0
+	for index = 1, #source do
+		a = (a + string.byte(source, index)) % 65521
+		b = (b + a) % 65521
+	end
+	return tostring(b * 65536 + a) .. ":" .. tostring(#source)
+end
+
+local function validName(name: any): boolean
+	return typeof(name) == "string" and #name &gt;= 1 and #name &lt;= 100
+		and string.match(name, "%S") ~= nil and string.match(name, "[%c]") == nil
+end
+
+local function verifyTarget(target: Instance?, metadata: any, managed: (Instance) -&gt; boolean): (boolean, string)
+	if not target or not target.Parent then return false, "Instance no longer exists." end
+	if target.Parent == game then return false, "Built-in services are protected." end
+	if not managed(target) then return false, "Instance is outside the mirrored DataModel." end
+	if target.Name ~= metadata.name or target.ClassName ~= metadata.className then
+		return false, "Instance was renamed or replaced in Studio."
+	end
+	return true, ""
+end
+
+local function verifyParent(parent: Instance?, snapshot: any, instances: {[string]: Instance}, managed: (Instance) -&gt; boolean): (boolean, string)
+	if not parent or not managed(parent) then return false, "Destination is no longer available." end
+	if parent.Name ~= snapshot.name or parent.ClassName ~= snapshot.className then
+		return false, "Destination changed in Studio."
+	end
+	local currentParent = parent.Parent
+	if (snapshot.parentId == "game" and currentParent ~= game)
+		or (snapshot.parentId ~= "game" and instances[snapshot.parentId] ~= currentParent) then
+		return false, "Destination moved in Studio."
+	end
+	return true, ""
+end
+
+local function cloneWithCurrentSources(target: Instance, destination: Instance): (boolean, string, Instance?)
+	if not target.Archivable then return false, "Instance is not Archivable." end
+	local originals = {target}
+	for _, child in target:GetDescendants() do table.insert(originals, child) end
+	local sources: {[number]: string} = {}
+	for index, original in originals do
+		if original:IsA("LuaSourceContainer") then
+			local source = scriptSource(original)
+			if source == nil then return false, "Cannot read a script in the duplicate." end
+			sources[index] = source
+		end
+	end
+	local copy = target:Clone()
+	if not copy then return false, "Studio rejected the clone." end
+	-- Roblox Studio permits siblings with identical names; Clone preserves the name.
+	copy.Name = target.Name
+	copy.Parent = destination
+	local copies = {copy}
+	for _, child in copy:GetDescendants() do table.insert(copies, child) end
+	if #copies ~= #originals then
+		copy:Destroy()
+		return false, "Clone excluded non-Archivable descendants."
+	end
+	for index, source in sources do
+		local clonedScript = copies[index]
+		if not clonedScript:IsA("LuaSourceContainer") then
+			copy:Destroy()
+			return false, "Clone structure differs from the original."
+		end
+		-- Avoid unnecessary writes when Studio already cloned the editor contents.
+		if scriptSource(clonedScript) ~= source and not updateSource(clonedScript, source) then
+			copy:Destroy()
+			return false, "Could not preserve an unsaved Studio script in the duplicate."
+		end
+	end
+	return true, "", copy
+end
+
+function HierarchyMutations.Execute(command: any, instances: {[string]: Instance}, managed: (Instance) -&gt; boolean, idFor: (Instance) -&gt; string): any
+	local results = {}
+	if RunService:IsRunning() then
+		return {type = "mutationResult", opId = command.opId, status = "error", results = {
+			{id = "", status = "error", message = "Stop Play Test before editing the DataModel."},
+		}}
+	end
+	local action = command.action
+	if not ({create = true, rename = true, duplicate = true, move = true, delete = true})[action] then
+		return {type = "mutationResult", opId = command.opId, status = "error", results = {}}
+	end
+	local destination: Instance? = nil
+	if action == "create" or action == "move" or (action == "duplicate" and command.destination ~= nil) then
+		local metadata = command.destination
+		if typeof(metadata) ~= "table" then
+			return {type = "mutationResult", opId = command.opId, status = "error", results = {}}
+		end
+		destination = instances[metadata.id]
+		local ok, reason = verifyParent(destination, metadata, instances, managed)
+		if not ok then
+			return {type = "mutationResult", opId = command.opId, status = "conflict", results = {{id = metadata.id, status = "conflict", message = reason}}}
+		end
+	end
+	if (action == "create" or action == "rename") and not validName(command.name) then
+		return {type = "mutationResult", opId = command.opId, status = "error", results = {}}
+	end
+ 	if action == "delete" then
+		-- A backup is only safe if every current Studio source matches the
+		-- backed-up source snapshot before this command was queued.
+		if typeof(command.protectedScripts) ~= "table" or #command.protectedScripts &gt; 200 then
+			return {type = "mutationResult", opId = command.opId, status = "error", results = {}}
+		end
+		for _, expected in command.protectedScripts do
+			local target = instances[expected.id]
+			local latest = if target then scriptSource(target) else nil
+			if latest == nil or fingerprint(latest) ~= expected.fingerprint then
+				return {type = "mutationResult", opId = command.opId, status = "conflict",
+					results = {{ id = expected.id, status = "conflict", message = "Source changed since backup. Nothing was deleted." }} }
+			end
+		end
+	end
+	-- Verify the complete requested selection before changing anything. A single
+	-- stale node must not accidentally cause a partial multi-delete or multi-move.
+	if action ~= "create" then
+		if typeof(command.targets) ~= "table" or #command.targets &lt; 1 or #command.targets &gt; 50 then
+			return {type = "mutationResult", opId = command.opId, status = "error", results = {}}
+		end
+		for _, metadata in command.targets do
+			local target = instances[metadata.id]
+			local valid, reason = verifyTarget(target, metadata, managed)
+			if valid and target then
+				if target.Parent ~= instances[metadata.parentId] then
+					valid, reason = false, "Instance moved in Studio."
+				elseif action == "move" and destination and (destination == target or destination:IsDescendantOf(target)) then
+					valid, reason = false, "Cannot move into a descendant."
+				end
+			end
+			if not valid then
+				return {type = "mutationResult", opId = command.opId, status = "conflict", results = {
+					{id = metadata.id, status = "conflict", message = reason},
+				}}
+			end
+		end
+	end
+	local historyId: string? = nil
+	local began, historyResult = pcall(function()
+		return ChangeHistoryService:TryBeginRecording("CursorBridge_" .. HttpService:GenerateGUID(false), "Cursor Bridge: " .. action)
+	end)
+	if began then historyId = historyResult end
+
+	if action == "create" then
+		if not ALLOWED_CLASSES[command.className] then
+			table.insert(results, {id = command.destination.id, status = "error", message = "Creation class not allowed."})
+		else
+			local createdId = command.destination.id
+			local ok, errorMessage = pcall(function()
+				local created = Instance.new(command.className)
+				created.Name = command.name
+				-- Match Studio's Insert Object behavior: allow repeated sibling names
+				-- and keep the new LuaSourceContainer's native source template.
+				-- UpdateSourceAsync is not required for creating a fresh Script.
+				created.Parent = destination
+				createdId = idFor(created)
+			end)
+			table.insert(results, {id = createdId, status = if ok then "applied" else "error", message = if ok then "Created" else tostring(errorMessage)})
+		end
+	else
+		local targets = command.targets
+		if typeof(targets) == "table" and #targets &lt;= 50 then
+			for _, metadata in targets do
+				local target = instances[metadata.id]
+				local valid, reason = verifyTarget(target, metadata, managed)
+				if valid and target and metadata.parentId ~= "game" then
+					local expectedParent = instances[metadata.parentId]
+					if target.Parent ~= expectedParent then
+						valid, reason = false, "Instance moved in Studio."
+					end
+				end
+				if valid and target and action == "move" then
+					if destination == target or (destination and destination:IsDescendantOf(target)) then
+						valid, reason = false, "Cannot move into a descendant."
+					end
+				end
+				if not valid then
+					table.insert(results, {id = metadata.id, status = "conflict", message = reason})
+				elseif target then
+					local affectedId = metadata.id
+					local ok, message = pcall(function()
+						if action == "rename" then
+							target.Name = command.name
+						elseif action == "delete" then
+							target:Destroy()
+						elseif action == "move" then
+							target.Parent = destination
+						elseif action == "duplicate" then
+							local duplicated, copyError, copy = cloneWithCurrentSources(target, (destination or target.Parent) :: Instance)
+							if not duplicated then error(copyError) end
+							if copy then affectedId = idFor(copy) end
+						end
+					end)
+					table.insert(results, {id = affectedId, status = if ok then "applied" else "error", message = if ok then "" else tostring(message)})
+				end
+			end
+		end
+	end
+
+	if historyId then
+		pcall(function()
+			ChangeHistoryService:FinishRecording(historyId :: string, Enum.FinishRecordingOperation.Commit)
+		end)
+	end
+	local succeeded = 0
+	local conflicted = 0
+	for _, result in results do
+		if result.status == "applied" then succeeded += 1 end
+		if result.status == "conflict" then conflicted += 1 end
+	end
+	local status = if succeeded == #results and succeeded &gt; 0 then "applied"
+		else (if succeeded &gt; 0 then "partial" else (if conflicted &gt; 0 then "conflict" else "error"))
+	return {type = "mutationResult", opId = command.opId, status = status, results = results}
+end
+
+return HierarchyMutations
+</ProtectedString>
+          <string name="ScriptGuid">{504D5CEE-179E-48D5-8B34-034B5E8878CF}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">HierarchyMutations</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX73D71B80A7C04C54A4DD68DE1DAA1FC7">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+local ChangeHistoryService = game:GetService("ChangeHistoryService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local ScriptEditorService = game:GetService("ScriptEditorService")
+
+local QuickApply = {}
+
+local MAX_ENTRIES = 20
+local MAX_SCRIPT_BYTES = 256 * 1024
+local ALLOWED_SCRIPT_CLASSES: {[string]: boolean} = {
+	Script = true,
+	LocalScript = true,
+	ModuleScript = true,
+}
+
+type Entry = {
+	index: number,
+	action: string,
+	name: string,
+	className: string,
+	source: string,
+	scriptId: string?,
+	expectedSource: string?,
+	anchorId: string?,
+	missingFolders: {string}?,
+	guards: {{id: string, parentId: string, name: string, className: string}},
+}
+
+type ExistingChange = {scriptObject: LuaSourceContainer, oldSource: string, writtenSource: string}
+
+local function sourceFor(instance: Instance): string?
+	if not instance:IsA("LuaSourceContainer") then return nil end
+	local succeeded, source = pcall(function()
+		return ScriptEditorService:GetEditorSource(instance :: LuaSourceContainer)
+	end)
+	if succeeded and typeof(source) == "string" then return source end
+	return nil
+end
+
+local function validName(value: any): boolean
+	return typeof(value) == "string" and #value &gt;= 1 and #value &lt;= 100
+		and string.match(value, "%S") ~= nil and string.match(value, "[%c/]") == nil
+end
+
+local function writeSource(target: LuaSourceContainer, source: string, expected: string,
+	canContinue: (() -&gt; boolean)?): (boolean, boolean)
+	local didApply = false
+	local succeeded = pcall(function()
+		ScriptEditorService:UpdateSourceAsync(target, function(current: string): string?
+			if current ~= expected or (canContinue and not canContinue()) then return nil end
+			didApply = true
+			return source
+		end)
+	end)
+	return succeeded and didApply and sourceFor(target) == source, didApply
+end
+
+local function findMatchingChild(parent: Instance, name: string): (Instance?, number)
+	local found: Instance? = nil
+	local count = 0
+	for _, child in parent:GetChildren() do
+		if child.Name == name then
+			count += 1
+			found = child
+		end
+	end
+	return found, count
+end
+
+local function verifyGuards(guards: any, instances: {[string]: Instance}, managed: (Instance) -&gt; boolean): boolean
+	if typeof(guards) ~= "table" or #guards &lt; 1 or #guards &gt; 30 then return false end
+	for _, meta in guards do
+		if typeof(meta) ~= "table" or typeof(meta.id) ~= "string" then return false end
+		local target = instances[meta.id]
+		if not target or not managed(target) or target.Name ~= meta.name or target.ClassName ~= meta.className then
+			return false
+		end
+		if meta.parentId == "game" then
+			if target.Parent ~= game then return false end
+		elseif target.Parent ~= instances[meta.parentId] then
+			return false
+		end
+	end
+	return true
+end
+
+local function preflight(entries: {Entry}, instances: {[string]: Instance}, managed: (Instance) -&gt; boolean): (boolean, string)
+	if RunService:IsRunning() then return false, "Stop Play Test before applying scripts." end
+	if #entries &lt; 1 or #entries &gt; MAX_ENTRIES then return false, "Invalid script count." end
+	for _, entry in entries do
+		if not ALLOWED_SCRIPT_CLASSES[entry.className] or not validName(entry.name)
+			or typeof(entry.source) ~= "string" or #entry.source &gt; MAX_SCRIPT_BYTES
+			or string.sub(entry.source, 1, 9) ~= "--!strict" then
+			return false, "Invalid script type, name, or source."
+		end
+		if not verifyGuards(entry.guards, instances, managed) then
+			return false, "A hierarchy path changed in Studio. No scripts were applied."
+		end
+		if entry.action == "modify" then
+			local target = if entry.scriptId then instances[entry.scriptId] else nil
+			if not target or target.ClassName ~= entry.className or target.Name ~= entry.name then
+				return false, "The modification destination changed."
+			end
+			if typeof(entry.expectedSource) ~= "string" or sourceFor(target) ~= entry.expectedSource then
+				return false, "Studio source changed since the preview. Nothing was applied."
+			end
+		elseif entry.action == "create" then
+			local anchor = if entry.anchorId then instances[entry.anchorId] else nil
+			if not anchor or anchor ~= instances[entry.guards[#entry.guards].id] then
+				return false, "The creation destination changed."
+			end
+			if typeof(entry.missingFolders) ~= "table" or #entry.missingFolders &gt; 28 then
+				return false, "Invalid folder path."
+			end
+			local parent = anchor
+			for _, name in entry.missingFolders do
+				if not validName(name) then return false, "Invalid folder name." end
+				local child, matches = findMatchingChild(parent, name)
+				if matches ~= 0 then
+					return false, "A missing folder appeared after preview. Review the bundle again."
+				end
+				-- A later segment cannot be checked until the missing parent is created.
+				break
+			end
+		else
+			return false, "Invalid Quick Apply action."
+		end
+	end
+	return true, ""
+end
+
+function QuickApply.Execute(command: any, instances: {[string]: Instance}, managed: (Instance) -&gt; boolean,
+	idFor: (Instance) -&gt; string, canContinue: () -&gt; boolean): any
+	local entries = command.entries :: {Entry}
+	local result = {type = "quickApplyResult", opId = command.opId, status = "error", results = {}}
+	if typeof(entries) ~= "table" then
+		table.insert(result.results, {index = -1, status = "error", message = "Invalid bundle."})
+		return result
+	end
+	local valid, reason = preflight(entries, instances, managed)
+	if not valid then
+		result.status = "conflict"
+		table.insert(result.results, {index = -1, status = "conflict", message = reason})
+		return result
+	end
+	local began, recording = pcall(function()
+		return ChangeHistoryService:TryBeginRecording("CursorBridge_QuickApply_" .. HttpService:GenerateGUID(false), "Cursor Bridge: Quick Apply")
+	end)
+	if not began or typeof(recording) ~= "string" then
+		table.insert(result.results, {index = -1, status = "error", message = "Studio could not start undo recording."})
+		return result
+	end
+
+	local created: {Instance} = {}
+	local updated: {ExistingChange} = {}
+	local appliedResults = {}
+	local succeeded, failure = pcall(function()
+		for _, entry in entries do
+			if not canContinue() or not verifyGuards(entry.guards, instances, managed) then
+				error("The Studio session or destination changed during Quick Apply.")
+			end
+			if entry.action == "modify" then
+				local target = instances[entry.scriptId :: string] :: LuaSourceContainer
+				local original = entry.expectedSource :: string
+				local wrote, attempted = writeSource(target, entry.source, original, canContinue)
+				if attempted then
+					table.insert(updated, {scriptObject = target, oldSource = original, writtenSource = entry.source})
+				end
+				if not wrote then
+					error("Studio refused to update " .. entry.name .. ".")
+				end
+			else
+				local parent = instances[entry.anchorId :: string]
+				for _, folderName in (entry.missingFolders :: {string}) do
+					if not canContinue() then error("Studio disconnected while creating folders.") end
+					local child, matches = findMatchingChild(parent, folderName)
+					if matches == 0 then
+						local folder = Instance.new("Folder")
+						folder.Name = folderName
+						folder.Parent = parent
+						table.insert(created, folder)
+						idFor(folder)
+						parent = folder
+					elseif matches == 1 and child and child:IsA("Folder") then
+						parent = child
+					else
+						error("Destination folder became ambiguous while applying scripts.")
+					end
+				end
+				local object = Instance.new(entry.className) :: LuaSourceContainer
+				object.Name = entry.name
+				object.Parent = parent
+				table.insert(created, object)
+				idFor(object)
+				local original = sourceFor(object)
+				if original == nil or (original ~= entry.source and not writeSource(object, entry.source, original, canContinue)) then
+					error("Studio refused to initialize " .. entry.name .. ".")
+				end
+			end
+			table.insert(appliedResults, {index = entry.index, status = "applied", message = "Applied in Studio."})
+		end
+	end)
+
+	if succeeded and not canContinue() then
+		succeeded = false
+		failure = "The Studio session ended before committing the changes."
+	end
+	if succeeded then
+		local finished = pcall(function()
+			ChangeHistoryService:FinishRecording(recording :: string, Enum.FinishRecordingOperation.Commit)
+		end)
+		if finished then
+			result.status = "applied"
+			result.results = appliedResults
+			return result
+		end
+		failure = "Studio could not commit undo history."
+	end
+
+	-- Preserve the previous editor sources even if an individual Studio write fails.
+	-- Cancel the single undo recording after best-effort local cleanup.
+	local rollbackOkay = true
+	for index = #updated, 1, -1 do
+		local change = updated[index]
+		local current = sourceFor(change.scriptObject)
+		if current == change.writtenSource then
+			local restored = writeSource(change.scriptObject, change.oldSource, change.writtenSource)
+			rollbackOkay = rollbackOkay and restored
+		elseif current ~= change.oldSource then
+			-- Do not overwrite a concurrent Studio edit while rolling back.
+			rollbackOkay = false
+		end
+	end
+	for index = #created, 1, -1 do
+		local object = created[index]
+		local deleted = pcall(function() object:Destroy() end)
+		rollbackOkay = rollbackOkay and deleted
+	end
+	local canceled = pcall(function()
+		ChangeHistoryService:FinishRecording(recording :: string, Enum.FinishRecordingOperation.Cancel)
+	end)
+	rollbackOkay = rollbackOkay and canceled
+	result.status = if rollbackOkay then "rolled-back" else "partial"
+	result.results = {{index = -1, status = result.status,
+		message = if rollbackOkay then "Changes were rolled back: " .. tostring(failure)
+			else "Rollback could not be verified. Inspect Studio and recovery backups: " .. tostring(failure)}}
+	return result
+end
+
+return QuickApply
+</ProtectedString>
+          <string name="ScriptGuid">{FB57027F-5752-44B9-A93E-302B20DCF719}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">QuickApply</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Folder" referent="RBX724264083A684D2DA07F7153E318F60E">
+      <Properties>
+        <Color3 name="IconTint">
+          <R>0</R>
+          <G>0</G>
+          <B>0</B>
+        </Color3>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <bool name="DefinesCapabilities">false</bool>
+        <string name="Name">Controllers</string>
+        <BinaryString name="SerializedOverrides"></BinaryString>
+        <int64 name="SourceAssetId">-1</int64>
+        <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+      </Properties>
+      <Item class="ModuleScript" referent="RBXD89F6453B9294297887871554093E83B">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+local Root = script.Parent.Parent
+local Maid = require(Root.Packages.Maid)
+local StudioBridge = require(Root.Services.StudioBridge)
+local BridgeWindow = require(Root.UI.BridgeWindow)
+local Theme = require(Root.UI.Theme)
+local Defaults = require(Root.Config.Defaults)
+local SettingsService = require(Root.Core.SettingsService)
+local ThemeService = require(Root.Core.ThemeService)
+local CommandService = require(Root.Core.CommandService)
+local ShortcutService = require(Root.Core.ShortcutService)
+local NotificationService = require(Root.Core.NotificationService)
+local CursorShell = require(Root.UI.CursorShell)
+
+local BridgeController = {}
+BridgeController.__index = BridgeController
+
+local function messageText(value: any): string
+	local content = tostring(value)
+	return content:match("([^\n]+)$") or content
+end
+
+function BridgeController.new(pluginObject: Plugin)
+	local settings = SettingsService.new(pluginObject, "CursorBridge", Defaults)
+	local themeService = ThemeService.new(settings, Theme)
+	themeService:Initialize()
+
+	local window = BridgeWindow.new(pluginObject)
+	local service = StudioBridge.new()
+	local commands = CommandService.new()
+	local shortcuts = ShortcutService.new()
+	local notifications = NotificationService.new(window:GetScreenGui())
+	local shell = CursorShell.new(
+		window:GetScreenGui(),
+		window:GetWindow(),
+		settings,
+		themeService,
+		commands,
+		shortcuts,
+		notifications
+	)
+
+	return setmetatable({
+		_plugin = pluginObject,
+		_maid = Maid.new(),
+		_window = window,
+		_service = service,
+		_settings = settings,
+		_themeService = themeService,
+		_commandService = commands,
+		_shortcutService = shortcuts,
+		_notificationService = notifications,
+		_shell = shell,
+		_busy = false,
+		_destroyed = false,
+	}, BridgeController)
+end
+
+function BridgeController:_connect()
+	local window = self._window
+	local service = self._service
+	if self._busy or not window or not service or service:IsConnected() then
+		return
+	end
+
+	local pairingCode = string.gsub(window.CodeBox.Text, "%s", "")
+	if not pairingCode:match("^%d%d%d%d%d%d$") then
+		window:SetStatus("Enter the six-digit pairing code from Windows.")
+		return
+	end
+
+	self._busy = true
+	window:SetBusy(true)
+	window:SetStatus("Pairing with desktop...")
+
+	task.spawn(function()
+		local ran, connected, result = xpcall(function()
+			return service:Connect(pairingCode)
+		end, debug.traceback)
+		if self._destroyed then
+			if service:IsConnected() then
+				service:Disconnect(true)
+			end
+			return
+		end
+
+		self._busy = false
+		window:SetBusy(false)
+		local success = ran and connected == true
+		window:SetConnected(success or service:IsConnected())
+		if success then
+			window:SetStatus("Connected. Synchronizing the Explorer...")
+			if self._notificationService then
+				self._notificationService:Show("Desktop session connected", "success")
+			end
+		else
+			local errorMessage = messageText(if ran then result else connected)
+			window:SetStatus("Connection failed: " .. errorMessage)
+			if self._notificationService then
+				self._notificationService:Show("Desktop pairing failed", "danger")
+			end
+		end
+	end)
+end
+
+function BridgeController:_disconnect()
+	local service = self._service
+	if not service or self._destroyed then
+		return
+	end
+	service:Disconnect(true)
+	local window = self._window
+	if window then
+		window:SetConnected(false)
+		window:SetStatus("Disconnected")
+	end
+	if self._notificationService then
+		self._notificationService:Show("Desktop session disconnected")
+	end
+end
+
+function BridgeController:Start()
+	local maid = self._maid
+	local window = self._window
+	local service = self._service
+	local commands = self._commandService
+	if not maid or not window or not service or not commands then
+		return
+	end
+
+	maid:Give(window:GetCloseRequestedSignal():Connect(function()
+		window:SetVisible(false)
+	end))
+	maid:Give(window.ConnectButton.MouseButton1Click:Connect(function()
+		self:_connect()
+	end))
+	maid:Give(window.DisconnectButton.MouseButton1Click:Connect(function()
+		self:_disconnect()
+	end))
+	maid:Give(window.CodeBox.FocusLost:Connect(function(enterPressed: boolean)
+		if enterPressed then
+			self:_connect()
+		end
+	end))
+	maid:Give(service.StateChanged.Event:Connect(function(status: string)
+		if self._destroyed or not self._window then
+			return
+		end
+		window:SetConnected(service:IsConnected())
+		window:SetStatus(status)
+	end))
+
+	maid:Give(commands:Register({
+		id = "bridge.connect",
+		title = "Connect to Desktop",
+		description = "Pair this Studio session with the local Cursor Bridge app",
+		keywords = {"studio", "desktop", "pair", "sync"},
+		action = function() self:_connect() end,
+	}))
+	maid:Give(commands:Register({
+		id = "bridge.disconnect",
+		title = "Disconnect Desktop",
+		description = "Release the active Cursor Bridge session",
+		keywords = {"disconnect", "session", "stop"},
+		action = function() self:_disconnect() end,
+	}))
+
+	window:SetConnected(service:IsConnected())
+	window:SetStatus("Disconnected")
+end
+
+function BridgeController:Toggle()
+	local window = self._window
+	if window then
+		window:SetVisible(not window:IsVisible())
+	end
+end
+
+function BridgeController:GetVisibilityChangedSignal(): RBXScriptSignal
+	local window = self._window
+	assert(window, "Bridge window is unavailable")
+	return window:GetVisibilityChangedSignal()
+end
+
+function BridgeController:Destroy()
+	if self._destroyed then
+		return
+	end
+	self._destroyed = true
+
+	local maid = self._maid
+	self._maid = nil
+	if maid then maid:Destroy() end
+
+	local shell = self._shell
+	self._shell = nil
+	if shell then shell:Destroy() end
+
+	local notificationService = self._notificationService
+	self._notificationService = nil
+	if notificationService then notificationService:Destroy() end
+
+	local service = self._service
+	self._service = nil
+	if service then service:Destroy() end
+
+	local window = self._window
+	self._window = nil
+	if window then window:Destroy() end
+
+	local shortcuts = self._shortcutService
+	self._shortcutService = nil
+	if shortcuts then shortcuts:Destroy() end
+
+	local commands = self._commandService
+	self._commandService = nil
+	if commands then commands:Destroy() end
+
+	local themeService = self._themeService
+	self._themeService = nil
+	if themeService then themeService:Destroy() end
+
+	local settings = self._settings
+	self._settings = nil
+	if settings then settings:Destroy() end
+end
+
+return BridgeController
+</ProtectedString>
+          <string name="ScriptGuid">{9E135505-5801-4C8F-ACB1-9E4B38B46291}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">BridgeController</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Folder" referent="RBXFF555006550B4CB4A8C2794C60366E42">
+      <Properties>
+        <Color3 name="IconTint">
+          <R>0</R>
+          <G>0</G>
+          <B>0</B>
+        </Color3>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <bool name="DefinesCapabilities">false</bool>
+        <string name="Name">Core</string>
+        <BinaryString name="SerializedOverrides"></BinaryString>
+        <int64 name="SourceAssetId">-1</int64>
+        <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+      </Properties>
+      <Item class="ModuleScript" referent="RBX287D7E59F3AC4B2E9D0BE97581E75E06">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+export type Command = {
+	id: string,
+	title: string,
+	description: string?,
+	keywords: {string}?,
+	shortcut: string?,
+	action: () -&gt; (),
+	isEnabled: (() -&gt; boolean)?,
+}
+
+local CommandService = {}
+CommandService.__index = CommandService
+
+export type CommandService = typeof(setmetatable({
+	_commands = {} :: {[string]: Command},
+	_changed = nil :: BindableEvent?,
+}, CommandService))
+
+local function normalize(text: string): string
+	return string.lower((text:gsub("%s+", " "):match("^%s*(.-)%s*$") or ""))
+end
+
+local function scoreCommand(command: Command, query: string): number
+	if query == "" then
+		return 1
+	end
+	local title = normalize(command.title)
+	local id = normalize(command.id)
+	if title == query then
+		return 1000
+	end
+	if string.sub(title, 1, #query) == query then
+		return 800
+	end
+	if string.find(title, query, 1, true) then
+		return 600
+	end
+	if string.find(id, query, 1, true) then
+		return 450
+	end
+	if command.description and string.find(normalize(command.description), query, 1, true) then
+		return 300
+	end
+	for _, keyword in command.keywords or {} do
+		local normalizedKeyword = normalize(keyword)
+		if normalizedKeyword == query then
+			return 500
+		end
+		if string.find(normalizedKeyword, query, 1, true) then
+			return 250
+		end
+	end
+	return 0
+end
+
+function CommandService.new(): CommandService
+	return setmetatable({
+		_commands = {},
+		_changed = Instance.new("BindableEvent"),
+	}, CommandService)
+end
+
+function CommandService:Register(command: Command): () -&gt; ()
+	assert(command.id ~= "", "Command id is required")
+	assert(command.title ~= "", "Command title is required")
+	self._commands[command.id] = command
+	local changedEvent = self._changed
+	if changedEvent then
+		changedEvent:Fire()
+	end
+
+	local alive = true
+	return function()
+		if not alive then
+			return
+		end
+		alive = false
+		if self._commands[command.id] == command then
+			self._commands[command.id] = nil
+			if self._changed then
+				self._changed:Fire()
+			end
+		end
+	end
+end
+
+function CommandService:Get(id: string): Command?
+	return self._commands[id]
+end
+
+function CommandService:GetAll(): {Command}
+	local output = {}
+	for _, command in self._commands do
+		table.insert(output, command)
+	end
+	table.sort(output, function(a, b)
+		return a.title &lt; b.title
+	end)
+	return output
+end
+
+function CommandService:Search(query: string, limit: number?): {Command}
+	local cleanQuery = normalize(query)
+	local ranked = {}
+	for _, command in self._commands do
+		if command.isEnabled == nil or command.isEnabled() then
+			local score = scoreCommand(command, cleanQuery)
+			if score &gt; 0 then
+				table.insert(ranked, {command = command, score = score})
+			end
+		end
+	end
+	table.sort(ranked, function(a, b)
+		if a.score == b.score then
+			return a.command.title &lt; b.command.title
+		end
+		return a.score &gt; b.score
+	end)
+
+	local output = {}
+	local maxResults = math.max(1, limit or 12)
+	for index = 1, math.min(maxResults, #ranked) do
+		table.insert(output, ranked[index].command)
+	end
+	return output
+end
+
+function CommandService:Execute(id: string): (boolean, string?)
+	local command = self._commands[id]
+	if not command then
+		return false, "Unknown command"
+	end
+	if command.isEnabled and not command.isEnabled() then
+		return false, "Command is unavailable"
+	end
+	local ok, err = xpcall(command.action, debug.traceback)
+	if not ok then
+		return false, tostring(err)
+	end
+	return true, nil
+end
+
+function CommandService:GetChangedSignal(): RBXScriptSignal
+	return (self._changed :: BindableEvent).Event
+end
+
+function CommandService:Destroy()
+	table.clear(self._commands)
+	if self._changed then
+		self._changed:Destroy()
+		self._changed = nil
+	end
+end
+
+return CommandService
+</ProtectedString>
+          <string name="ScriptGuid">{F1F06465-924A-423C-B2CF-1119FD71556E}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">CommandService</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX71581EA81BF444018A3EBD6EF8E71F7A">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+local UserInputService = game:GetService("UserInputService")
+
+export type Shortcut = {
+	id: string,
+	chord: string,
+	callback: () -&gt; (),
+	isEnabled: (() -&gt; boolean)?,
+	allowWhenTyping: boolean?,
+}
+
+local ShortcutService = {}
+ShortcutService.__index = ShortcutService
+
+export type ShortcutService = typeof(setmetatable({
+	_shortcuts = {} :: {[string]: Shortcut},
+	_connection = nil :: RBXScriptConnection?,
+}, ShortcutService))
+
+local function normalizeChord(chord: string): string
+	local normalized = string.upper(chord:gsub("%s+", ""))
+	normalized = normalized:gsub("CONTROL", "CTRL")
+	return normalized
+end
+
+local function keyToken(keyCode: Enum.KeyCode): string
+	if keyCode == Enum.KeyCode.Comma then
+		return ","
+	elseif keyCode == Enum.KeyCode.Period then
+		return "."
+	elseif keyCode == Enum.KeyCode.Slash then
+		return "/"
+	elseif keyCode == Enum.KeyCode.Semicolon then
+		return ";"
+	end
+	return string.upper(keyCode.Name)
+end
+
+local function currentChord(input: InputObject): string
+	local parts = {}
+	if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl) then
+		table.insert(parts, "CTRL")
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then
+		table.insert(parts, "SHIFT")
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) or UserInputService:IsKeyDown(Enum.KeyCode.RightAlt) then
+		table.insert(parts, "ALT")
+	end
+	table.insert(parts, keyToken(input.KeyCode))
+	return table.concat(parts, "+")
+end
+
+function ShortcutService.new(): ShortcutService
+	local self = setmetatable({
+		_shortcuts = {},
+		_connection = nil,
+	}, ShortcutService)
+
+	self._connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if input.UserInputType ~= Enum.UserInputType.Keyboard then
+			return
+		end
+		local chord = currentChord(input)
+		for _, shortcut in self._shortcuts do
+			if normalizeChord(shortcut.chord) ~= chord then
+				continue
+			end
+			if shortcut.isEnabled and not shortcut.isEnabled() then
+				continue
+			end
+			if not shortcut.allowWhenTyping and UserInputService:GetFocusedTextBox() ~= nil then
+				continue
+			end
+			if gameProcessed and not shortcut.allowWhenTyping then
+				continue
+			end
+			shortcut.callback()
+			break
+		end
+	end)
+
+	return self
+end
+
+function ShortcutService:Register(shortcut: Shortcut): () -&gt; ()
+	self._shortcuts[shortcut.id] = shortcut
+	local alive = true
+	return function()
+		if not alive then
+			return
+		end
+		alive = false
+		if self._shortcuts[shortcut.id] == shortcut then
+			self._shortcuts[shortcut.id] = nil
+		end
+	end
+end
+
+function ShortcutService:Destroy()
+	if self._connection then
+		self._connection:Disconnect()
+		self._connection = nil
+	end
+	table.clear(self._shortcuts)
+end
+
+return ShortcutService
+</ProtectedString>
+          <string name="ScriptGuid">{693CC546-67D1-4E0B-97A7-CF1029463E8D}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">ShortcutService</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX46D20563C4354CCCB20322F1831CF051">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+local SettingsService = {}
+SettingsService.__index = SettingsService
+
+export type SettingsService = typeof(setmetatable({
+	_plugin = nil :: Plugin?,
+	_storageKey = "",
+	_defaults = {} :: {[string]: any},
+	_data = {} :: {[string]: any},
+	_changed = nil :: BindableEvent?,
+}, SettingsService))
+
+local function deepCopy(value: any): any
+	if typeof(value) ~= "table" then
+		return value
+	end
+	local output = {}
+	for key, child in value do
+		output[deepCopy(key)] = deepCopy(child)
+	end
+	return output
+end
+
+local function mergeDefaults(target: {[string]: any}, defaults: {[string]: any})
+	for key, defaultValue in defaults do
+		local current = target[key]
+		if typeof(defaultValue) == "table" then
+			if typeof(current) ~= "table" then
+				current = {}
+				target[key] = current
+			end
+			mergeDefaults(current, defaultValue)
+		elseif current == nil or typeof(current) ~= typeof(defaultValue) then
+			target[key] = defaultValue
+		end
+	end
+end
+
+local function splitPath(path: string): {string}
+	local output = {}
+	for segment in string.gmatch(path, "[^%.]+") do
+		table.insert(output, segment)
+	end
+	return output
+end
+
+local function readPath(root: {[string]: any}, path: string): any
+	local cursor: any = root
+	for _, segment in splitPath(path) do
+		if typeof(cursor) ~= "table" then
+			return nil
+		end
+		cursor = cursor[segment]
+	end
+	return cursor
+end
+
+local function writePath(root: {[string]: any}, path: string, value: any)
+	local segments = splitPath(path)
+	if #segments == 0 then
+		return
+	end
+	local cursor: {[string]: any} = root
+	for index = 1, #segments - 1 do
+		local segment = segments[index]
+		local nextValue = cursor[segment]
+		if typeof(nextValue) ~= "table" then
+			nextValue = {}
+			cursor[segment] = nextValue
+		end
+		cursor = nextValue
+	end
+	cursor[segments[#segments]] = value
+end
+
+local function validateAgainstDefault(defaults: {[string]: any}, path: string, value: any): boolean
+	local defaultValue = readPath(defaults, path)
+	if defaultValue == nil then
+		-- Session/runtime extension points are intentionally allowed.
+		return string.sub(path, 1, 8) == "Session."
+	end
+	return typeof(defaultValue) == typeof(value)
+end
+
+function SettingsService.new(pluginObject: Plugin, pluginId: string, defaults: {[string]: any}): SettingsService
+	local storageKey = string.format("CursorV2.%s.Settings", pluginId)
+	local saved: any = nil
+	local ok = pcall(function()
+		saved = pluginObject:GetSetting(storageKey)
+	end)
+
+	local data = if ok and typeof(saved) == "table" then deepCopy(saved) else {}
+	mergeDefaults(data, defaults)
+
+	return setmetatable({
+		_plugin = pluginObject,
+		_storageKey = storageKey,
+		_defaults = deepCopy(defaults),
+		_data = data,
+		_changed = Instance.new("BindableEvent"),
+	}, SettingsService)
+end
+
+function SettingsService:_persist()
+	local pluginObject = self._plugin
+	if not pluginObject then
+		return
+	end
+	local ok, err = pcall(function()
+		pluginObject:SetSetting(self._storageKey, deepCopy(self._data))
+	end)
+	if not ok then
+		warn(string.format("[Cursor Settings] Failed to persist settings: %s", tostring(err)))
+	end
+end
+
+function SettingsService:Get(path: string): any
+	return deepCopy(readPath(self._data, path))
+end
+
+function SettingsService:GetAll(): {[string]: any}
+	return deepCopy(self._data)
+end
+
+function SettingsService:Set(path: string, value: any): boolean
+	if not validateAgainstDefault(self._defaults, path, value) then
+		return false
+	end
+	local previous = readPath(self._data, path)
+	if previous == value then
+		return true
+	end
+	writePath(self._data, path, deepCopy(value))
+	self:_persist()
+	local changed = self._changed
+	if changed then
+		changed:Fire(path, deepCopy(value), deepCopy(previous))
+	end
+	return true
+end
+
+function SettingsService:Reset(path: string?)
+	if path == nil or path == "" then
+		self._data = deepCopy(self._defaults)
+		self:_persist()
+		local changed = self._changed
+		if changed then
+			changed:Fire("*", self:GetAll(), nil)
+		end
+		return
+	end
+	local defaultValue = readPath(self._defaults, path)
+	if defaultValue == nil then
+		return
+	end
+	self:Set(path, defaultValue)
+end
+
+function SettingsService:GetChangedSignal(): RBXScriptSignal
+	return (self._changed :: BindableEvent).Event
+end
+
+function SettingsService:Destroy()
+	if self._changed then
+		self._changed:Destroy()
+		self._changed = nil
+	end
+	self._plugin = nil
+end
+
+return SettingsService
+</ProtectedString>
+          <string name="ScriptGuid">{04DA2848-2547-44F9-A229-30EDC7981891}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">SettingsService</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBXAB67F09F8DFE40DB95B9EB9ED7E7FCAE">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+local TweenService = game:GetService("TweenService")
+
+local Root = script.Parent.Parent
+local Theme = require(Root.UI.Theme)
+local Primitives = require(Root.UI.Primitives)
+
+local NotificationService = {}
+NotificationService.__index = NotificationService
+
+export type NotificationService = typeof(setmetatable({
+	_screenGui = nil :: ScreenGui?,
+	_host = nil :: Frame?,
+}, NotificationService))
+
+local function make(className: string, properties: {[string]: any}, parent: Instance?): any
+	local object = Instance.new(className)
+	for key, value in properties do
+		(object :: any)[key] = value
+	end
+	if parent then
+		object.Parent = parent
+	end
+	return object
+end
+
+function NotificationService.new(screenGui: ScreenGui): NotificationService
+	local host = make("Frame", {
+		Name = "CursorNotifications",
+		AnchorPoint = Vector2.new(1, 1),
+		BackgroundTransparency = 1,
+		Position = UDim2.new(1, -12, 1, -12),
+		Size = UDim2.fromOffset(280, 220),
+		ZIndex = 900,
+	}, screenGui)
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Vertical,
+		HorizontalAlignment = Enum.HorizontalAlignment.Right,
+		VerticalAlignment = Enum.VerticalAlignment.Bottom,
+		Padding = UDim.new(0, 6),
+	}, host)
+
+	return setmetatable({
+		_screenGui = screenGui,
+		_host = host,
+	}, NotificationService)
+end
+
+function NotificationService:Show(message: string, tone: string?, duration: number?)
+	local host = self._host
+	if not host then
+		return
+	end
+	local card = make("CanvasGroup", {
+		Name = "Toast",
+		BackgroundColor3 = Theme.SurfaceRaised,
+		BorderSizePixel = 0,
+		GroupTransparency = 1,
+		Size = UDim2.fromOffset(260, 38),
+		ZIndex = 901,
+	}, host)
+	Primitives.Corner(card, Theme.RadiusMedium)
+	Primitives.Stroke(card, if tone == "danger" then Theme.Danger else Theme.Border)
+	local label = Primitives.Label(card, message, 9, if tone == "danger" then Theme.Danger else Theme.TextMuted, true)
+	label.Position = UDim2.fromOffset(10, 0)
+	label.Size = UDim2.new(1, -20, 1, 0)
+	label.TextTruncate = Enum.TextTruncate.AtEnd
+	label.ZIndex = 902
+
+	local motionDisabled = Theme.ReduceMotion == true or Theme.AnimationsEnabled == false
+	local fadeTime = if motionDisabled then 0 else Theme.MotionNormal
+	if fadeTime &gt; 0 then
+		TweenService:Create(card, TweenInfo.new(fadeTime), {GroupTransparency = 0}):Play()
+	else
+		card.GroupTransparency = 0
+	end
+
+	task.delay(duration or 2.6, function()
+		if not card.Parent then
+			return
+		end
+		if fadeTime &lt;= 0 then
+			card:Destroy()
+			return
+		end
+		local tween = TweenService:Create(card, TweenInfo.new(fadeTime), {GroupTransparency = 1})
+		tween:Play()
+		tween.Completed:Connect(function()
+			if card.Parent then
+				card:Destroy()
+			end
+		end)
+	end)
+end
+
+function NotificationService:Destroy()
+	if self._host then
+		self._host:Destroy()
+		self._host = nil
+	end
+	self._screenGui = nil
+end
+
+return NotificationService
+</ProtectedString>
+          <string name="ScriptGuid">{320083BC-A84E-431E-A83F-7E4E3ADC5249}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">NotificationService</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBXD0DE387267F044689AC0AD26F58BB26E">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+local RunService = game:GetService("RunService")
+
+local ThemeService = {}
+ThemeService.__index = ThemeService
+
+export type ThemeService = typeof(setmetatable({
+	_settings = nil :: any,
+	_theme = nil :: {[string]: any}?,
+	_changed = nil :: BindableEvent?,
+	_root = nil :: Instance?,
+	_rainbowConnection = nil :: RBXScriptConnection?,
+	_rainbowAddedConnection = nil :: RBXScriptConnection?,
+	_rainbowBindings = {} :: {any},
+	_rainbowAccumulator = 0,
+}, ThemeService))
+
+local COLOR_PROPERTIES = {
+	"BackgroundColor3",
+	"BorderColor3",
+	"TextColor3",
+	"PlaceholderColor3",
+	"ImageColor3",
+	"ScrollBarImageColor3",
+}
+
+local COLOR_ATTRIBUTES = {
+	"CursorBaseBackground",
+	"CursorBaseForeground",
+	"CursorHoverBackground",
+	"CursorHoverForeground",
+	"EaseColor",
+}
+
+local RAINBOW_TOKENS = {
+	"Accent",
+	"AccentHover",
+	"AccentSoft",
+	"AccentFaint",
+	"Focus",
+	"Ring",
+	"Secondary",
+	"SecondarySoft",
+	"Playhead",
+	"Selection",
+	"KeyframeSelected",
+}
+
+local function colorKey(color: Color3): string
+	return string.format("%.6f,%.6f,%.6f", color.R, color.G, color.B)
+end
+
+local function buildReplacementMap(before: {[string]: Color3}, after: {[string]: Color3}): {[string]: Color3}
+	local replacements: {[string]: Color3} = {}
+	local names = {}
+	for name in before do
+		table.insert(names, name)
+	end
+	table.sort(names)
+	for _, name in names do
+		local oldColor = before[name]
+		local newColor = after[name]
+		if newColor then
+			local key = colorKey(oldColor)
+			if replacements[key] == nil then
+				replacements[key] = newColor
+			end
+		end
+	end
+	return replacements
+end
+
+local function remapObject(object: Instance, replacements: {[string]: Color3})
+	for _, propertyName in COLOR_PROPERTIES do
+		local ok, current = pcall(function()
+			return (object :: any)[propertyName]
+		end)
+		if ok and typeof(current) == "Color3" then
+			local replacement = replacements[colorKey(current)]
+			if replacement then
+				pcall(function()
+					(object :: any)[propertyName] = replacement
+				end)
+			end
+		end
+	end
+
+	if object:IsA("UIStroke") then
+		local replacement = replacements[colorKey(object.Color)]
+		if replacement then
+			object.Color = replacement
+		end
+	end
+
+	for _, attributeName in COLOR_ATTRIBUTES do
+		local current = object:GetAttribute(attributeName)
+		if typeof(current) == "Color3" then
+			local replacement = replacements[colorKey(current)]
+			if replacement then
+				object:SetAttribute(attributeName, replacement)
+			end
+		end
+	end
+end
+
+function ThemeService.new(settingsService: any, themeModule: {[string]: any}): ThemeService
+	return setmetatable({
+		_settings = settingsService,
+		_theme = themeModule,
+		_changed = Instance.new("BindableEvent"),
+		_root = nil,
+		_rainbowConnection = nil,
+		_rainbowAddedConnection = nil,
+		_rainbowBindings = {},
+		_rainbowAccumulator = 0,
+	}, ThemeService)
+end
+
+function ThemeService:_stopRainbow()
+	if self._rainbowConnection then
+		self._rainbowConnection:Disconnect()
+		self._rainbowConnection = nil
+	end
+	if self._rainbowAddedConnection then
+		self._rainbowAddedConnection:Disconnect()
+		self._rainbowAddedConnection = nil
+	end
+	table.clear(self._rainbowBindings)
+	self._rainbowAccumulator = 0
+end
+
+function ThemeService:_registerRainbowObject(object: Instance)
+	local theme = self._theme
+	if not theme then
+		return
+	end
+
+	local tokenByColor: {[string]: string} = {}
+	for _, token in RAINBOW_TOKENS do
+		local color = theme[token]
+		if typeof(color) == "Color3" then
+			tokenByColor[colorKey(color)] = token
+		end
+	end
+
+	for _, propertyName in COLOR_PROPERTIES do
+		local ok, current = pcall(function()
+			return (object :: any)[propertyName]
+		end)
+		if ok and typeof(current) == "Color3" then
+			local token = tokenByColor[colorKey(current)]
+			if token then
+				table.insert(self._rainbowBindings, {
+					object = object,
+					kind = "property",
+					name = propertyName,
+					token = token,
+				})
+			end
+		end
+	end
+
+	if object:IsA("UIStroke") then
+		local token = tokenByColor[colorKey(object.Color)]
+		if token then
+			table.insert(self._rainbowBindings, {
+				object = object,
+				kind = "stroke",
+				name = "Color",
+				token = token,
+			})
+		end
+	end
+
+	for _, attributeName in COLOR_ATTRIBUTES do
+		local current = object:GetAttribute(attributeName)
+		if typeof(current) == "Color3" then
+			local token = tokenByColor[colorKey(current)]
+			if token then
+				table.insert(self._rainbowBindings, {
+					object = object,
+					kind = "attribute",
+					name = attributeName,
+					token = token,
+				})
+			end
+		end
+	end
+end
+
+function ThemeService:_startRainbow(root: Instance)
+	local theme = self._theme
+	if not theme or not theme.IsAnimatedPreset(theme.GetActivePreset()) then
+		return
+	end
+
+	self:_stopRainbow()
+	self._root = root
+	self:_registerRainbowObject(root)
+	for _, descendant in root:GetDescendants() do
+		self:_registerRainbowObject(descendant)
+	end
+
+	self._rainbowAddedConnection = root.DescendantAdded:Connect(function(descendant)
+		self:_registerRainbowObject(descendant)
+	end)
+
+	self._rainbowConnection = RunService.Heartbeat:Connect(function(deltaTime)
+		self._rainbowAccumulator += deltaTime
+		if self._rainbowAccumulator &lt; (1 / 24) then
+			return
+		end
+		self._rainbowAccumulator = 0
+
+		local hue = (os.clock() * 0.075) % 1
+		theme.ApplyRainbowHue(hue)
+		local bindings = self._rainbowBindings
+		local writeIndex = 1
+		for readIndex = 1, #bindings do
+			local binding = bindings[readIndex]
+			local object = binding.object :: Instance
+			if object.Parent ~= nil then
+				local color = theme[binding.token]
+				if typeof(color) == "Color3" then
+					if binding.kind == "property" then
+						pcall(function()
+							(object :: any)[binding.name] = color
+						end)
+					elseif binding.kind == "stroke" and object:IsA("UIStroke") then
+						object.Color = color
+					elseif binding.kind == "attribute" then
+						object:SetAttribute(binding.name, color)
+					end
+				end
+				bindings[writeIndex] = binding
+				writeIndex += 1
+			end
+		end
+		for index = #bindings, writeIndex, -1 do
+			bindings[index] = nil
+		end
+	end)
+end
+
+function ThemeService:Initialize()
+	local theme = self._theme
+	if not theme then
+		return
+	end
+	local preset = self._settings:Get("Appearance.Theme")
+	theme.ApplyPreset(if typeof(preset) == "string" then preset else "Obsidian")
+	theme.ReduceMotion = self._settings:Get("Appearance.ReduceMotion") == true
+	theme.AnimationsEnabled = self._settings:Get("Appearance.Animations") ~= false
+end
+
+function ThemeService:GetActivePreset(): string
+	local theme = self._theme
+	return if theme then theme.GetActivePreset() else "Obsidian"
+end
+
+function ThemeService:GetPresetNames(): {string}
+	local theme = self._theme
+	local output = {}
+	if theme then
+		for _, name in theme.PresetNames do
+			table.insert(output, name)
+		end
+	end
+	return output
+end
+
+function ThemeService:SetPreset(name: string, root: Instance?): string
+	local theme = self._theme
+	if not theme then
+		return "Obsidian"
+	end
+
+	self:_stopRainbow()
+	if root then
+		self._root = root
+	end
+
+	local before = theme.GetColorSnapshot()
+	local applied = theme.ApplyPreset(name)
+	local after = theme.GetColorSnapshot()
+	local targetRoot = root or self._root
+
+	if targetRoot then
+		local replacements = buildReplacementMap(before, after)
+		remapObject(targetRoot, replacements)
+		for _, descendant in targetRoot:GetDescendants() do
+			remapObject(descendant, replacements)
+		end
+	end
+
+	self._settings:Set("Appearance.Theme", applied)
+	if targetRoot and theme.IsAnimatedPreset(applied) then
+		self:_startRainbow(targetRoot)
+	end
+
+	local changed = self._changed
+	if changed then
+		changed:Fire(applied)
+	end
+	return applied
+end
+
+function ThemeService:SetReduceMotion(enabled: boolean)
+	local theme = self._theme
+	if theme then
+		theme.ReduceMotion = enabled
+	end
+	self._settings:Set("Appearance.ReduceMotion", enabled)
+	local changed = self._changed
+	if changed then
+		changed:Fire(self:GetActivePreset())
+	end
+end
+
+function ThemeService:SetAnimationsEnabled(enabled: boolean)
+	local theme = self._theme
+	if theme then
+		theme.AnimationsEnabled = enabled
+	end
+	self._settings:Set("Appearance.Animations", enabled)
+	local changed = self._changed
+	if changed then
+		changed:Fire(self:GetActivePreset())
+	end
+end
+
+function ThemeService:GetChangedSignal(): RBXScriptSignal
+	return (self._changed :: BindableEvent).Event
+end
+
+function ThemeService:Destroy()
+	self:_stopRainbow()
+	if self._changed then
+		self._changed:Destroy()
+		self._changed = nil
+	end
+	self._settings = nil
+	self._theme = nil
+	self._root = nil
+end
+
+return ThemeService
+</ProtectedString>
+          <string name="ScriptGuid">{4618F0E4-245F-4E0D-9AE4-0B9F2819AC62}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">ThemeService</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX860D11CBBA3346D1A905B84056971465">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+local Logger = {}
+Logger.__index = Logger
+
+export type Logger = typeof(setmetatable({
+	_prefix = "Cursor",
+	_debugEnabled = false,
+}, Logger))
+
+function Logger.new(prefix: string, debugEnabled: boolean?): Logger
+	return setmetatable({
+		_prefix = prefix,
+		_debugEnabled = debugEnabled == true,
+	}, Logger)
+end
+
+function Logger:SetDebugEnabled(enabled: boolean)
+	self._debugEnabled = enabled
+end
+
+function Logger:Debug(message: string, ...: any)
+	if not self._debugEnabled then
+		return
+	end
+	print(string.format("[%s] %s", self._prefix, string.format(message, ...)))
+end
+
+function Logger:Info(message: string, ...: any)
+	print(string.format("[%s] %s", self._prefix, string.format(message, ...)))
+end
+
+function Logger:Warn(message: string, ...: any)
+	warn(string.format("[%s] %s", self._prefix, string.format(message, ...)))
+end
+
+return Logger
+</ProtectedString>
+          <string name="ScriptGuid">{879574BD-30EC-4798-BFE5-D2905A5E0185}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">Logger</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+    </Item>
+    <Item class="Folder" referent="RBXEF63488951A0493A977A12EC8034303F">
+      <Properties>
+        <Color3 name="IconTint">
+          <R>0</R>
+          <G>0</G>
+          <B>0</B>
+        </Color3>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <bool name="DefinesCapabilities">false</bool>
+        <string name="Name">Config</string>
+        <BinaryString name="SerializedOverrides"></BinaryString>
+        <int64 name="SourceAssetId">-1</int64>
+        <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+      </Properties>
+      <Item class="ModuleScript" referent="RBX64638EB9038D4B86917D571982F04516">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+-- Shared settings contract used by the other Cursor V2 plugins.
+local Defaults = {
+	Version = 2,
+	Appearance = {
+		Theme = "Obsidian",
+		ReduceMotion = false,
+		Animations = true,
+		Density = "Comfortable",
+	},
+	Behavior = {
+		ConfirmDestructiveActions = true,
+		RestoreSession = true,
+		ShowTooltips = true,
+	},
+	Product = {
+		Name = "Cursor Bridge V2",
+		Version = "0.2.1",
+	},
+	Advanced = {
+		DebugLogging = false,
+	},
+	Session = {
+		Favorites = {},
+		RecentActions = {},
+	},
+
+	-- Bridge-specific transport settings. These keys are not user-editable.
+	ServerURL = "http://127.0.0.1:38471",
+	PollInterval = 0.18,
+	MaxBatchBytes = 700 * 1024,
+	MaxScriptBytes = 256 * 1024,
+	MaxOperationsPerBatch = 75,
+	MaxPendingOperations = 30000,
+	MaxNodes = 20000,
+	MaxNetworkFailures = 10,
+}
+
+return table.freeze(Defaults)
+</ProtectedString>
+          <string name="ScriptGuid">{7EF4FF61-AA15-4A63-9E80-6A7035822AC5}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">Defaults</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+    </Item>
+  </Item>
+  <SharedStrings>
+    <SharedString md5="yuZpQdnvvUBOTYh1jqZ2cA=="></SharedString>
+  </SharedStrings>
+</roblox>

@@ -1,0 +1,23 @@
+Return all newly created or modified Roblox Luau scripts in ONE plain .txt document.
+Include ONLY scripts that must actually change. Supply their COMPLETE final source, not patches.
+Use exact, case-sensitive paths from the Roblox Studio Explorer.
+Each Luau source must begin on its first code line with --!strict.
+All script code and comments must be in English.
+Use STATUS: MODIFIED only for an existing script and STATUS: NEW for a new one.
+For every NEW script also include CLASS: Script, CLASS: LocalScript, or CLASS: ModuleScript.
+If CLASS is omitted for NEW, Cursor Bridge defaults to Script; users can change it in the preview.
+Paths must use forward slashes, beginning at game/Workspace, game/ServerScriptService, etc.
+Missing intermediate folders in NEW script paths will be created automatically.
+Do not use markdown fences, explanations, or text outside the script blocks.
+Repeat the following header for EVERY script, using exactly 50 equals signs:
+
+==================================================
+SCRIPT: ExampleScript
+PATH: game/ServerScriptService/Systems/ExampleScript
+STATUS: NEW
+CLASS: Script
+==================================================
+
+--!strict
+
+print("Hello from Cursor Bridge")
