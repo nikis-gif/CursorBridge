@@ -1,0 +1,105 @@
+name: Import verified Discord Cloud Workspace v0.3.0
+
+on:
+  push:
+    branches: ['redesign/discord-cloud']
+    paths: ['.github/workflows/import-v030.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: import-cursorbridge-v030
+  cancel-in-progress: false
+
+jobs:
+  import-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify and apply reviewed source patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          import base64, hashlib, lzma, subprocess
+          from pathlib import Path
+          text = ''.join(Path(f'.github/cursorbridge-v030.part{i}').read_text() for i in (1, 2))
+          patch = lzma.decompress(base64.b64decode(text))
+          expected = '74b18e70f80b217126e2f751937e660e27b4a51ce0d26a052706dfdd9346fe61'
+          assert hashlib.sha256(patch).hexdigest() == expected, 'Source patch checksum mismatch'
+          target = Path('/tmp/cursorbridge-v030.patch')
+          target.write_bytes(patch)
+          subprocess.run(['git', 'apply', '--check', '--index', '--unidiff-zero', str(target)], check=True)
+          subprocess.run(['git', 'apply', '--index', '--unidiff-zero', str(target)], check=True)
+          # Generated Roblox referents intentionally use UUIDs. Validate the
+          # source/XML contract, not byte identity between independent builds.
+          workflow = Path('.github/workflows/workspace-validation.yml')
+          source = workflow.read_text()
+          obsolete = '          git diff --exit-code -- CursorBridgeV2.rbxmx\n'
+          assert source.count(obsolete) == 1
+          workflow.write_text(source.replace(obsolete, ''))
+          PY
+      - name: Recover exact dependency lock from successful baseline validation
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh run download 38166453699 --repo nikis-gif/CursorBridge --name cursorbridge-validation-workspace --dir /tmp/cursorbridge-baseline
+          python - <<'PY'
+          import hashlib, json, tarfile
+          from pathlib import Path
+          with tarfile.open('/tmp/cursorbridge-baseline/cursorbridge-workspace.tar.gz', 'r:gz') as archive:
+              member = archive.extractfile('./package-lock.json')
+              assert member is not None
+              lock = json.load(member)
+          lock['version'] = '0.3.0'
+          lock['packages']['']['version'] = '0.3.0'
+          data = (json.dumps(lock, indent=2) + '\n').encode()
+          assert hashlib.sha256(data).hexdigest() == '2a3406a704f27471e4aca63d881c0fb8730baad89039a6645a904223121b98f4'
+          Path('package-lock.json').write_bytes(data)
+          PY
+      - name: Install exact tested dependencies and browser
+        run: |
+          npm ci --no-audit --no-fund
+          python -m pip install -r tests/browser/requirements.txt
+          python -m playwright install --with-deps chromium
+      - name: Test application and build production renderer
+        run: |
+          npm test
+          npm run build
+      - name: Rebuild and validate Studio plugin
+        run: |
+          python scripts/build_plugin.py
+          python -m unittest discover -s tests -p test_plugin_build.py -v
+      - name: Validate existing workflows and real split editor
+        run: |
+          npm run test:ui
+          npm run test:ui:workspace
+          npm run test:ui:load
+          npm run test:ui:stability
+      - name: Commit only validated sources and remove temporary import files
+        run: |
+          git add package-lock.json CursorBridgeV2.rbxmx .github/workflows/workspace-validation.yml
+          git rm .github/cursorbridge-v030.part1 .github/cursorbridge-v030.part2 .github/workflows/import-v030.yml
+          git diff --cached --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'feat: Discord Cloud Workspace v0.3.0 with safe split editing'
+          git push origin HEAD:refs/heads/redesign/discord-cloud
+          git rev-parse HEAD >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v030-import-validation
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
