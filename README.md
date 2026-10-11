@@ -1,6 +1,6 @@
 # Cursor Bridge
 
-**Cursor Bridge v0.2.4** is a Windows-first Luau workbench connected to the **currently paired Roblox Studio place**. It comprises a local Electron/Monaco application and a Roblox Studio plugin with the existing Cursor V2 floating window. Studio remains the source of truth for the DataModel; the workbench does not run games or replace Studio's compiler.
+**Cursor Bridge v0.2.5** is a Windows-first Luau workbench connected to the **currently paired Roblox Studio place**. It comprises a local Electron/Monaco application and a Roblox Studio plugin with the existing Cursor V2 floating window. Studio remains the source of truth for the DataModel; the workbench does not run games or replace Studio's compiler.
 
 All connection traffic stays on `127.0.0.1:38471`. Source history, recovery snapshots, and unsynced drafts are stored locally on the PC.
 
@@ -124,3 +124,10 @@ Reconnect recovery can offer a previous draft when its saved hierarchy path is u
 **Recovery:** use *Open recovery folder* in the app or the script's *History* view. If a conflict occurs, choose whether to reapply the local draft or reload the Studio version. Do not delete the backups or drafts directory during an update.
 
 The Studio plugin is unchanged from the previous build. Update only the Windows project for this release. Automated tests exercise a simulated Studio transport; live Roblox Studio behavior still requires verification on Windows.
+
+
+## High-load Studio transport (v0.2.5)
+
+The Studio plugin now uses rate-aware adaptive polling: 1.5 seconds while idle and 0.55 seconds while there are queued changes. Source audits run every 2 seconds, rather than on every network cycle. On Roblox HttpService throttling ("Number of requests exceeded limit"), the plugin backs off exponentially (2–30 seconds) instead of treating the throttle itself as an immediately fatal local connection error. The desktop session heartbeat timeout is now 45 seconds to tolerate transient throttling.
+
+The local session can still expire after a sustained outage. Disconnect or Place changes still require an explicit pairing step, and local drafts/backups continue to apply. These rates are intentionally conservative because other Studio plugins may share the Roblox HTTP request budget. Users upgrading from v0.2.4 must install both the Windows app and the updated v0.2.5 Studio plugin. This is a transport fix, not proof of support for arbitrarily large places; the current hierarchy, source-size and backup limits remain in effect.
