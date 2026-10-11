@@ -1,0 +1,43 @@
+name: Workspace validation
+
+on:
+  push:
+    branches: ['redesign/discord-cloud']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workspace-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run application regression tests
+        run: npm test
+      - name: Build renderer
+        run: npm run build
+      - name: Validate Studio plugin
+        run: |
+          python scripts/build_plugin.py
+          python -m unittest discover -s tests -p test_plugin_build.py -v
+      - name: Export reproducible workspace for visual validation
+        run: |
+          tar -czf /tmp/cursorbridge-workspace.tar.gz --exclude=.git --exclude=node_modules/electron/dist --exclude=node_modules/app-builder-bin --exclude=node_modules/7zip-bin --exclude=release .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cursorbridge-validation-workspace
+          path: /tmp/cursorbridge-workspace.tar.gz
+          retention-days: 3
