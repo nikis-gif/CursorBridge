@@ -28,7 +28,12 @@ local Defaults = {
 
 	-- Bridge-specific transport settings. These keys are not user-editable.
 	ServerURL = "http://127.0.0.1:38471",
-	PollInterval = 0.18,
+	PollInterval = 0.18, -- Legacy setting retained for plugin compatibility.
+	ActivePollInterval = 0.55,
+	IdlePollInterval = 1.5,
+	SourceAuditInterval = 2.0,
+	InitialRetryDelay = 2.0,
+	MaximumRetryDelay = 30.0,
 	MaxBatchBytes = 700 * 1024,
 	MaxScriptBytes = 256 * 1024,
 	MaxOperationsPerBatch = 75,
