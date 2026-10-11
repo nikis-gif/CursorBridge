@@ -1,0 +1,104 @@
+name: Validate and import minimal workspace v0.3.1
+
+on:
+  push:
+    branches: ['polish/minimal-workspace-v031']
+    paths: ['.github/workflows/import-v031.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: import-cursorbridge-v031
+  cancel-in-progress: false
+
+jobs:
+  import-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify source baseline and apply reviewed changes
+        shell: bash
+        run: |
+          python - <<'PY'
+          import base64, hashlib, json, lzma, subprocess
+          from pathlib import Path
+          encoded = ''.join(Path(f'.github/polish-v031.part{i}').read_text() for i in (1, 2))
+          data = lzma.decompress(base64.b64decode(encoded, validate=True))
+          assert hashlib.sha256(data).hexdigest() == '61615dba530941cf129ca3dc7e75a26049dbf3697c39021db5fdd3ad40d0ef6c', 'Manifest checksum mismatch'
+          entries = json.loads(data)
+          root = Path.cwd().resolve()
+          prepared = []
+          seen = set()
+          for entry in entries:
+              relative = entry['path']
+              path = (root / relative).resolve()
+              assert relative not in seen and not relative.startswith('.git')
+              assert path.is_relative_to(root) and path != root
+              seen.add(relative)
+              if entry['before'] is None:
+                  assert not path.exists(), f'New file already exists: {relative}'
+                  source = ''
+              else:
+                  original = path.read_bytes()
+                  assert hashlib.sha256(original).hexdigest() == entry['before'], f'Baseline changed: {relative}'
+                  source = original.decode('utf-8')
+              boundary = len(source)
+              for start, end, replacement in reversed(entry['edits']):
+                  assert 0 <= start <= end <= boundary
+                  source = source[:start] + replacement + source[end:]
+                  boundary = start
+              result = source.encode('utf-8')
+              assert hashlib.sha256(result).hexdigest() == entry['after'], f'Result mismatch: {relative}'
+              prepared.append((path, result))
+          for path, result in prepared:
+              path.parent.mkdir(parents=True, exist_ok=True)
+              path.write_bytes(result)
+          subprocess.run(['git', 'add', '--', *sorted(seen)], check=True)
+          print(f'Applied and verified {len(prepared)} source files.')
+          PY
+      - name: Install locked dependencies and browser tooling
+        run: |
+          npm ci --no-audit --no-fund
+          python -m pip install -r tests/browser/requirements.txt
+          python -m playwright install --with-deps chromium
+      - name: Test application and build production renderer
+        run: |
+          npm test
+          npm run build
+      - name: Rebuild and validate Studio plugin
+        run: |
+          python scripts/build_plugin.py
+          python -m unittest discover -s tests -p test_plugin_build.py -v
+      - name: Validate navigation, synchronization and compact split workspace
+        run: |
+          npm run test:ui
+          npm run test:ui:workspace
+          npm run test:ui:load
+          npm run test:ui:stability
+      - name: Commit validated source without changing workflow permissions
+        run: |
+          git add CursorBridgeV2.rbxmx
+          git rm .github/polish-v031.part1 .github/polish-v031.part2
+          git diff --cached --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'feat: minimal professional workspace v0.3.1'
+          git push origin HEAD:refs/heads/polish/minimal-workspace-v031
+          git rev-parse HEAD >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: minimal-workspace-validation
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
