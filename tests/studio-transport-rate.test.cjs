@@ -40,3 +40,15 @@ test('release workflow publishes all artifacts through a single GitHub release',
   assert.match(workflow, /gh release create \$tag \$assets/);
   assert.doesNotMatch(workflow, /electron-builder --win nsis --publish always/);
 });
+
+test('release uses a stable NSIS filename and validates updater metadata before upload', () => {
+  const pkg = JSON.parse(read('package.json'));
+  const workflow = read('.github/workflows/release.yml');
+  assert.equal(pkg.build.win.artifactName, 'Cursor-Bridge-Setup-${version}.${ext}');
+  assert.match(workflow, /Verify updater manifest matches installer/);
+  assert.match(workflow, /latest\.yml checksum does not match installer/);
+  assert.match(workflow, /latest\.yml path does not match installer name/);
+  assert.match(workflow, /latest\.yml size does not match installer/);
+  assert.ok(workflow.indexOf('Verify updater manifest matches installer') <
+    workflow.indexOf('Publish one complete GitHub release'));
+});
