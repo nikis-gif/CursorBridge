@@ -87,6 +87,7 @@ function registerIpc() {
     'bridge:list-backups': (_event, id) => bridge.listBackups(id),
     'bridge:read-backup': (_event, id, version, storageScriptId) => bridge.restoreBackup(id, version, storageScriptId),
     'bridge:open-studio-script': (_event, id) => bridge.openStudioScript(id),
+    'bridge:list-children': (_event, id) => bridge.requestChildren(id),
     'bridge:open-backups-folder': () => shell.openPath(bridge.storage.backupsPath),
     'bridge:disconnect': () => bridge.disconnect('application-user-disconnected'),
     'bridge:check-updates': () => checkForUpdates(true),

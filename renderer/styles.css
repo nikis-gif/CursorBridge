@@ -405,3 +405,11 @@ body[data-theme=obsidian] {
 .quick-result.active{outline:0;background:var(--selection);color:var(--text);}
 .quick-result-line{font-size:9px;color:var(--faint);flex-shrink:0;font-family:Consolas,monospace;}
 @media(max-width:920px){.quick-result-info{grid-template-columns:minmax(70px,.9fr) minmax(80px,1.2fr);gap:7px;}}
+
+/* On-demand folders use an inline Explorer row, never an overlay or layout shift. */
+.tree-page-action {
+  width:100%; border:0; background:transparent; text-align:left;
+  font-size:11px; color:var(--muted); padding-right:8px;
+}
+.tree-page-action:not(:disabled) { cursor:pointer; color:var(--sub); }
+.tree-page-action:not(:disabled):hover { color:var(--text); background:var(--hover); }

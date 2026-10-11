@@ -5,7 +5,7 @@ const SERVICE_ORDER = ['Workspace', 'Players', 'CoreGui', 'Lighting', 'MaterialS
   'SoundService', 'TextChatService', 'Chat', 'TestService', 'LocalizationService'];
 const SERVICE_RANK = new Map(SERVICE_ORDER.map((name, i) => [name, i]));
 
-export function buildExplorerRows(nodes, expanded, searchTerm = '', maxRows = 1000000) {
+export function buildExplorerRows(nodes, expanded, searchTerm = '', maxRows = 1000000, childPages = new Map(), fullyIndexed = false) {
   const term = searchTerm.trim().toLocaleLowerCase();
   const children = new Map();
   for (const node of nodes.values()) {
@@ -57,10 +57,19 @@ export function buildExplorerRows(nodes, expanded, searchTerm = '', maxRows = 10
     for (const node of children.get(parentId) || []) {
       if (rows.length >= maxRows) return;
       if (term && !visible.has(node.id)) continue;
-      const hasChildren = !!children.get(node.id)?.length;
+      const hasChildren = !!children.get(node.id)?.length || node.hasChildren === true;
       const isExpanded = term ? true : expanded.has(node.id);
       rows.push({ id: node.id, node, depth, hasChildren, expanded: isExpanded });
-      if (isExpanded && hasChildren) visit(node.id, depth + 1, next);
+      if (isExpanded && hasChildren) {
+        visit(node.id, depth + 1, next);
+        const page = childPages.get(node.id);
+        // A page marker appears even when zero children have been fetched.
+        // It never represents an Instance and cannot be moved or deleted.
+        if (!fullyIndexed && !term && node.hasChildren === true && page?.complete !== true && rows.length < maxRows) {
+          rows.push({ id: `@cursor-page:${node.id}`, node: null,
+            depth: depth + 1, parentId: node.id, pageMarker: true });
+        }
+      }
     }
   }
   visit('game', 0, new Set());

@@ -20,6 +20,7 @@ window.cursorBridge = {
   async getDraft(){return null;},
   async saveDraft(){}, async clearDraft(){}, async writeScript(){return {status:'queued'};},
   async mutateHierarchy(command){const opId=`mut-${window.__mutations.length+1}`; window.__mutations.push({...command,opId});return {status:'queued',opId,count:1};},
+  async requestChildren(){return {status:'complete',offset:0,total:0,complete:true};},
   async getBackups(){return [];},
   async copyText(){}, async disconnect(){window.__emitServer({type:'status',status:noSession});},
   async openStudioScript(){}, async openBackupsFolder(){}, async checkForUpdates(){return {reason:'No updates'};},

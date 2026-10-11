@@ -1,9 +1,12 @@
-## 0.2.4 — Windows Release CI Compatibility
+## 0.2.8 — Demand-Paged Large Place Explorer
 
-- Fixed a platform-dependent Explorer regression test that expected LF-only source line endings. The assertion now also verifies that the offline guard clears cached Explorer rows and DOM under CRLF.
-- Added Git source line-ending rules to keep code consistent on Windows and Unix.
-- Moved manual release tag creation until after application tests, renderer build, plugin build, and XML validation, so a failed build does not reserve another release tag prematurely.
-- No changes to Studio synchronization, desktop editor behavior, plugin protocol, or UI. Roblox Studio plugin reinstall is not required.
+- Paired Roblox Studio sessions expose managed root services before the background scan finishes.
+- Large folders load their immediate children in 150-item pages with an Explorer "Load more" row, avoiding an eager full-Place mirror.
+- Automatic indexing has a bounded budget; previously unseen branches remain accessible by expanding the parent.
+- Prevented partially indexed subtrees from being deleted/duplicated/moved without full coverage, and restricted Quick Apply to fully loaded target paths.
+- Maintained source revisions, conflict protection, local drafts and Studio authority; marked global search as partial when the Place is on demand.
+- Added Node protocol and Chromium regression tests for paging a folder that advertises 600,000 children.
+- Known limit: 250,000 simultaneously indexed nodes in the desktop mirror; simulated tests do not establish live Roblox production capacity.
 
 ## 0.2.3 — Editing and Sync Reliability
 

@@ -1,10 +1,8 @@
 # Cursor Bridge
 
-**Cursor Bridge v0.2.5** is a Windows-first Luau workbench connected to the **currently paired Roblox Studio place**. It comprises a local Electron/Monaco application and a Roblox Studio plugin with the existing Cursor V2 floating window. Studio remains the source of truth for the DataModel; the workbench does not run games or replace Studio's compiler.
+**Cursor Bridge v0.2.8** is a Windows-first Luau workbench connected to the **currently paired Roblox Studio place**. It comprises a local Electron/Monaco application and a Roblox Studio plugin with the existing Cursor V2 floating window. Studio remains the source of truth for the DataModel; the workbench does not run games or replace Studio's compiler.
 
 All connection traffic stays on `127.0.0.1:38471`. Source history, recovery snapshots, and unsynced drafts are stored locally on the PC.
-
-**GitHub publishing:** The source is hosted at [nikis-gif/CursorBridge](https://github.com/nikis-gif/CursorBridge). Open **Actions > Build and publish Windows release > Run workflow** on `main`, or push a matching version tag. See [docs/GITHUB_RELEASE.md](docs/GITHUB_RELEASE.md). The release workflow publishes a public downloadable `.exe` and `latest.yml`.
 
 ## Install and run (Windows)
 
@@ -22,9 +20,9 @@ To install or update the Studio plugin, first **close Roblox Studio**:
 PowerShell -ExecutionPolicy Bypass -File .\scripts\install-studio-plugin.ps1
 ```
 
-Start the desktop app, open Roblox Studio, click **Cursor Bridge V2** on the Plugins toolbar and enter the six-digit pairing code. Grant Studio permission to call the localhost HTTP endpoint when asked. Do not leave older Cursor Bridge plugin copies installed. **The Studio plugin from v0.2.1 is fully compatible with this update**; reinstalling the plugin is not required when upgrading only the Windows app from v0.2.1 to v0.2.4.
+Start the desktop app, open Roblox Studio, click **Cursor Bridge V2** on the Plugins toolbar and enter the six-digit pairing code. Grant Studio permission to call the localhost HTTP endpoint when asked. Do not leave older Cursor Bridge plugin copies installed. **The Studio plugin from v0.2.1 is fully compatible with this update**; reinstalling the plugin is not required when upgrading only the Windows app from v0.2.1 to v0.2.3.
 
-## Workbench v0.2.4
+## Workbench v0.2.3
 
 - **Compact, context-aware Explorer:** Roblox-class-specific original SVG artwork, Studio-like Camera/Terrain prominence under Workspace, correctly nested services, and stable sibling order based on `GetChildren()` metadata rather than alphabetical sorting. Studio-hidden/internal services are not mirrored.
 - **Low-distraction selection:** Click, Ctrl+Click, Shift+Click, keyboard range selection, and rectangular marquee selection by dragging from an empty portion of Explorer. The marquee uses tree offsets instead of measuring every node during each mouse movement. The selection toolbar occupies a permanent-height footer, so selecting objects does not shift the tree.
@@ -86,7 +84,7 @@ Browser tests simulate Studio responses; they do not validate live Roblox Studio
 
 ## Publishing and updates
 
-Read [docs/SETUP.md](docs/SETUP.md) before uploading to GitHub. Configure your actual GitHub repository in `package.json` (`build.publish[0]`); push source, `package-lock.json`, and a `v0.2.4` tag. The included GitHub Actions workflow compiles the installer and validates/uploads `CursorBridgeV2.rbxmx`. The installed desktop app can prompt for updates from GitHub Releases; Studio plugin upgrades are **not** currently automatic.
+Read [docs/SETUP.md](docs/SETUP.md) before uploading to GitHub. Configure your actual GitHub repository in `package.json` (`build.publish[0]`); push source, `package-lock.json`, and a `v0.2.3` tag. The included GitHub Actions workflow compiles the installer and validates/uploads `CursorBridgeV2.rbxmx`. The installed desktop app can prompt for updates from GitHub Releases; Studio plugin upgrades are **not** currently automatic.
 
 For architecture, security, and scope see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). For interface research and exact shortcut semantics see [docs/ENGINE_REFERENCE.md](docs/ENGINE_REFERENCE.md).
 
@@ -125,9 +123,33 @@ Reconnect recovery can offer a previous draft when its saved hierarchy path is u
 
 The Studio plugin is unchanged from the previous build. Update only the Windows project for this release. Automated tests exercise a simulated Studio transport; live Roblox Studio behavior still requires verification on Windows.
 
+## Large Places: on-demand Explorer (v0.2.8)
 
-## High-load Studio transport (v0.2.5)
+Cursor Bridge no longer stops at 20,000 instances. The Studio plugin streams a breadth-first
+DataModel scan in bounded slices and keeps HTTP polling responsive while the index grows.
+The Explorer becomes available after the first slice and displays a live indexing count;
+**the hierarchy is not complete until indexing finishes.** Destructive hierarchy operations
+and Quick Apply are blocked until the scan has completed successfully.
 
-The Studio plugin now uses rate-aware adaptive polling: 1.5 seconds while idle and 0.55 seconds while there are queued changes. Source audits run every 2 seconds, rather than on every network cycle. On Roblox HttpService throttling ("Number of requests exceeded limit"), the plugin backs off exponentially (2–30 seconds) instead of treating the throttle itself as an immediately fatal local connection error. The desktop session heartbeat timeout is now 45 seconds to tolerate transient throttling.
+The desktop server supports up to **250,000 actively indexed instances** in memory; this is a
+safety ceiling, **not unlimited enterprise scale**. Reaching it triggers an explicit incomplete
+index warning. Script source is progressively hydrated and can be requested on demand when
+opening an indexed script. The Explorer mounts only the visible rows, even when an expanded
+branch contains 100,000 instances. Streamed recovery snapshots avoid a large extra in-memory
+JSON copy. The paired session timeout is 120 seconds, allowing a prolonged Roblox HTTP
+rate-limit backoff. See [docs/SCALING.md](docs/SCALING.md) for architectural limits and tests.
 
-The local session can still expire after a sustained outage. Disconnect or Place changes still require an explicit pairing step, and local drafts/backups continue to apply. These rates are intentionally conservative because other Studio plugins may share the Roblox HTTP request budget. Users upgrading from v0.2.4 must install both the Windows app and the updated v0.2.5 Studio plugin. This is a transport fix, not proof of support for arbitrarily large places; the current hierarchy, source-size and backup limits remain in effect.
+**Upgrade both the Windows app and the Roblox Studio plugin** from previous versions.
+The v0.2.7 protocol supports older plugins for basic editing, but old plugins do not stream
+large hierarchies. Check that the indexing indicator finishes before using destructive actions.
+
+## v0.2.8 Large Place browsing
+
+For extremely large Roblox Places, Explorer becomes usable as soon as service roots are
+received; users expand folders to fetch immediate children in 150-instance pages.
+A bounded background index accelerates small projects without blocking access to huge
+subtrees or reporting an invented full-Place count. A clickable **Load more** row loads
+additional siblings. Ctrl+P and Find in Place search indexed scripts, not unloaded
+content; Quick Apply and destructive operations require complete coverage of each
+target subtree/path. See [docs/SCALING.md](docs/SCALING.md) for current resource
+budgets and limits. Both the Windows app and Studio plugin must be updated together.

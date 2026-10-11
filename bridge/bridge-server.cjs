@@ -65,6 +65,8 @@ class BridgeServer extends EventEmitter {
     this.scanIndexed = 0;
     this.scanLimitReached = false;
     this.progressiveScan = false;
+    this.onDemand = false;
+    this.childPages = new Map();
     this.pendingWrites = new Map();
     this.scriptNodeCount = 0;
     this.sourceReadyCount = 0;
@@ -166,6 +168,7 @@ class BridgeServer extends EventEmitter {
       scanComplete: this.scanComplete,
       scanIndexed: this.scanIndexed,
       scanLimitReached: this.scanLimitReached,
+      onDemand: this.onDemand,
       lastChangeAt: this.lastChangeAt || null,
       lastHeartbeatAt: this.session?.lastSeen || null,
       port: this.port,
@@ -176,6 +179,7 @@ class BridgeServer extends EventEmitter {
     return {
       status: this.getStatus(),
       nodes: [...this.nodes.values()].map((node) => this.serializeNode(node)),
+      childPages: Object.fromEntries(this.childPages),
       activity: this.activity.slice(0, 30),
     };
   }
@@ -259,12 +263,15 @@ class BridgeServer extends EventEmitter {
       lastSeq: 0,
       openRequests: new Map(),
       sourceRequests: new Map(),
+      childRequests: new Map(),
     };
     this.cachedPlaceKey = this.session.placeKey;
     this.cachedPlaceName = this.session.placeName;
     this.ready = false;
     this.indexing = false;
     this.progressiveScan = false;
+    this.onDemand = false;
+    this.childPages.clear();
     this.scanComplete = false;
     this.scanIndexed = 0;
     this.scanLimitReached = false;
@@ -297,6 +304,9 @@ class BridgeServer extends EventEmitter {
     for (const [id, opId] of this.session.sourceRequests) {
       commands.push({ type: 'loadSource', opId, scriptId: id });
     }
+    for (const [parentId, request] of this.session.childRequests) {
+      commands.push({type: 'listChildren', opId: request.opId, parentId, offset: request.offset});
+    }
     for (const [opId, request] of this.session.openRequests) {
       commands.push({ type: 'open', opId, scriptId: request.scriptId });
     }
@@ -319,6 +329,45 @@ class BridgeServer extends EventEmitter {
       this.session.sourceRequests.set(id, crypto.randomUUID());
     }
     return { status: 'loading' };
+  }
+
+  // A bounded page is requested only when the Explorer expands a parent.
+  // No full-Place traversal is necessary for locating an arbitrary deep branch.
+  requestChildren(parentId) {
+    if (!this.session || !this.ready) throw new Error('Studio is not connected.');
+    const parent = this.nodes.get(parentId);
+    if (!parent || parent.isScript) throw new Error('The destination folder is not indexed.');
+    const state = this.childPages.get(parentId) || {offset: 0, total: null, complete: false};
+    if (state.complete || parent.hasChildren === false) {
+      if (!state.complete) this.childPages.set(parentId, {...state, total: 0, complete: true});
+      return {status: 'complete', ...state};
+    }
+    if (this.session.childRequests.has(parentId)) return {status: 'loading', ...state};
+    if (this.session.childRequests.size >= 8) throw new Error('Too many pending Explorer folders. Wait for a page to finish.');
+    this.session.childRequests.set(parentId, {opId: crypto.randomUUID(), offset: state.offset});
+    return {status: 'loading', ...state};
+  }
+
+  // Unknown subtrees must never be deleted/duplicated without all source backups.
+  isSubtreeFullyIndexed(rootId) {
+    if (this.scanComplete && !this.onDemand) return true;
+    const children = new Map();
+    for (const node of this.nodes.values()) {
+      if (!children.has(node.parentId)) children.set(node.parentId, []);
+      children.get(node.parentId).push(node);
+    }
+    const stack = [rootId];
+    const visited = new Set();
+    while (stack.length) {
+      const id = stack.pop();
+      if (visited.has(id)) continue;
+      visited.add(id);
+      const node = this.nodes.get(id);
+      if (!node) return false;
+      if (node.hasChildren && this.childPages.get(id)?.complete !== true) return false;
+      for (const child of children.get(id) || []) stack.push(child.id);
+    }
+    return true;
   }
 
   async receiveChanges(data) {
@@ -346,11 +395,14 @@ class BridgeServer extends EventEmitter {
     if (op.type === 'reset') {
       if (this.ready) throw httpError(409, 'A ready session cannot be reset.');
       this.nodes.clear();
+      this.childPages.clear();
+      this.session?.childRequests.clear();
       this.emit('event', { type: 'reset' });
       return;
     }
     if (op.type === 'scanBegin') {
       this.progressiveScan = true;
+      this.onDemand = false;
       this.indexing = true;
       this.scanComplete = false;
       this.emitState();
@@ -379,11 +431,21 @@ class BridgeServer extends EventEmitter {
     if (op.type === 'scanComplete') {
       this.indexing = false;
       this.scanComplete = true;
+      this.onDemand = false;
       this.scanIndexed = Math.max(this.nodes.size, Number(op.count) || 0);
       this.log('success', `Explorer fully indexed: ${this.nodes.size} instances.`);
       this.emitState();
       // Save only a complete snapshot, not a misleading partial workspace.
       this.saveSnapshot().catch((error) => this.log('warning', `Snapshot unavailable: ${error.message}`));
+      return;
+    }
+    if (op.type === 'scanPaused') {
+      this.indexing = false;
+      this.scanComplete = false;
+      this.onDemand = true;
+      this.scanIndexed = Math.max(this.nodes.size, Number(op.count) || 0);
+      this.log('info', 'Automatic index paused. Additional folders load as they are opened.');
+      this.emitState();
       return;
     }
     if (op.type === 'scanLimit') {
@@ -392,6 +454,32 @@ class BridgeServer extends EventEmitter {
       this.scanComplete = false;
       this.log('warning', 'Hierarchy safety limit reached; the Explorer remains incomplete.');
       this.emitState();
+      return;
+    }
+    if (op.type === 'childrenPage') {
+      const parentId = op.parentId;
+      const expected = this.session?.childRequests.get(parentId);
+      if (!expected || expected.opId !== op.opId || expected.offset !== op.offset) return;
+      if (op.invalidated) {
+        this.session.childRequests.delete(parentId);
+        this.childPages.delete(parentId);
+        this.emitWorkspaceEvent({type: 'childrenPage', parentId, invalidated: true});
+        return;
+      }
+      if (!Array.isArray(op.children) || op.children.length > 150 ||
+          !Number.isSafeInteger(op.total) || op.total < 0 ||
+          !Number.isSafeInteger(op.nextOffset) || op.nextOffset < op.offset ||
+          op.nextOffset > op.total || op.nextOffset - op.offset > 150) {
+        throw httpError(400, 'Invalid Explorer page.');
+      }
+      for (const child of op.children) {
+        if (!child || child.parentId !== parentId) throw httpError(400, 'Explorer page child belongs to another parent.');
+        await this.applyOperation({type: 'upsert', node: child});
+      }
+      this.session.childRequests.delete(parentId);
+      const state = {offset: op.nextOffset, total: op.total, complete: op.nextOffset >= op.total};
+      this.childPages.set(parentId, state);
+      this.emitWorkspaceEvent({type: 'childrenPage', parentId, ...state});
       return;
     }
     if (op.type === 'upsert') {
@@ -412,6 +500,7 @@ class BridgeServer extends EventEmitter {
       node.metadataRevision = (node.metadataRevision || 0) + (changedMetadata ? 1 : 0);
       if (nextOrder !== null) node.siblingOrder = nextOrder;
       node.name = cleanString(data.name, 300);
+      if (typeof data.hasChildren === 'boolean') node.hasChildren = data.hasChildren;
       node.parentId = cleanString(data.parentId, 120);
       node.className = cleanString(data.className, 100);
       if (previous && previous.isScript !== isScript) {
@@ -739,8 +828,8 @@ class BridgeServer extends EventEmitter {
 
   async mutateHierarchy(request) {
     if (!this.session || !this.ready) throw new Error('Connect Roblox Studio before modifying the Explorer.');
-    if (this.progressiveScan && !this.scanComplete && request.action !== 'create' && request.action !== 'rename') {
-      throw new Error('Wait for the full hierarchy scan before moving, duplicating or deleting objects.');
+    if (this.progressiveScan && this.indexing && request.action !== 'create' && request.action !== 'rename') {
+      throw new Error('Wait for the full hierarchy scan to pause before structural changes.');
     }
     if (this.pendingQuickApply || this.quickApplyPreparing) throw new Error('Wait for Quick Apply to finish before changing the hierarchy.');
     const sessionId = this.session.sessionId;
@@ -748,6 +837,10 @@ class BridgeServer extends EventEmitter {
     const lockIds = payload.targets.map((target) => target.id);
     if (lockIds.some((id) => this.mutationLocks.has(id))) {
       throw new Error('One or more selected instances already have a pending operation.');
+    }
+    if (['delete', 'duplicate', 'move'].includes(payload.action) &&
+        lockIds.some((id) => !this.isSubtreeFullyIndexed(id))) {
+      throw new Error('Expand and fully load all folders within this selection before a structural change.');
     }
     const changedNodes = descendantsOf(this.nodes, lockIds);
     if (payload.action === 'delete' || payload.action === 'duplicate') {
@@ -779,12 +872,32 @@ class BridgeServer extends EventEmitter {
     return { opId, status: 'queued', count: payload.targets.length || 1 };
   }
 
+  requireQuickApplyPathsLoaded(plan) {
+    if (this.scanComplete && !this.onDemand) return;
+    // Each known path segment must be uniquely resolvable from a fully loaded
+    // sibling list. A partial mirror must never be treated as an empty folder.
+    for (const entry of plan.entries) {
+      if (entry.action === 'error') continue;
+      let parentId = 'game';
+      for (const guard of entry.guards || []) {
+        if (parentId !== 'game' && this.childPages.get(parentId)?.complete !== true) {
+          throw new Error(`Expand and fully load the path before Quick Apply: ${entry.path}`);
+        }
+        parentId = guard.id;
+      }
+      // For MODIFIED the final guard is the script itself. Its parent must be
+      // loaded; for NEW the last guard is the parent where siblings are checked.
+      if (entry.action === 'create' && this.childPages.get(parentId)?.complete !== true) {
+        throw new Error(`Expand and fully load the destination before Quick Apply: ${entry.path}`);
+      }
+    }
+  }
+
   previewQuickApply(text, classOverrides = {}) {
     if (!this.session || !this.ready) throw new Error('Connect Roblox Studio before previewing the bundle.');
-    if (this.indexing || !this.scanComplete) {
-      throw new Error('Quick Apply requires the complete hierarchy. Wait until indexing finishes.');
-    }
+    if (this.indexing) throw new Error('Quick Apply requires a complete hierarchy or fully loaded paths. Wait for automatic indexing to pause.');
     const plan = buildQuickApplyPlan(text, this.nodes, classOverrides);
+    this.requireQuickApplyPathsLoaded(plan);
     const token = crypto.randomUUID();
     // Keep only a few short-lived previews so large pasted files never accumulate.
     this.quickApplyPreviews.clear();
@@ -808,6 +921,7 @@ class BridgeServer extends EventEmitter {
     const classOverrides = Object.fromEntries(preview.entries.filter((entry) => entry.status === 'NEW')
       .map((entry) => [entry.index, entry.className]));
     const latest = buildQuickApplyPlan(preview.text, this.nodes, classOverrides);
+    this.requireQuickApplyPathsLoaded(latest);
     if (latest.errors.length || latest.entries.length !== preview.entries.length || latest.entries.some((entry, index) => {
       const old = preview.entries[index];
       return entry.action !== old.action || entry.scriptId !== old.scriptId ||
@@ -886,6 +1000,7 @@ class BridgeServer extends EventEmitter {
     this.mutationLocks.clear();
     this.ready = false;
     this.indexing = false;
+    this.childPages.clear();
     this.pendingWrites.clear();
     for (const node of this.nodes.values()) {
       if (node.pendingWrite) await this.failPendingWrite(node, `Session ended (${reason}).`);

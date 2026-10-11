@@ -17,6 +17,8 @@ const api = window.cursorBridge;
 const $ = (id) => document.getElementById(id);
 const nodes = new Map();
 const expanded = new Set();
+const childPages = new Map();
+const childLoads = new Set();
 const selected = new Set();
 const models = new Map();
 const localState = new Map();
@@ -270,7 +272,7 @@ function refreshSelectionUI() {
   $('moveSelected').disabled = !enabled;
   $('deleteSelected').disabled = !enabled;
   $('explorerHelp').hidden = !actions.hidden;
-  $('explorerSummary').textContent = count ? `${count} selected` : `${nodes.size.toLocaleString('en-US')} instances`;
+  $('explorerSummary').textContent = count ? `${count} selected` : `${nodes.size.toLocaleString('en-US')} ${currentStatus.onDemand ? 'indexed' : 'instances'}`;
 }
 // Selection only changes classes, never reconstructs the DOM underneath a pointer click.
 // Reconstructing here used to destroy the clicked row before its click/dblclick event.
@@ -299,13 +301,37 @@ function selectOnly(id) {
 function selectForRow(id, shift, toggle) {
   const next = selectOnPointer(rowIds(), selected, anchorId, id, { shift, toggle });
   selected.clear();
-  for (const item of next.selected) selected.add(item);
+  for (const item of next.selected) if (nodes.has(item)) selected.add(item);
   anchorId = next.anchorId;
   focusedId = next.focusedId;
   paintSelection();
 }
+async function loadNextChildrenPage(id) {
+  if (!canMutate() || currentStatus.scanComplete || childLoads.has(id)) return;
+  const node = nodes.get(id);
+  if (!node || node.hasChildren === false || childPages.get(id)?.complete) return;
+  childLoads.add(id);
+  childPages.set(id, {...(childPages.get(id) || {offset:0,total:null}), loading:true});
+  scheduleRender();
+  try {
+    const result = await api.requestChildren(id);
+    if (result?.status === 'complete') {
+      childPages.set(id, {...result, complete:true, loading:false});
+      childLoads.delete(id); scheduleRender();
+    }
+    // A successful request remains pending until the authoritative Studio page arrives.
+  } catch (error) {
+    childLoads.delete(id);
+    childPages.set(id, {...(childPages.get(id) || {offset:0,total:null}), loading:false});
+    scheduleRender(); safeError(error);
+  }
+}
 function toggleExpand(id) {
-  if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
+  if (expanded.has(id)) expanded.delete(id);
+  else {
+    expanded.add(id);
+    loadNextChildrenPage(id).catch(safeError);
+  }
   scheduleRender();
 }
 function renderTree() {
@@ -316,7 +342,7 @@ function renderTree() {
     refreshSelectionUI();
     return;
   }
-  const tree = buildExplorerRows(nodes, expanded, $('treeSearch').value, 1000000);
+  const tree = buildExplorerRows(nodes, expanded, $('treeSearch').value, 1000000, childPages, currentStatus.scanComplete === true);
   treeRows = tree.rows;
   treeRowIds = treeRows.map((row) => row.id);
   virtualTruncated = tree.truncated;
@@ -339,6 +365,21 @@ function paintTreeWindow(force = false) {
   for (let index = visible.start; index < visible.end; index++) {
     const data = treeRows[index];
     const { node, id, depth, hasChildren, expanded: isExpanded } = data;
+    if (data.pageMarker) {
+      const marker = document.createElement('button');
+      marker.className = 'tree-row tree-page-action';
+      marker.style.setProperty('--depth', depth);
+      marker.dataset.id = id;
+      const page = childPages.get(data.parentId);
+      const pending = page?.loading || childLoads.has(data.parentId);
+      const remaining = page?.total == null ? null : Math.max(0, page.total - (page.offset || 0));
+      marker.textContent = pending ? 'Loading children…' :
+        remaining === null ? 'Load children…' : `Load more · ${remaining.toLocaleString('en-US')} remaining`;
+      marker.disabled = pending;
+      marker.addEventListener('click', () => loadNextChildrenPage(data.parentId).catch(safeError));
+      fragment.append(marker);
+      continue;
+    }
     const row = document.createElement('div');
     row.className = `tree-row${selected.has(id) ? ' selected' : ''}${focusedId === id ? ' focused' : ''}`;
     row.style.setProperty('--depth', depth);
@@ -512,7 +553,9 @@ function setupMarqueeSelection() {
       // Content coordinates also retain selected off-screen rows when auto-scrolling.
       const start = clamp(Math.floor((topContent - firstRowOffset) / ROW_HEIGHT), 0, treeRows.length);
       const end = clamp(Math.ceil((bottomContent - firstRowOffset) / ROW_HEIGHT), 0, treeRows.length);
-      for (let index = start; index < end; index++) next.add(treeRows[index].id);
+      for (let index = start; index < end; index++) {
+        if (treeRows[index].node) next.add(treeRows[index].id);
+      }
     }
     selected.clear();
     for (const id of next) selected.add(id);
@@ -966,6 +1009,12 @@ function receiveNode(node, origin='studio') {
     scriptNodeCount += node.isScript ? 1 : -1;
   }
   nodes.set(node.id, node);
+  // A ready status may reach Electron before its batched root upserts.
+  // Prefetch Workspace when it finally arrives, regardless of message order.
+  if (!old && node.parentId === 'game' && node.className === 'Workspace' && currentStatus.ready) {
+    expanded.add(node.id);
+    loadNextChildrenPage(node.id).catch(safeError);
+  }
   if (node.id === pendingScriptOpenId && typeof node.source === 'string') {
     pendingScriptOpenId = null;
     queueMicrotask(() => openScript(node.id).catch(safeError));
@@ -1000,6 +1049,7 @@ function receiveNode(node, origin='studio') {
 }
 function updateStatus(status) {
   const previouslyConnected = currentStatus.connected === true;
+  const previouslyReady = currentStatus.ready === true;
   currentStatus = status;
   const connected = status.connected === true;
   const ready = connected && status.ready === true;
@@ -1009,7 +1059,7 @@ function updateStatus(status) {
   $('headerPlace').textContent = connected ? status.placeName : 'No place';
   $('placeName').textContent = connected ? status.placeName : 'No place connected';
   $('placeKey').textContent = connected ? status.placeKey : 'Waiting for a local session';
-  $('lastSeen').textContent = ready ? (status.indexing ? `Indexing ${Number(status.scanIndexed || status.nodeCount || 0).toLocaleString('en-US')} objects in the background. Destructive actions are temporarily locked.` : 'Studio is authoritative. All edits are synchronized locally.')
+  $('lastSeen').textContent = ready ? (status.onDemand ? 'Large Place mode: expand folders to load more children. Global search covers indexed scripts only.' : status.indexing ? `Indexing ${Number(status.scanIndexed || status.nodeCount || 0).toLocaleString('en-US')} objects in the background.` : 'Studio is authoritative. All edits are synchronized locally.')
     : 'Recovery versions are stored locally. No Explorer data is shown offline.';
   $('pairingCard').hidden = connected;
   $('pairingCode').textContent = status.pairingCode || 'LINKED';
@@ -1047,7 +1097,11 @@ function updateStatus(status) {
   else if (!previouslyConnected || !rowElements.size) scheduleRender();
   updateCounts();
   if (ready && selectedId) requestAnimationFrame(() => editor.layout());
-  setFooter(ready ? (status.scanLimitReached ? 'Scan safety limit reached; hierarchy is incomplete.' : status.indexing ? `Indexing ${Number(status.scanIndexed || status.nodeCount || 0).toLocaleString('en-US')} instances in the background…` : `Connected to ${status.placeName}.`) : connected ? 'Preparing live Studio hierarchy…' : 'No active Studio session');
+  setFooter(ready ? (status.onDemand ? `Large Place mode · ${Number(status.nodeCount||0).toLocaleString('en-US')} indexed · Expand folders to load more` : status.indexing ? `Indexing ${Number(status.scanIndexed || status.nodeCount || 0).toLocaleString('en-US')} instances in the background…` : `Connected to ${status.placeName}.`) : connected ? 'Connecting to Studio…' : 'No active Studio session');
+  if (ready && !previouslyReady) {
+    const workspace = [...nodes.values()].find((node)=>node.parentId==='game' && node.className==='Workspace');
+    if (workspace) {expanded.add(workspace.id);loadNextChildrenPage(workspace.id).catch(safeError);scheduleRender();}
+  }
 }
 function resetWorkspace() {
   // Keep unsynced source before disposing Monaco models during a new pairing.
@@ -1060,6 +1114,7 @@ function resetWorkspace() {
   clipboardState = null;
   closedTabs = [];
   nodes.clear();scriptNodeCount=0;pendingScriptOpenId=null;
+  childPages.clear();childLoads.clear();
   treeRows=[];treeRowIds=[];virtualStart=-1;virtualEnd=-1;
   selected.clear();anchorId=null;focusedId=null;expanded.clear();
   rowElements.clear();paintedSelection.clear();paintedFocus=null;
@@ -1080,6 +1135,18 @@ function receiveServerEvent(event) {
   if (event.type === 'status') updateStatus(event.status);
   else if (event.type === 'upsert') receiveNode(event.node,event.origin);
   else if (event.type === 'reset') resetWorkspace();
+  else if (event.type === 'childrenPage') {
+    const id = event.parentId;
+    childLoads.delete(id);
+    if (event.invalidated) {
+      childPages.delete(id);
+      toast('Folder changed in Studio. Expand it again to refresh.', true);
+    } else {
+      childPages.set(id, {offset:event.offset, total:event.total,
+        complete:event.complete===true, loading:false});
+    }
+    scheduleRender();
+  }
   else if (event.type === 'sourceUnavailable') {
     if (event.id === pendingScriptOpenId) {
       pendingScriptOpenId = null;
@@ -1096,6 +1163,7 @@ function receiveServerEvent(event) {
       cancelScriptTimers(id);
       if (nodes.get(id)?.isScript) scriptNodeCount--;
       nodes.delete(id);selected.delete(id);expanded.delete(id);
+      childPages.delete(id);childLoads.delete(id);
       const tab = activeTabs.indexOf(id);
       if (tab !== -1) activeTabs.splice(tab,1);
       if (selectedId === id) { selectedId=null;++openEpoch;editor.setModel(null);$('welcome').hidden=false;$('codePanel').hidden=true; }
@@ -1529,7 +1597,7 @@ function displayPlaceSearch(result) {
     return;
   }
   const skipped = placeSearchUnavailable ? ` · ${placeSearchUnavailable} unavailable` : '';
-  placeSearchMessage(`${result.matchCount.toLocaleString()}${result.truncated ? '+' : ''} results in ${result.fileCount} ${result.fileCount === 1 ? 'script' : 'scripts'}${skipped}`);
+  placeSearchMessage(`${result.matchCount.toLocaleString()}${result.truncated ? '+' : ''} results in ${result.fileCount} ${result.fileCount === 1 ? 'script' : 'scripts'}${skipped}${currentStatus.onDemand ? ' · Indexed folders only' : ''}`);
   const fragment = document.createDocumentFragment();
   for (const group of result.groups) {
     const container = document.createElement('section');container.className = 'place-result-group';
@@ -1641,7 +1709,7 @@ function schedulePlaceSearch(delay = 160) {
     placeSearchActiveIndex = -1;
     $('placeSearchPrevious').disabled = true;
     $('placeSearchNext').disabled = true;
-    placeSearchMessage('Search every script in your connected Place.');
+    placeSearchMessage(currentStatus.onDemand ? 'Search scripts loaded in Explorer (partial Place index).' : 'Search every script in your connected Place.');
     placeSearchEmpty('Search across every script in your Place.', 'Results link directly to the matching line.');
     return;
   }
@@ -1787,7 +1855,13 @@ function focusRowByOffset(offset, extendSelection = false, absoluteIndex = null)
   const nextIndex = absoluteIndex == null
     ? Math.max(0, Math.min(treeRows.length - 1, currentIndex + offset))
     : Math.max(0, Math.min(treeRows.length - 1, absoluteIndex));
-  const id = treeRows[nextIndex].id;
+  let targetIndex = nextIndex;
+  const direction = offset < 0 ? -1 : 1;
+  while (targetIndex >= 0 && targetIndex < treeRows.length && !treeRows[targetIndex].node) {
+    targetIndex += direction;
+  }
+  if (targetIndex < 0 || targetIndex >= treeRows.length) return;
+  const id = treeRows[targetIndex].id;
   selectForRow(id, extendSelection, false);
   revealTreeRow(id, true);
 }
@@ -1837,7 +1911,7 @@ window.addEventListener('keydown',(event)=>{
     return;
   }
   if (sidebarMode !== 'explorer' || !inExplorer || inForm || inEditor || !canMutate()) return;
-  if (mod && key === 'a') {event.preventDefault();selected.clear();for(const row of treeRows)selected.add(row.id);paintSelection();return;}
+  if (mod && key === 'a') {event.preventDefault();selected.clear();for(const row of treeRows)if(row.node)selected.add(row.id);paintSelection();return;}
   if (mod && key === 'c') {event.preventDefault();copyExplorerSelection('copy');return;}
   if (mod && key === 'x') {event.preventDefault();copyExplorerSelection('cut');return;}
   if (mod && key === 'v') {event.preventDefault();pasteExplorer(event.shiftKey).catch(safeError);return;}
@@ -1861,7 +1935,7 @@ window.addEventListener('keydown',(event)=>{
   }
   if (event.key === 'ArrowRight') {
     event.preventDefault();const node=treeRows.find((row)=>row.id===focusedId);
-    if(node?.hasChildren && !expanded.has(focusedId)){expanded.add(focusedId);scheduleRender();}
+    if(node?.hasChildren && !expanded.has(focusedId)){toggleExpand(focusedId);}
     else if(node?.hasChildren){const index=rowIds().indexOf(focusedId);focusRowByOffset(0,false,index+1);}
     return;
   }
@@ -2217,7 +2291,8 @@ async function start() {
   });
   const state=await api.getState();
   if (state.status.connected) for (const node of state.nodes) { nodes.set(node.id,node); if (node.isScript) scriptNodeCount++; }
-  for (const node of nodes.values()) if (node.parentId === 'game') expanded.add(node.id);
+  for (const [id,page] of Object.entries(state.childPages||{})) childPages.set(id,page);
+  for (const node of nodes.values()) if (node.parentId === 'game' && node.className === 'Workspace') expanded.add(node.id);
   updateStatus(state.status);renderTree();renderTabs();
   initializing = false;
   for (const event of initialEvents) receiveServerEvent(event);

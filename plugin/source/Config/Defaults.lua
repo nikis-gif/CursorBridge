@@ -16,7 +16,7 @@ local Defaults = {
 	},
 	Product = {
 		Name = "Cursor Bridge V2",
-		Version = "0.2.7",
+		Version = "0.2.8",
 	},
 	Advanced = {
 		DebugLogging = false,
@@ -35,6 +35,9 @@ local Defaults = {
 	InitialRetryDelay = 2.0,
 	MaximumRetryDelay = 30.0,
 	ScanSliceSize = 96,
+	MaxAutomaticNodes = 8000,
+	MaxAutomaticSiblings = 800,
+	ChildrenPageSize = 150,
 	MaxQueuedScanOperations = 900,
 	MaxSourcesPerCycle = 10,
 	ScanProgressInterval = 1.5,

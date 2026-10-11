@@ -62,6 +62,8 @@ function StudioBridge.new()
 	self._scanQueued = setmetatable({}, { __mode = "k" }) :: {[Instance]: boolean}
 	self._scanCount = 0
 	self._scanReadySent = false
+	self._scanDeferred = false
+	self._pageSnapshots = {} :: {[string]: {children: {Instance}, createdAt: number}}
 	self._results = {} :: {any}
 	self._lastSources = {} :: {[string]: string}
 	self._scriptIds = {} :: {string}
@@ -160,11 +162,34 @@ function StudioBridge:_enqueueOperation(op: any)
 	table.insert(self._queue, op)
 end
 
+function StudioBridge:_ensureAncestorsObserved(instance: Instance)
+	local lineage = {}
+	local parent: Instance? = instance.Parent
+	while parent and parent ~= game do
+		table.insert(lineage, parent)
+		parent = parent.Parent
+	end
+	for index = #lineage, 1, -1 do
+		local ancestor = lineage[index]
+		local id = self:_idFor(ancestor)
+		if not self._connections[id] then
+			self:_observe(ancestor)
+			self:_enqueueOperation({type = "upsert", node = self:_metadata(ancestor, false)})
+		end
+	end
+end
+
 function StudioBridge:_sourceChanged(instance: Instance)
 	if not self._connected or not self:_isManaged(instance) then
 		return
 	end
 	local identifier = self:_idFor(instance)
+	if not self._connections[identifier] then
+		-- An externally edited script can be outside the browsed tree; preserve its path.
+		self:_ensureAncestorsObserved(instance)
+		self:_observe(instance)
+		self:_enqueueOperation({type = "upsert", node = self:_metadata(instance, false)})
+	end
 	if self._sourceQueue[identifier] == nil then
 		table.insert(self._sourceIds, identifier)
 	end
@@ -188,6 +213,7 @@ function StudioBridge:_metadata(instance: Instance, includeSource: boolean): any
 		parentId = parent == game and "game" or (if parent then self:_idFor(parent) else "game"),
 		name = instance.Name,
 		className = instance.ClassName,
+		hasChildren = not isScript(instance) and #instance:GetChildren() > 0,
 	}
 	if isScript(instance) then
 		if includeSource then
@@ -248,6 +274,7 @@ function StudioBridge:_observe(instance: Instance)
 	table.insert(connections, instance:GetPropertyChangedSignal("Parent"):Connect(function()
 		if not self._connected then return end
 		if self:_isManaged(instance) then
+			self:_ensureAncestorsObserved(instance)
 			local parent = instance.Parent
 			if parent then self:_indexSiblingOrder(parent) end
 			self:_enqueueOperation({ type = "upsert", node = self:_metadata(instance, false) })
@@ -295,11 +322,11 @@ function StudioBridge:_scanLoop()
 			if self:_isManaged(instance) and instance.Parent then
 				local id = self:_idFor(instance)
 				if not self._connections[id] then
-					if self._scanCount >= Defaults.MaxNodes then
-						self:_enqueueOperation({type = "scanLimit", count = self._scanCount})
+					if self._scanCount >= Defaults.MaxAutomaticNodes then
+						self._scanDeferred = true
+						self:_enqueueOperation({type = "scanPaused", count = self._scanCount})
 						self._scanQueue = {}
 						self._scanHead = 1
-						self:_notify("Hierarchy safety limit reached; scan incomplete.")
 						return
 					end
 					self:_observe(instance)
@@ -308,9 +335,14 @@ function StudioBridge:_scanLoop()
 					if isScript(instance) then self:_sourceChanged(instance) end
 				end
 				local children = instance:GetChildren()
-				for index, child in children do
-					self._siblingOrder[child] = index
-					self:_enqueueScan(child)
+				if #children > Defaults.MaxAutomaticSiblings then
+					-- Large sibling lists are paged on demand; do not enqueue them all.
+					self._scanDeferred = true
+				else
+					for index, child in children do
+						self._siblingOrder[child] = index
+						self:_enqueueScan(child)
+					end
 				end
 			end
 			count += 1
@@ -328,7 +360,8 @@ function StudioBridge:_scanLoop()
 	end
 	if self._alive and self._connected then
 		if not self._scanReadySent then self:_enqueueOperation({type = "ready"}) end
-		self:_enqueueOperation({type = "scanComplete", count = self._scanCount})
+		self:_enqueueOperation({type = if self._scanDeferred then "scanPaused" else "scanComplete",
+			count = self._scanCount})
 		self._scanQueue = {}
 		self._scanHead = 1
 		self._scanQueued = setmetatable({}, { __mode = "k" }) :: {[Instance]: boolean}
@@ -341,16 +374,30 @@ function StudioBridge:_watchChanges()
 			return
 		end
 		local parent = instance.Parent
-		if parent then self:_indexSiblingOrder(parent) end
-		self:_enqueueScan(instance)
+		if not parent then return end
+		if parent == game then
+			if not MANAGED_CLASSES[instance.ClassName] then return end
+		elseif not self._connections[self._instanceIds[parent] or ""] then
+			-- An unexpanded subtree is discovered when the user opens it.
+			return
+		end
+		local id = self:_idFor(instance)
+		self:_observe(instance)
+		self:_enqueueOperation({ type = "upsert", node = self:_metadata(instance, false) })
+		if isScript(instance) then self:_sourceChanged(instance) end
+		local parentId = if parent == game then "game" else self:_idFor(parent)
+		if parentId ~= "game" then
+			self:_enqueueOperation({ type = "upsert", node = self:_metadata(parent, false) })
+		end
 	end))
 	table.insert(self._globalConnections, game.DescendantRemoving:Connect(function(instance: Instance)
 		local id = self._instanceIds[instance]
-		local descendants = instance:GetDescendants()
+		-- DescendantRemoving also fires for each descendant; never allocate an entire removed subtree.
 		task.defer(function()
 			if not self._connected then return end
 			if self:_isManaged(instance) then
 				-- Reparented within the place: keep stable ids and descendant watchers.
+				self:_ensureAncestorsObserved(instance)
 				if id then self:_enqueueOperation({ type = "upsert", node = self:_metadata(instance, false) }) end
 				return
 			end
@@ -358,7 +405,7 @@ function StudioBridge:_watchChanges()
 				self:_enqueueOperation({ type = "remove", id = id })
 			end
 			self:_unwatch(instance)
-			for _, descendant in descendants do self:_unwatch(descendant) end
+			-- Other observed descendants are removed by their own callbacks.
 		end)
 	end))
 	table.insert(self._globalConnections, ScriptEditorService.TextDocumentDidChange:Connect(function(document: ScriptDocument)
@@ -496,6 +543,62 @@ function StudioBridge:_applyCommand(command: any)
 				end
 			end
 		end)
+		return
+	end
+	if command.type == "listChildren" then
+		local parent = self._instances[command.parentId]
+		if not parent or not parent.Parent or not self:_isManaged(parent) then
+			self:_enqueueOperation({type = "childrenPage", opId = command.opId,
+				parentId = command.parentId, offset = command.offset, total = 0,
+				children = {}, invalidated = true})
+			return
+		end
+		local offset = command.offset
+		if typeof(offset) ~= "number" or offset < 0 or offset % 1 ~= 0 then return end
+		local snapshot = self._pageSnapshots[command.parentId]
+		if offset == 0 or not snapshot then
+			if offset ~= 0 then
+				self:_enqueueOperation({type = "childrenPage", opId = command.opId,
+					parentId = command.parentId, offset = offset, total = 0,
+					children = {}, invalidated = true})
+				return
+			end
+			snapshot = {children = parent:GetChildren(), createdAt = os.clock()}
+			self._pageSnapshots[command.parentId] = snapshot
+		end
+		-- Bound temporary full-sibling arrays: they should not accumulate in long
+		-- Studio sessions with many expanded high-cardinality folders.
+		snapshot.createdAt = os.clock()
+		local active = 0
+		local oldestId: string? = nil
+		local oldestAt = math.huge
+		for key, entry in self._pageSnapshots do
+			if os.clock() - entry.createdAt > 600 and key ~= command.parentId then
+				self._pageSnapshots[key] = nil
+			else
+				active += 1
+				if key ~= command.parentId and entry.createdAt < oldestAt then
+					oldestAt = entry.createdAt
+					oldestId = key
+				end
+			end
+		end
+		if active > 8 and oldestId then self._pageSnapshots[oldestId] = nil end
+		local children = snapshot.children
+		local last = math.min(#children, offset + Defaults.ChildrenPageSize)
+		local page = {}
+		for index = offset + 1, last do
+			local child = children[index]
+			if child.Parent == parent then
+				self._siblingOrder[child] = index
+				self:_observe(child)
+				table.insert(page, self:_metadata(child, false))
+			end
+		end
+		self:_enqueueOperation({type = "childrenPage", opId = command.opId,
+			parentId = command.parentId, offset = offset, nextOffset = last,
+			total = #children, children = page})
+		if last >= #children then self._pageSnapshots[command.parentId] = nil end
 		return
 	end
 	if command.type == "loadSource" then
@@ -674,15 +777,23 @@ function StudioBridge:Connect(pairingCode: string): (boolean, string)
 	self._scanQueued = setmetatable({}, { __mode = "k" }) :: {[Instance]: boolean}
 	self._scanCount = 0
 	self._scanReadySent = false
+	self._scanDeferred = false
+	self._pageSnapshots = {}
 	self:_enqueueOperation({ type = "reset" })
 	self:_enqueueOperation({ type = "scanBegin" })
 	self:_watchChanges()
 	self:_indexSiblingOrder(game)
 	for _, root in game:GetChildren() do
-		if MANAGED_CLASSES[root.ClassName] then self:_enqueueScan(root) end
+		if MANAGED_CLASSES[root.ClassName] then
+			self:_observe(root)
+			self:_enqueueOperation({type = "upsert", node = self:_metadata(root, false)})
+			self:_enqueueScan(root)
+		end
 	end
-	-- Scanning and HTTP transfer operate independently. The app becomes
-	-- interactive after the first slice instead of waiting for the full place.
+	-- The Explorer is usable as soon as roots are acknowledged. Deep branches
+	-- are discoverable through listChildren regardless of the auto-index budget.
+	self:_enqueueOperation({type = "ready"})
+	self._scanReadySent = true
 	task.spawn(function() self:_syncLoop() end)
 	task.spawn(function() self:_scanLoop() end)
 	self:_notify("Indexing place hierarchy in the background...")
@@ -717,6 +828,7 @@ function StudioBridge:Disconnect(notifyServer: boolean?)
 	self._sourceHead = 1
 	self._scanQueue = {}
 	self._scanHead = 1
+	self._pageSnapshots = {}
 	self._scanQueued = setmetatable({}, { __mode = "k" }) :: {[Instance]: boolean}
 	self._results = {}
 	self._inFlightBatch = nil

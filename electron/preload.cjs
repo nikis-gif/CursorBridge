@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('cursorBridge', {
   getBackups: (id) => ipcRenderer.invoke('bridge:list-backups', id),
   restoreBackup: (id, version, storageScriptId) => ipcRenderer.invoke('bridge:read-backup', id, version, storageScriptId),
   openStudioScript: (id) => ipcRenderer.invoke('bridge:open-studio-script', id),
+  requestChildren: (id) => ipcRenderer.invoke('bridge:list-children', id),
   openBackupsFolder: () => ipcRenderer.invoke('bridge:open-backups-folder'),
   disconnect: () => ipcRenderer.invoke('bridge:disconnect'),
   checkForUpdates: () => ipcRenderer.invoke('bridge:check-updates'),
