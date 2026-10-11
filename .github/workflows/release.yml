@@ -126,7 +126,10 @@ jobs:
           $assets = @($installer.FullName, $blockmap.FullName, $metadata, $studioPlugin)
           $notesFile = Join-Path 'docs' "RELEASE_$($version.Replace('.', '_')).md"
           if (Test-Path -LiteralPath $notesFile) {
-            gh release create $tag $assets --title "Cursor Bridge $tag" --notes-file $notesFile --latest --verify-tag
+            $title = "Cursor Bridge $tag"
+            $heading = Get-Content -LiteralPath $notesFile -TotalCount 1 -Encoding utf8
+            if ($heading -match '^#\s+(.+)$') { $title = $Matches[1].Trim() }
+            gh release create $tag $assets --title $title --notes-file $notesFile --latest --verify-tag
           } else {
             gh release create $tag $assets --title "Cursor Bridge $tag" --notes "Cursor Bridge $tag" --latest --verify-tag
           }
