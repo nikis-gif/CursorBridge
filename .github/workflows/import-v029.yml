@@ -1,0 +1,71 @@
+name: Import and publish Cursor Bridge v0.2.9
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/imports/v0.2.9/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: cursor-bridge-import-v029
+  cancel-in-progress: false
+
+jobs:
+  import-source:
+    if: github.repository == 'nikis-gif/CursorBridge' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the reviewed update
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Use Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Apply verified source files
+        run: python .github/imports/v0.2.9/apply.py apply
+
+      - name: Run application regression tests
+        run: npm test
+
+      - name: Build and validate the Studio plugin
+        run: python -m unittest discover -s tests -p test_plugin_build.py -v
+
+      - name: Finalize the source manifest
+        run: python .github/imports/v0.2.9/apply.py finalize
+
+      - name: Commit the validated v0.2.9 sources
+        env:
+          EXPECTED_HEAD: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          actual_head=$(git ls-remote origin refs/heads/main | cut -f1)
+          if [ "$actual_head" != "$EXPECTED_HEAD" ]; then
+            echo 'The repository changed during validation; no branch was overwritten.' >&2
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Release Cursor Bridge v0.2.9: Quick Apply and session stability'
+          git push origin HEAD:main
+
+      - name: Request the Windows release build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run release.yml --repo nikis-gif/CursorBridge --ref main
+          echo 'Source committed; Windows installer publication is handled by release.yml.' >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,303 @@
+diff --git a/bridge/quick-apply-resolver.cjs b/bridge/quick-apply-resolver.cjs
+new file mode 100644
+--- /dev/null
++++ b/bridge/quick-apply-resolver.cjs
+@@ -0,0 +1,92 @@
++'use strict';
++
++const { randomUUID } = require('node:crypto');
++const { parseBundle, buildQuickApplyPlan, publicPreview } = require('./quick-apply.cjs');
++const limits = require('../shared/limits.json');
++
++function cancelResolution(bridge, message) {
++  const pending = bridge.pathResolution;
++  if (!pending) return;
++  bridge.pathResolution = null;
++  clearTimeout(pending.timer);
++  pending.reject(new Error(message));
++}
++
++function startResolution(bridge, text, overrides) {
++  const entries = parseBundle(text);
++  if (!overrides || Array.isArray(overrides) || typeof overrides !== 'object') throw new Error('Invalid script type overrides.');
++  if (bridge.pendingQuickApply || bridge.quickApplyPreparing) throw new Error('Wait for the current Quick Apply to finish.');
++  cancelResolution(bridge, 'A newer preview replaced this request.');
++  bridge.quickApplyPreviews.clear();
++  const opId = randomUUID(), session = bridge.session;
++  return new Promise((resolve, reject) => {
++    const timer = setTimeout(() => {
++      if (bridge.pathResolution?.opId === opId) cancelResolution(bridge,
++        'Studio did not finish resolving paths within five minutes. Your TXT is preserved. Retry when Studio responds.');
++    }, 5 * 60_000);
++    timer.unref?.();
++    bridge.pathResolution = { opId, session, text, overrides, resolve, reject, timer,
++      command: {type:'resolvePaths', opId,
++        paths:entries.map(({index,path,status,segments}) => ({index,path,status,segments}))} };
++    bridge.emitWorkspaceEvent({type:'quickApplyProgress', message:'Resolving exact paths in Roblox Studio...'});
++  });
++}
++
++async function acceptResolution(bridge, op) {
++  const pending = bridge.pathResolution;
++  if (!pending || pending.opId !== op.opId || pending.session !== bridge.session) return;
++  if (op.error) { cancelResolution(bridge, String(op.error).slice(0,500)); return; }
++  try {
++    if (!Array.isArray(op.nodes) || op.nodes.length > limits.maxScripts * 30 ||
++        !Array.isArray(op.errors) || op.errors.length > limits.maxScripts) throw new Error('Invalid resolved path response.');
++    const resolved = new Map();
++    let bytes = 0;
++    for (const node of op.nodes) {
++      if (!node || typeof node.id !== 'string' || typeof node.parentId !== 'string' ||
++          typeof node.name !== 'string' || typeof node.className !== 'string') throw new Error('Invalid resolved instance.');
++      bytes += typeof node.source === 'string' ? Buffer.byteLength(node.source, 'utf8') : 0;
++      if (bytes > limits.maxResolvedSourceBytes) throw new Error('Existing destination sources exceed 16 MiB. Split the bundle.');
++      if (pending.session !== bridge.session || bridge.pathResolution !== pending) return;
++      await bridge.applyOperation({type:'upsert',node});
++      resolved.set(node.id, {...bridge.nodes.get(node.id)});
++    }
++    if (bridge.pathResolution !== pending || pending.session !== bridge.session) return;
++    const plan = buildQuickApplyPlan(pending.text, resolved, pending.overrides);
++    for (const problem of op.errors) {
++      if (!Number.isSafeInteger(problem.index) || !plan.entries[problem.index]) throw new Error('Invalid path error index.');
++      const entry = plan.entries[problem.index];
++      entry.action = 'error';
++      entry.message = String(problem.message || 'Studio could not resolve this path.').slice(0,500);
++    }
++    plan.errors = plan.entries.filter(entry => entry.action === 'error').map(({index,path,message}) => ({index,path,message}));
++    plan.summary = {create:0,modify:0,unchanged:0,errors:plan.errors.length};
++    for (const entry of plan.entries) if (entry.action !== 'error') plan.summary[entry.action]++;
++    clearTimeout(pending.timer);
++    bridge.pathResolution = null;
++    const token = randomUUID();
++    bridge.quickApplyPreviews.clear();
++    bridge.quickApplyPreviews.set(token, {...plan,text:pending.text,token,resolved:true,
++      createdAt:bridge.now(),sessionId:bridge.session.sessionId});
++    pending.resolve({ok:plan.errors.length === 0,token,...publicPreview(plan),placeName:bridge.session.placeName});
++  } catch (error) {
++    if (bridge.pathResolution === pending) cancelResolution(bridge, error.message);
++  }
++}
++
++function validateResolvedPreview(bridge, preview) {
++  for (const entry of preview.entries) {
++    for (const guard of entry.guards || []) {
++      const current = bridge.nodes.get(guard.id);
++      if (!current || current.parentId !== guard.parentId || current.name !== guard.name || current.className !== guard.className) {
++        throw new Error('A destination changed since preview. Preview the bundle again.');
++      }
++    }
++    if (entry.scriptId) {
++      const node = bridge.nodes.get(entry.scriptId);
++      if (!node || node.revision !== entry.revision || node.source !== entry.expectedSource ||
++          node.pendingWrite || typeof node.queuedSource === 'string') throw new Error('A destination source changed since preview. Preview the bundle again.');
++    }
++  }
++  return preview;
++}
++module.exports = {startResolution,acceptResolution,cancelResolution,validateResolvedPreview};
+diff --git a/bridge/quick-apply.cjs b/bridge/quick-apply.cjs
+--- a/bridge/quick-apply.cjs
++++ b/bridge/quick-apply.cjs
+@@ -3,8 +3,9 @@
+ const { MAX_SCRIPT_BYTES } = require('./bridge-server-constants.cjs');
+ 
+ const BOUNDARY = '='.repeat(50);
+-const MAX_BUNDLE_BYTES = 512 * 1024;
+-const MAX_SCRIPTS = 20;
++const limits = require('../shared/limits.json');
++const MAX_BUNDLE_BYTES = limits.maxBundleBytes;
++const MAX_SCRIPTS = limits.maxScripts;
+ const SCRIPT_CLASSES = new Set(['Script', 'LocalScript', 'ModuleScript']);
+ const HEADER = /^={50}\nSCRIPT: ([^\n]+)\nPATH: ([^\n]+)\nSTATUS: (NEW|MODIFIED)\n(?:CLASS: (Script|LocalScript|ModuleScript)\n)?={50}\n/gm;
+ 
+@@ -12,7 +13,7 @@
+ 
+ function parseBundle(raw) {
+   if (typeof raw !== 'string' || !raw.trim()) error('Paste an AI script bundle before previewing.');
+-  if (Buffer.byteLength(raw, 'utf8') > MAX_BUNDLE_BYTES) error('Bundle exceeds the 512 KiB safety limit.');
++  if (Buffer.byteLength(raw, 'utf8') > MAX_BUNDLE_BYTES) error('Bundle exceeds the 16 MiB safety limit.');
+   const text = raw.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+   const markers = [...text.matchAll(HEADER)];
+   if (!markers.length) {
+@@ -32,7 +33,7 @@
+     if (code === '--!strict') error(`Script ${index + 1}: source is empty after --!strict.`);
+     const source = code + '\n';
+     if (Buffer.byteLength(source, 'utf8') > MAX_SCRIPT_BYTES) {
+-      error(`Script ${index + 1} (${match[1]}): source exceeds 256 KiB.`);
++      error(`Script ${index + 1} (${match[1]}): source exceeds 2 MiB.`);
+     }
+     const name = match[1];
+     const rawPath = match[2];
+diff --git a/bridge/wire-transfer.cjs b/bridge/wire-transfer.cjs
+new file mode 100644
+--- /dev/null
++++ b/bridge/wire-transfer.cjs
+@@ -0,0 +1,132 @@
++'use strict';
++
++const { randomUUID } = require('node:crypto');
++const limits = require('../shared/limits.json');
++
++// A corruption check, not a signature. The session bearer token authenticates the peer.
++function checksum(bytes) {
++  let a = 1, b = 0;
++  for (let start = 0; start < bytes.length; start += 5552) {
++    for (let i = start; i < Math.min(start + 5552, bytes.length); i++) { a += bytes[i]; b += a; }
++    a %= 65521; b %= 65521;
++  }
++  return b * 65536 + a;
++}
++
++function encodeTransfer(value, id = randomUUID()) {
++  const bytes = Buffer.from(JSON.stringify(value), 'utf8');
++  if (bytes.length > limits.maxTransferBytes) throw new Error('Encoded operation exceeds 64 MiB. Split the bundle.');
++  const parts = [];
++  for (let start = 0; start < bytes.length;) {
++    let end = Math.min(start + limits.chunkBytes, bytes.length);
++    while (end < bytes.length && (bytes[end] & 0xc0) === 0x80) end--;
++    parts.push(bytes.subarray(start, end).toString('utf8'));
++    start = end;
++  }
++  const digest = checksum(bytes);
++  return parts.map((data, index) => ({ type: 'wireChunk', id, index,
++    count: parts.length, bytes: bytes.length, checksum: digest, data }));
++}
++
++class IncomingTransfer {
++  constructor() { this.active = null; this.completed = null; }
++
++  accept(chunk) {
++    const { id, index, count, bytes, data } = chunk;
++    if (typeof id !== 'string' || !id || id.length > 120 || !Number.isSafeInteger(index) ||
++        !Number.isSafeInteger(count) || count < 1 || count > 2048 || index < 0 || index >= count ||
++        !Number.isSafeInteger(bytes) || bytes < 1 || bytes > limits.maxTransferBytes ||
++        !Number.isSafeInteger(chunk.checksum) || chunk.checksum < 0 || chunk.checksum > 0xffffffff ||
++        typeof data !== 'string' || Buffer.byteLength(data, 'utf8') > limits.chunkBytes) {
++      throw new Error('Invalid transfer fragment.');
++    }
++    const done = this.completed;
++    if (done) {
++      if (done.id !== id || done.count !== count || done.bytes !== bytes || done.checksum !== chunk.checksum || done.lastData !== data || index !== count - 1) {
++        throw new Error('The previous transfer has not been committed.');
++      }
++      return { next: count, received: bytes, total: bytes, value: done.value };
++    }
++    if (!this.active) {
++      if (index !== 0) throw new Error('Transfer must start at fragment zero.');
++      this.active = { id, count, bytes, checksum: chunk.checksum, parts: [], received: 0 };
++    }
++    const active = this.active;
++    if (active.id !== id || active.count !== count || active.bytes !== bytes || active.checksum !== chunk.checksum) {
++      throw new Error('Transfer identity changed.');
++    }
++    if (index < active.parts.length) {
++      if (active.parts[index] !== data) throw new Error('Retried fragment differs from its original.');
++      return { next: active.parts.length, received: active.received, total: bytes, value: null };
++    }
++    if (index !== active.parts.length) throw new Error('Out-of-order transfer fragment.');
++    active.received += Buffer.byteLength(data, 'utf8');
++    if (active.received > bytes) { this.clear(); throw new Error('Transfer exceeds its declared size.'); }
++    active.parts.push(data);
++    const progress = { next: active.parts.length, received: active.received, total: bytes, value: null };
++    if (active.parts.length === count) {
++      this.active = null;
++      const body = Buffer.from(active.parts.join(''), 'utf8');
++      if (body.length !== bytes || checksum(body) !== active.checksum) throw new Error('Transfer checksum mismatch.');
++      const value = JSON.parse(body.toString('utf8'));
++      if (!value || typeof value !== 'object' || value.type === 'wireChunk') throw new Error('Invalid transferred operation.');
++      // Keep the decoded operation if the downstream disk write fails. Only the
++      // final fragment is retried; successful earlier fragments stay checkpointed.
++      this.completed = {id, count, bytes, checksum:chunk.checksum, lastData:data, value};
++      progress.value = value;
++    }
++    return progress;
++  }
++
++  commit(id) { if (this.completed?.id === id) this.completed = null; }
++  clear() { this.active = null; this.completed = null; }
++}
++
++class OutgoingTransfers {
++  constructor() { this.items = new Map(); }
++
++  receipts(receipts) {
++    if (!Array.isArray(receipts) || receipts.length > 32) throw new Error('Invalid command receipts.');
++    for (const receipt of receipts) {
++      if (!receipt || typeof receipt.id !== 'string') throw new Error('Invalid command receipt.');
++      const item = this.items.get(receipt.id);
++      if (!item) continue;
++      if (!Number.isSafeInteger(receipt.next) || receipt.next < 0 || receipt.next > item.sent) throw new Error('Receipt acknowledges unsent fragments.');
++      item.next = Math.max(item.next, receipt.next);
++    }
++  }
++
++  pack(commands) {
++    const live = new Set(commands.map(command => command.opId));
++    for (const id of this.items.keys()) if (!live.has(id)) this.items.delete(id);
++    const output = [];
++    let packetBytes = 4096;
++    for (const command of commands) {
++      let item = this.items.get(command.opId);
++      if (item && item.next === item.chunks.length) continue;
++      const size = item ? limits.chunkBytes + 1 : Buffer.byteLength(JSON.stringify(command), 'utf8');
++      if (size <= limits.chunkBytes) {
++        if (packetBytes + size > limits.maxPacketBytes) break;
++        output.push(command); packetBytes += size + 1;
++        continue;
++      }
++      if (!item) {
++        if ([...this.items.values()].some(other => other.next < other.chunks.length)) continue;
++        item = { chunks: encodeTransfer(command, command.opId), next: 0, sent: 0 };
++        this.items.set(command.opId, item);
++      }
++      for (let i = item.next; i < item.chunks.length; i++) {
++        const chunk = item.chunks[i];
++        const size = Buffer.byteLength(JSON.stringify(chunk), 'utf8');
++        if (packetBytes + size > limits.maxPacketBytes) break;
++        output.push(chunk); packetBytes += size + 1;
++        item.sent = Math.max(item.sent, i + 1);
++      }
++      if (item.next < item.chunks.length) break;
++    }
++    return output;
++  }
++
++  clear() { this.items.clear(); }
++}
++module.exports = {checksum, encodeTransfer, IncomingTransfer, OutgoingTransfers};
+diff --git a/docs/QUICK_APPLY_FORMAT.md b/docs/QUICK_APPLY_FORMAT.md
+--- a/docs/QUICK_APPLY_FORMAT.md
++++ b/docs/QUICK_APPLY_FORMAT.md
+@@ -35,15 +35,19 @@
+ - `STATUS: NEW`: create a fresh script; missing intermediate **Folder** instances are created. Existing scripts with the same name are not overwritten.
+ - `CLASS`: optional for NEW. Accepted values: `Script`, `LocalScript`, `ModuleScript`. Without CLASS, the default is `Script`, adjustable in the preview. Existing scripts retain their actual class.
+ 
++## Closed folders and demand paging
++
++With both v0.2.9 components installed, Quick Apply resolves exact paths directly in Studio. You do not need to expand destination folders or load every sibling. Preview is read-only. Missing MODIFIED scripts and ambiguous paths remain errors. NEW entries only create missing folders after Apply. Studio rechecks identity and source when applying.
++
+ ## Safety
+ 
+ Quick Apply does **not** execute pasted text in the desktop application. The bridge stores the TXT file and backups for every modified script **before** queueing a command. Roblox Studio checks the exact instance paths and source text a second time before changing anything. The Studio plugin uses a single ChangeHistoryService recording for undo. If the batch fails, it attempts to restore existing sources and remove created objects, then reports the result. A disconnected or uncertain batch is **never automatically retried**.
+ 
+-Limits: 20 scripts per bundle, 256 KiB per script, 512 KiB total. Code is not compiled or linted by Quick Apply: Studio remains responsible for script editing and diagnostics. Undo, network behavior, and Lua source writes still require real Studio validation.
++Limits in v0.2.9: 128 scripts, 2 MiB of UTF-8 source per script, and 16 MiB of UTF-8 TXT input in total. Existing destination sources have a separate 16 MiB aggregate budget. Serialized JSON transfers are bounded at 64 MiB. Oversized input is rejected explicitly and never truncated. Code is not compiled or linted by Quick Apply: Studio remains responsible for script editing and diagnostics. Undo, network behavior, and Lua source writes still require real Studio validation.
+ 
+ ## Recovery
+ 
+-The app saves imported bundles to `backups/quick-apply/<place-key>/` under its user-data directory and individual prior script versions under `backups/scripts/`. Use **Session > Open recovery folder**. Pasted text is also retained locally until a successful Studio confirmation or manual Clear.
++The app saves imported bundles to `backups/quick-apply/<place-key>/` under its user-data directory and individual prior script versions under `backups/scripts/`. Use **Session > Open recovery folder**. Pasted input is saved atomically to `drafts/quick-apply-input.txt` under the app user-data directory, instead of depending on browser localStorage capacity. It remains until successful confirmation or explicit Clear.
+ 
+ ## Workflow
+ 
+diff --git a/docs/QUICK_APPLY_PROMPT.txt b/docs/QUICK_APPLY_PROMPT.txt
+--- a/docs/QUICK_APPLY_PROMPT.txt
++++ b/docs/QUICK_APPLY_PROMPT.txt
+@@ -21,3 +21,7 @@
+ --!strict
+ 
+ print("Hello from Cursor Bridge")
++
++Cursor Bridge v0.2.9 accepts up to 128 scripts, 16 MiB total UTF-8 TXT, and 2 MiB UTF-8 per source.
++Split larger deliveries into separate complete bundles. Never truncate a script.
++Do not change MODIFIED to NEW simply because an Explorer folder is collapsed.

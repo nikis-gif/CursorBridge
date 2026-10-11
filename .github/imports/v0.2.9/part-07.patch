@@ -1,0 +1,262 @@
+diff --git a/scripts/publish-update.cjs b/scripts/publish-update.cjs
+new file mode 100644
+--- /dev/null
++++ b/scripts/publish-update.cjs
+@@ -0,0 +1,85 @@
++'use strict';
++
++// Upload a verified source update through the user's existing GitHub CLI login.
++// No personal access token is read, embedded, copied or printed by this script.
++const fs = require('node:fs');
++const path = require('node:path');
++const crypto = require('node:crypto');
++const {spawnSync} = require('node:child_process');
++
++function gh(args, body) {
++  const result = spawnSync('gh', args, {encoding:'utf8',windowsHide:true,
++    input:body === undefined ? undefined : JSON.stringify(body),maxBuffer:32*1024*1024});
++  if (result.error) throw new Error(`GitHub CLI could not start. Install it and run gh auth login. ${result.error.message}`);
++  if (result.status !== 0) throw new Error((result.stderr || result.stdout || 'GitHub command failed.').trim());
++  if (!result.stdout.trim()) return null;
++  try { return JSON.parse(result.stdout); } catch { return result.stdout.trim(); }
++}
++function api(client, endpoint, method='GET', data) {
++  const args=['api','--method',method,endpoint];
++  if (data !== undefined) args.push('--input','-');
++  return client(args,data);
++}
++function hash(kind, bytes) { return crypto.createHash(kind).update(bytes).digest('hex'); }
++function blobHash(bytes) { return hash('sha1',Buffer.concat([Buffer.from(`blob ${bytes.length}\0`),bytes])); }
++
++function publish({root=path.join(__dirname,'..'),client=gh,log=console.log}={}) {
++  const manifestPath=path.join(root,'update-manifest.json');
++  const manifest=JSON.parse(fs.readFileSync(manifestPath,'utf8'));
++  const repo='nikis-gif/CursorBridge';
++  if (manifest.repository !== repo || manifest.version !== '0.2.9' || !Array.isArray(manifest.files) || !manifest.files.length) {
++    throw new Error('Invalid release source manifest. Extract the original update ZIP again.');
++  }
++  const files=[];const used=new Set();
++  for(const entry of manifest.files) {
++    if (typeof entry.path !== 'string' || !/^[A-Za-z0-9_.\/-]+$/.test(entry.path) ||
++        entry.path.split('/').some(part=>part==='..'||part==='.'||!part) || entry.path.startsWith('.') || used.has(entry.path)) {
++      throw new Error('Unsafe or duplicated path in update manifest.');
++    }
++    used.add(entry.path);
++    const bytes=fs.readFileSync(path.join(root,entry.path));
++    if (hash('sha256',bytes) !== entry.sha256 || blobHash(bytes) !== entry.blob) throw new Error(`Local file changed: ${entry.path}. Nothing was published.`);
++    files.push({...entry,bytes});
++  }
++  log(`Checking ${repo} before uploading Cursor Bridge ${manifest.version}...`);
++  const head=api(client,`repos/${repo}/git/ref/heads/main`).object.sha;
++  const commit=api(client,`repos/${repo}/git/commits/${head}`);
++  const tree=api(client,`repos/${repo}/git/trees/${commit.tree.sha}?recursive=1`);
++  if (tree.truncated || !Array.isArray(tree.tree)) throw new Error('Incomplete repository tree. No source changes were made.');
++  const remote=new Map(tree.tree.filter(item=>item.type==='blob').map(item=>[item.path,item.sha]));
++  const changed=[];
++  for(const file of files) {
++    const current=remote.get(file.path) || null;
++    if(current===file.blob)continue;
++    if(current!==file.baseBlob)throw new Error(`GitHub file changed since this update was prepared: ${file.path}. Refusing to overwrite it.`);
++    changed.push(file);
++  }
++  if(!changed.length){log('All source files already match this update. No new commit or release was created.');return {changed:false,sha:head};}
++  const entries=[];
++  for(const [index,file] of changed.entries()) {
++    log(`[${index+1}/${changed.length}] ${file.path}`);
++    const result=api(client,`repos/${repo}/git/blobs`,'POST',{content:file.bytes.toString('base64'),encoding:'base64'});
++    if(result.sha!==file.blob)throw new Error(`GitHub blob verification failed: ${file.path}`);
++    entries.push({path:file.path,mode:'100644',type:'blob',sha:result.sha});
++  }
++  const nextTree=api(client,`repos/${repo}/git/trees`,'POST',{base_tree:commit.tree.sha,tree:entries});
++  const nextCommit=api(client,`repos/${repo}/git/commits`,'POST',{
++    message:'Cursor Bridge v0.2.9: live Quick Apply paths, chunked bundles and session recovery',
++    tree:nextTree.sha,parents:[head]});
++  const current=api(client,`repos/${repo}/git/ref/heads/main`).object.sha;
++  if(current!==head)throw new Error('The repository changed during upload. No branch was overwritten. Run again after reviewing the changes.');
++  // A concurrent commit after the check is also protected by fast-forward only.
++  api(client,`repos/${repo}/git/refs/heads/main`,'PATCH',{sha:nextCommit.sha,force:false});
++  log(`Source published: ${nextCommit.sha}`);
++  try {
++    api(client,`repos/${repo}/actions/workflows/release.yml/dispatches`,'POST',{ref:'main'});
++    log('Windows release build requested. This is not a build-success confirmation.');
++  } catch(error) {
++    log(`Source upload succeeded, but the release could not be started: ${error.message}`);
++    log('Open GitHub Actions > Build and publish Windows release > Run workflow > main.');
++  }
++  log(`https://github.com/${repo}/actions/workflows/release.yml`);
++  return {changed:true,sha:nextCommit.sha};
++}
++if(require.main===module){try{publish();}catch(error){console.error(error.message);process.exitCode=1;}}
++module.exports={publish,blobHash};
+diff --git a/shared/limits.json b/shared/limits.json
+new file mode 100644
+--- /dev/null
++++ b/shared/limits.json
+@@ -0,0 +1,10 @@
++{
++  "protocolVersion": 2,
++  "maxBundleBytes": 16777216,
++  "maxScriptBytes": 2097152,
++  "maxScripts": 128,
++  "maxResolvedSourceBytes": 16777216,
++  "maxTransferBytes": 67108864,
++  "chunkBytes": 65536,
++  "maxPacketBytes": 716800
++}
+diff --git a/tests/browser/bridge-mock.js b/tests/browser/bridge-mock.js
+--- a/tests/browser/bridge-mock.js
++++ b/tests/browser/bridge-mock.js
+@@ -14,6 +14,8 @@
+ const noSession = {connected:false,ready:false,placeKey:'offline',placeName:'Recovered Place',pairingCode:'432987'};
+ window.__mutations = [];
+ window.cursorBridge = {
++  saveQuickApplyDraft: async (text) => { window.__savedQuickApplyInput = text; return {ok:true}; },
++  getQuickApplyDraft: async () => '',
+   onEvent(fn){window.__emitServer = fn;},
+   async getState(){return {status: offline ? noSession : online, nodes:roots};},
+   async getAppVersion(){return '0.2.3';},
+diff --git a/tests/browser/quick_apply_large.py b/tests/browser/quick_apply_large.py
+new file mode 100644
+--- /dev/null
++++ b/tests/browser/quick_apply_large.py
+@@ -0,0 +1,63 @@
++#!/usr/bin/env python3
++"""Production UI with a simulated bridge: large TXT and async recovery races."""
++from playwright.sync_api import sync_playwright
++from smoke import PROJECT, FIXTURES, fixture_page, fixture_modules, IMPORTS, MOUNT_APP, launch_options
++
++
++def main():
++    with sync_playwright() as pw:
++        browser = pw.chromium.launch(**launch_options())
++        try:
++            page = browser.new_page(viewport={"width": 1400, "height": 900})
++            errors = []
++            page.on('pageerror', lambda error: errors.append(str(error)))
++            page.set_content(fixture_page())
++            bridge = (FIXTURES/'bridge-mock.js').read_text().replace("new URLSearchParams(location.search).has('offline')", 'false')
++            page.evaluate(bridge)
++            page.evaluate("""() => {
++              Object.defineProperty(window,'localStorage',{configurable:true,value:{
++                getItem:()=>null,setItem:()=>{throw Error('Quota exceeded');},removeItem:()=>{}}});
++              window.__previews=[];
++              window.cursorBridge.previewQuickApply=(text)=>new Promise(resolve=>window.__previews.push({text,resolve}));
++            }""")
++            page.evaluate(MOUNT_APP,[fixture_modules(),(PROJECT/'renderer/app.js').read_text(),IMPORTS])
++            page.wait_for_selector('.tree-row')
++            page.keyboard.press('Control+l')
++            page.evaluate("""() => {const f=document.getElementById('quickApplyText');
++              f.value='--!strict\\n'+'x'.repeat(6*1024*1024);f.dispatchEvent(new Event('input',{bubbles:true}));}""")
++            page.wait_for_function('window.__previews.length===1')
++            assert page.evaluate('window.__savedQuickApplyInput.length') > 6*1024*1024
++            assert '16 MiB' in page.locator('#quickApplySize').inner_text()
++            assert not page.locator('#quickApplyConfirm').is_enabled()
++            page.evaluate("""() => window.__emitServer({type:'status',status:{connected:true,ready:true,
++              placeKey:'100-200',placeName:'Sample Place',scanIndexed:999}})""")
++            page.wait_for_timeout(400)
++            assert page.evaluate('window.__previews.length') == 1
++            page.locator('#quickApplyText').fill('newer text')
++            page.evaluate("""() => window.__previews[0].resolve({ok:true,token:'stale',placeName:'Test',
++              errors:[],entries:[],summary:{create:1,modify:0,unchanged:0,errors:0}})""")
++            page.wait_for_timeout(100)
++            assert not page.locator('#quickApplyConfirm').is_enabled()
++            page.wait_for_function('window.__previews.length===2')
++            page.evaluate("""() => window.__emitServer({type:'status',status:{connected:true,ready:false,
++              recovering:true,placeKey:'100-200',placeName:'Sample Place'}})""")
++            assert 'Reconnecting' in page.locator('#welcomeTitle').inner_text()
++            assert page.locator('#explorerPane').is_hidden()
++            assert page.locator('#quickApplyText').input_value() == 'newer text'
++            count = page.evaluate('window.__previews.length')
++            page.evaluate("""() => {const f=document.getElementById('quickApplyText');
++              f.value='x'.repeat(16*1024*1024+1);f.dispatchEvent(new Event('input',{bubbles:true}));}""")
++            page.wait_for_function("document.getElementById('quickApplySummary').innerText.includes('exceeds 16 MiB')", timeout=10000)
++            assert page.evaluate('window.__previews.length') == count
++            page.evaluate("""() => window.__emitServer({type:'status',status:{connected:true,ready:true,
++              protocolVersion:1,placeKey:'100-200',placeName:'Sample Place'}})""")
++            assert 'Update your Studio plugin' in page.locator('#welcomeTitle').inner_text()
++            assert page.locator('#explorerPane').is_hidden()
++            assert not errors, errors
++            print('PASS 6 MiB TXT with full localStorage, stale preview guard, quiet progress, recovery, 16 MiB boundary')
++        finally:
++            browser.close()
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/tests/browser/smoke.py b/tests/browser/smoke.py
+--- a/tests/browser/smoke.py
++++ b/tests/browser/smoke.py
+@@ -39,10 +39,13 @@
+         "editorsync": PROJECT / "renderer/editor-sync.mjs",
+         "searchworker": FIXTURES / "mock-search-worker.mjs",
+     }
+-    return {name: path.read_text(encoding="utf-8") for name, path in files.items()}
++    modules = {name: path.read_text(encoding="utf-8") for name, path in files.items()}
++    modules["limits"] = "export default " + (PROJECT / "shared/limits.json").read_text() + ";"
++    return modules
+ 
+ 
+ IMPORTS = {
++    "import limits from '../shared/limits.json';": "limits",
+     "import * as monaco from 'monaco-editor';": "monaco",
+     "import EditorWorker from 'monaco-editor/editor/editor.worker?worker';": "worker",
+     "import { icon } from './icons.js';": "icons",
+diff --git a/tests/publish-update.test.cjs b/tests/publish-update.test.cjs
+new file mode 100644
+--- /dev/null
++++ b/tests/publish-update.test.cjs
+@@ -0,0 +1,54 @@
++'use strict';
++const {test}=require('node:test');
++const assert=require('node:assert/strict');
++const fs=require('node:fs');
++const os=require('node:os');
++const path=require('node:path');
++const crypto=require('node:crypto');
++const {publish,blobHash}=require('../scripts/publish-update.cjs');
++function fixture(t){
++  const root=fs.mkdtempSync(path.join(os.tmpdir(),'cursor-publish-'));
++  t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
++  const bytes=Buffer.from('tested source\n');fs.writeFileSync(path.join(root,'test.cjs'),bytes);
++  fs.writeFileSync(path.join(root,'update-manifest.json'),JSON.stringify({repository:'nikis-gif/CursorBridge',version:'0.2.9',files:[{
++    path:'test.cjs',baseBlob:'old-blob',blob:blobHash(bytes),sha256:crypto.createHash('sha256').update(bytes).digest('hex')}]}));
++  return {root,bytes};
++}
++function mock(bytes,options={}){
++  const calls=[];let reads=0;
++  const client=(args,data)=>{calls.push({args,data});const endpoint=args[3];
++    if(endpoint.endsWith('git/ref/heads/main'))return {object:{sha:++reads>1&&options.concurrent?'other-head':'head'}};
++    if(endpoint.endsWith('git/commits/head'))return {tree:{sha:'base-tree'}};
++    if(endpoint.includes('git/trees/base-tree'))return {tree:[{path:'test.cjs',type:'blob',sha:options.already?blobHash(bytes):options.conflict?'different':'old-blob'}]};
++    if(endpoint.endsWith('git/blobs'))return {sha:blobHash(bytes)};
++    if(endpoint.endsWith('git/trees'))return {sha:'new-tree'};
++    if(endpoint.endsWith('git/commits'))return {sha:'new-commit'};
++    if(endpoint.includes('dispatches')&&options.dispatchFail)throw Error('Actions permission missing');
++    return null;};return {calls,client};
++}
++test('publisher verifies files, commits as one fast-forward and requests release',t=>{
++  const {root,bytes}=fixture(t);const {client,calls}=mock(bytes);const result=publish({root,client,log:()=>{}});
++  assert.equal(result.sha,'new-commit');
++  const patch=calls.find(c=>c.args[2]==='PATCH');assert.deepEqual(patch.data,{sha:'new-commit',force:false});
++  assert.ok(calls.some(c=>c.args[3].includes('dispatches')));
++});
++test('publisher refuses locally modified source before making network calls',t=>{
++  const {root,bytes}=fixture(t);const {client,calls}=mock(bytes);fs.appendFileSync(path.join(root,'test.cjs'),'changed');
++  assert.throws(()=>publish({root,client,log:()=>{}}),/Local file changed/);assert.equal(calls.length,0);
++});
++test('publisher refuses conflicting remote files and concurrent branch changes',t=>{
++  const {root,bytes}=fixture(t);
++  for(const option of [{conflict:true},{concurrent:true}]){
++    const {client,calls}=mock(bytes,option);assert.throws(()=>publish({root,client,log:()=>{}}),/changed/);
++    assert.ok(!calls.some(c=>c.args[2]==='PATCH'));
++  }
++});
++test('publisher is idempotent and does not create duplicate version tags',t=>{
++  const {root,bytes}=fixture(t);const {client,calls}=mock(bytes,{already:true});
++  assert.equal(publish({root,client,log:()=>{}}).changed,false);assert.ok(!calls.some(c=>c.args[2]==='POST'));
++});
++test('publisher reports source success separately from release dispatch failure',t=>{
++  const {root,bytes}=fixture(t);const {client}=mock(bytes,{dispatchFail:true});const logs=[];
++  assert.equal(publish({root,client,log:x=>logs.push(x)}).changed,true);
++  assert.ok(logs.some(x=>x.includes('Source upload succeeded, but')));
++});
