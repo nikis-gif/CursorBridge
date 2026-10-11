@@ -5,7 +5,7 @@ const SERVICE_ORDER = ['Workspace', 'Players', 'CoreGui', 'Lighting', 'MaterialS
   'SoundService', 'TextChatService', 'Chat', 'TestService', 'LocalizationService'];
 const SERVICE_RANK = new Map(SERVICE_ORDER.map((name, i) => [name, i]));
 
-export function buildExplorerRows(nodes, expanded, searchTerm = '', maxRows = 11000) {
+export function buildExplorerRows(nodes, expanded, searchTerm = '', maxRows = 1000000) {
   const term = searchTerm.trim().toLocaleLowerCase();
   const children = new Map();
   for (const node of nodes.values()) {
@@ -51,7 +51,7 @@ export function buildExplorerRows(nodes, expanded, searchTerm = '', maxRows = 11
   }
   const rows = [];
   function visit(parentId, depth, ancestors) {
-    if (rows.length >= maxRows || depth >= 45 || ancestors.has(parentId)) return;
+    if (rows.length >= maxRows || depth >= 512 || ancestors.has(parentId)) return;
     const next = new Set(ancestors);
     next.add(parentId);
     for (const node of children.get(parentId) || []) {

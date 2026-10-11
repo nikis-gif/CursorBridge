@@ -55,6 +55,13 @@ function StudioBridge.new()
 	self._queue = {} :: {any}
 	self._queueHead = 1
 	self._sourceQueue = {} :: {[string]: Instance}
+	self._sourceIds = {} :: {string}
+	self._sourceHead = 1
+	self._scanQueue = {} :: {Instance}
+	self._scanHead = 1
+	self._scanQueued = setmetatable({}, { __mode = "k" }) :: {[Instance]: boolean}
+	self._scanCount = 0
+	self._scanReadySent = false
 	self._results = {} :: {any}
 	self._lastSources = {} :: {[string]: string}
 	self._scriptIds = {} :: {string}
@@ -158,6 +165,9 @@ function StudioBridge:_sourceChanged(instance: Instance)
 		return
 	end
 	local identifier = self:_idFor(instance)
+	if self._sourceQueue[identifier] == nil then
+		table.insert(self._sourceIds, identifier)
+	end
 	self._sourceQueue[identifier] = instance
 end
 
@@ -179,12 +189,16 @@ function StudioBridge:_metadata(instance: Instance, includeSource: boolean): any
 		name = instance.Name,
 		className = instance.ClassName,
 	}
-	if isScript(instance) and includeSource then
-		local source = self:_editorSource(instance)
-		if source then
-			result.source = source
-			self._lastSources[result.id] = source
-		else
+	if isScript(instance) then
+		if includeSource then
+			local source = self:_editorSource(instance)
+			if source then
+				result.source = source
+				self._lastSources[result.id] = source
+			else
+				result.sourceAvailable = false
+			end
+		elseif self._lastSources[result.id] == nil then
 			result.sourceAvailable = false
 		end
 	end
@@ -255,6 +269,72 @@ function StudioBridge:_observe(instance: Instance)
 	self._connections[id] = connections
 end
 
+-- Incremental breadth-first traversal. Large model scans must never hold the
+-- transport queue, Studio editor, or frame scheduler hostage.
+function StudioBridge:_enqueueScan(instance: Instance)
+	if self._scanQueued[instance] or not self:_isManaged(instance) then return end
+	self._scanQueued[instance] = true
+	table.insert(self._scanQueue, instance)
+end
+
+function StudioBridge:_scanLoop()
+	local nextProgress = 0
+	while self._alive and self._connected and self._scanHead <= #self._scanQueue do
+		local queued = #self._queue - self._queueHead + 1
+		if queued >= Defaults.MaxQueuedScanOperations or self._inFlightBatch ~= nil then
+			task.wait(0.06)
+			continue
+		end
+		local count = 0
+		local sliceStart = os.clock()
+		while self._scanHead <= #self._scanQueue and count < Defaults.ScanSliceSize do
+			if (#self._queue - self._queueHead + 1) >= Defaults.MaxQueuedScanOperations then break end
+			local instance = self._scanQueue[self._scanHead]
+			self._scanHead += 1
+			self._scanQueued[instance] = nil
+			if self:_isManaged(instance) and instance.Parent then
+				local id = self:_idFor(instance)
+				if not self._connections[id] then
+					if self._scanCount >= Defaults.MaxNodes then
+						self:_enqueueOperation({type = "scanLimit", count = self._scanCount})
+						self._scanQueue = {}
+						self._scanHead = 1
+						self:_notify("Hierarchy safety limit reached; scan incomplete.")
+						return
+					end
+					self:_observe(instance)
+					self:_enqueueOperation({ type = "upsert", node = self:_metadata(instance, false) })
+					self._scanCount += 1
+					if isScript(instance) then self:_sourceChanged(instance) end
+				end
+				local children = instance:GetChildren()
+				for index, child in children do
+					self._siblingOrder[child] = index
+					self:_enqueueScan(child)
+				end
+			end
+			count += 1
+			if os.clock() - sliceStart > 0.009 then break end
+		end
+		if not self._scanReadySent then
+			self._scanReadySent = true
+			self:_enqueueOperation({type = "ready"})
+		end
+		if os.clock() >= nextProgress then
+			self:_enqueueOperation({type = "scanProgress", count = self._scanCount})
+			nextProgress = os.clock() + Defaults.ScanProgressInterval
+		end
+		task.wait(0.02)
+	end
+	if self._alive and self._connected then
+		if not self._scanReadySent then self:_enqueueOperation({type = "ready"}) end
+		self:_enqueueOperation({type = "scanComplete", count = self._scanCount})
+		self._scanQueue = {}
+		self._scanHead = 1
+		self._scanQueued = setmetatable({}, { __mode = "k" }) :: {[Instance]: boolean}
+	end
+end
+
 function StudioBridge:_watchChanges()
 	table.insert(self._globalConnections, game.DescendantAdded:Connect(function(instance: Instance)
 		if not self._connected or not self:_isManaged(instance) then
@@ -262,14 +342,7 @@ function StudioBridge:_watchChanges()
 		end
 		local parent = instance.Parent
 		if parent then self:_indexSiblingOrder(parent) end
-		local function track(target: Instance)
-			local id = self:_idFor(target)
-			if self._connections[id] then return end
-			self:_observe(target)
-			self:_enqueueOperation({ type = "upsert", node = self:_metadata(target, true) })
-		end
-		track(instance)
-		for _, descendant in instance:GetDescendants() do track(descendant) end
+		self:_enqueueScan(instance)
 	end))
 	table.insert(self._globalConnections, game.DescendantRemoving:Connect(function(instance: Instance)
 		local id = self._instanceIds[instance]
@@ -311,15 +384,24 @@ function StudioBridge:_watchChanges()
 end
 
 function StudioBridge:_flushSources()
-	for id, instance in self._sourceQueue do
+	local read = 0
+	while self._sourceHead <= #self._sourceIds and read < Defaults.MaxSourcesPerCycle do
+		local id = self._sourceIds[self._sourceHead]
+		self._sourceHead += 1
+		local instance = self._sourceQueue[id]
 		self._sourceQueue[id] = nil
-		if instance.Parent and self:_isManaged(instance) then
+		if instance and instance.Parent and self:_isManaged(instance) then
 			local source = self:_editorSource(instance)
 			if source and source ~= self._lastSources[id] then
 				self._lastSources[id] = source
 				self:_enqueueOperation({ type = "source", id = id, source = source })
 			end
 		end
+		read += 1
+	end
+	if self._sourceHead > #self._sourceIds then
+		self._sourceIds = {}
+		self._sourceHead = 1
 	end
 end
 
@@ -416,6 +498,19 @@ function StudioBridge:_applyCommand(command: any)
 		end)
 		return
 	end
+	if command.type == "loadSource" then
+		local target = self._instances[command.scriptId]
+		if target and target.Parent and isScript(target) and self:_isManaged(target) then
+			local source = self:_editorSource(target)
+			if source then
+				self._lastSources[command.scriptId] = source
+				self:_enqueueOperation({type = "source", id = command.scriptId, source = source})
+			else
+				self:_enqueueOperation({type = "sourceUnavailable", id = command.scriptId})
+			end
+		end
+		return
+	end
 	if command.type == "mutate" then
 		local ok, result = pcall(function()
 			return HierarchyMutations.Execute(command, self._instances, function(target: Instance)
@@ -483,36 +578,29 @@ function StudioBridge:_syncLoop()
 			return
 		end
 		local succeeded, err = pcall(function()
-			-- Source events are immediate; a rotating audit is a fallback, not a per-poll workload.
 			if os.clock() >= nextAudit then
 				self:_auditChanges()
 				nextAudit = os.clock() + Defaults.SourceAuditInterval
 			end
 			self:_sendNextBatch()
 			local poll = self:_request("/v1/poll", {}, self._token)
-			for _, command in poll.commands do
-				self:_applyCommand(command)
-			end
+			for _, command in poll.commands do self:_applyCommand(command) end
 		end)
 		if not self._alive or not self._connected then return end
 		local delaySeconds: number
 		if succeeded then
 			failures = 0
 			if self._status ~= "Connected" then self:_notify("Connected") end
-			-- Idle sessions consume only a small, predictable HTTP budget.
-			-- Pending changes/results are sent faster, without exceeding the cap.
 			local busy = self._inFlightBatch ~= nil
-				or self._queueHead <= #self._queue
-				or #self._results > 0
-				or next(self._sourceQueue) ~= nil
+				or self._queueHead <= #self._queue or #self._results > 0
+				or self._sourceHead <= #self._sourceIds
+				or self._scanHead <= #self._scanQueue
 			delaySeconds = if busy then Defaults.ActivePollInterval else Defaults.IdlePollInterval
 		else
 			failures += 1
 			local message = tostring(err)
 			local rateLimited = string.find(string.lower(message), "requests exceeded limit", 1, true) ~= nil
 				or string.find(message, "429", 1, true) ~= nil
-			-- A shared Studio rate limit can involve other plugins. Waiting is not
-			-- the same as losing the authenticated local session.
 			if failures == 1 or failures % 3 == 0 then
 				warn("[Cursor Bridge] " .. message)
 				self:_notify(if rateLimited then "Studio HTTP budget exhausted; waiting..."
@@ -577,42 +665,27 @@ function StudioBridge:Connect(pairingCode: string): (boolean, string)
 	self._queue = {}
 	self._queueHead = 1
 	self._sourceQueue = {}
+	self._sourceIds = {}
+	self._sourceHead = 1
 	self._results = {}
 	self._handledOps = {}
+	self._scanQueue = {}
+	self._scanHead = 1
+	self._scanQueued = setmetatable({}, { __mode = "k" }) :: {[Instance]: boolean}
+	self._scanCount = 0
+	self._scanReadySent = false
 	self:_enqueueOperation({ type = "reset" })
+	self:_enqueueOperation({ type = "scanBegin" })
 	self:_watchChanges()
-	-- Start the network heartbeat before scanning potentially large places.
-	task.spawn(function()
-		self:_syncLoop()
-	end)
-	local count = 0
 	self:_indexSiblingOrder(game)
 	for _, root in game:GetChildren() do
-		if not self._alive or not self._connected then
-			return false, "Bridge was disconnected during indexing."
-		end
-		if MANAGED_CLASSES[root.ClassName] then
-			self:_observe(root)
-			self:_enqueueOperation({ type = "upsert", node = self:_metadata(root, true) })
-			count += 1
-			for _, descendant in root:GetDescendants() do
-				if not self._alive or not self._connected then
-					return false, "Bridge was disconnected during indexing."
-				end
-				if count >= Defaults.MaxNodes then
-					warn("[Cursor Bridge] Maximum instance count reached. Explorer is incomplete.")
-					break
-				end
-				self:_observe(descendant)
-				self:_enqueueOperation({ type = "upsert", node = self:_metadata(descendant, true) })
-				count += 1
-				if count % 200 == 0 then task.wait() end
-			end
-		end
-		if count >= Defaults.MaxNodes then break end
+		if MANAGED_CLASSES[root.ClassName] then self:_enqueueScan(root) end
 	end
-	self:_enqueueOperation({ type = "ready" })
-	self:_notify(string.format("Indexing %d instances...", count))
+	-- Scanning and HTTP transfer operate independently. The app becomes
+	-- interactive after the first slice instead of waiting for the full place.
+	task.spawn(function() self:_syncLoop() end)
+	task.spawn(function() self:_scanLoop() end)
+	self:_notify("Indexing place hierarchy in the background...")
 	return true, "Pairing completed."
 end
 
@@ -640,6 +713,11 @@ function StudioBridge:Disconnect(notifyServer: boolean?)
 	self._queue = {}
 	self._queueHead = 1
 	self._sourceQueue = {}
+	self._sourceIds = {}
+	self._sourceHead = 1
+	self._scanQueue = {}
+	self._scanHead = 1
+	self._scanQueued = setmetatable({}, { __mode = "k" }) :: {[Instance]: boolean}
 	self._results = {}
 	self._inFlightBatch = nil
 	if notifyServer and token then

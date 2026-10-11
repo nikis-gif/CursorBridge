@@ -9,7 +9,7 @@ const { prepareMutation, descendantsOf, sourceFingerprint, MAX_BACKUP_SCRIPTS } 
 
 const MAX_BODY_BYTES = 1024 * 1024;
 const { MAX_SCRIPT_BYTES } = require('./bridge-server-constants.cjs');
-const TIMEOUT_MS = 45000; // Allow Studio HTTP throttling to recover without releasing the local session.
+const TIMEOUT_MS = 120000; // Accommodate Roblox HTTP throttling safely.
 const PORT = 38471;
 
 function httpError(code, message) {
@@ -59,7 +59,15 @@ class BridgeServer extends EventEmitter {
     this.pendingBatchEvents = null;
     this.pendingMutations = new Map();
     this.mutationLocks = new Set();
-    this.maxNodes = 25000;
+    this.maxNodes = 250000;
+    this.indexing = false;
+    this.scanComplete = false;
+    this.scanIndexed = 0;
+    this.scanLimitReached = false;
+    this.progressiveScan = false;
+    this.pendingWrites = new Map();
+    this.scriptNodeCount = 0;
+    this.sourceReadyCount = 0;
     this.quickApplyPreviews = new Map();
     this.pendingQuickApply = null;
     this.quickApplyPreparing = false;
@@ -117,7 +125,7 @@ class BridgeServer extends EventEmitter {
     if (!this.session && this.now() - this.pairingCreatedAt > 5 * 60 * 1000) {
       this.rotatePairingCode();
     }
-    if (this.ready && this.now() - this.lastSnapshotAt > 30 * 1000) {
+    if (this.ready && this.scanComplete && this.now() - this.lastSnapshotAt > 30 * 1000) {
       this.saveSnapshot().catch((error) => this.log('error', `Backup failed: ${error.message}`));
     }
   }
@@ -153,7 +161,11 @@ class BridgeServer extends EventEmitter {
       studioRunId: this.session?.studioRunId || null,
       pairingCode: this.session ? null : this.pairingCode,
       nodeCount: this.nodes.size,
-      scriptCount: [...this.nodes.values()].filter((node) => node.isScript && typeof node.source === 'string').length,
+      scriptCount: this.sourceReadyCount,
+      indexing: this.indexing,
+      scanComplete: this.scanComplete,
+      scanIndexed: this.scanIndexed,
+      scanLimitReached: this.scanLimitReached,
       lastChangeAt: this.lastChangeAt || null,
       lastHeartbeatAt: this.session?.lastSeen || null,
       port: this.port,
@@ -246,11 +258,20 @@ class BridgeServer extends EventEmitter {
       lastSeen: this.now(),
       lastSeq: 0,
       openRequests: new Map(),
+      sourceRequests: new Map(),
     };
     this.cachedPlaceKey = this.session.placeKey;
     this.cachedPlaceName = this.session.placeName;
     this.ready = false;
+    this.indexing = false;
+    this.progressiveScan = false;
+    this.scanComplete = false;
+    this.scanIndexed = 0;
+    this.scanLimitReached = false;
     this.nodes.clear();
+    this.sourceReadyCount = 0;
+    this.scriptNodeCount = 0;
+    this.pendingWrites.clear();
     this.writeQueues.clear();
     this.pendingMutations.clear();
     this.mutationLocks.clear();
@@ -264,12 +285,17 @@ class BridgeServer extends EventEmitter {
 
   poll() {
     const commands = [];
-    for (const node of this.nodes.values()) {
-      if (node.pendingWrite) {
-        const p = node.pendingWrite;
-        commands.push({ type: 'write', opId: p.opId, scriptId: node.id,
-          expectedSource: p.expectedSource, newSource: p.newSource });
+    // Do not scan the entire DataModel on every HTTP heartbeat.
+    for (const [id, pending] of this.pendingWrites) {
+      if (this.nodes.get(id)?.pendingWrite !== pending) {
+        this.pendingWrites.delete(id);
+        continue;
       }
+      commands.push({ type: 'write', opId: pending.opId, scriptId: id,
+        expectedSource: pending.expectedSource, newSource: pending.newSource });
+    }
+    for (const [id, opId] of this.session.sourceRequests) {
+      commands.push({ type: 'loadSource', opId, scriptId: id });
     }
     for (const [opId, request] of this.session.openRequests) {
       commands.push({ type: 'open', opId, scriptId: request.scriptId });
@@ -284,8 +310,19 @@ class BridgeServer extends EventEmitter {
     return { ok: true, ready: this.ready, commands: commands.slice(0, 25) };
   }
 
+  requestSource(id) {
+    if (!this.ready || !this.session) throw new Error('Studio is not connected.');
+    const node = this.nodes.get(id);
+    if (!node?.isScript) throw new Error('Script is not indexed yet.');
+    if (typeof node.source === 'string') return { status: 'ready' };
+    if (!this.session.sourceRequests.has(id)) {
+      this.session.sourceRequests.set(id, crypto.randomUUID());
+    }
+    return { status: 'loading' };
+  }
+
   async receiveChanges(data) {
-    if (!data || !Number.isSafeInteger(data.sequence) || !Array.isArray(data.ops) || data.ops.length > 100) {
+    if (!data || !Number.isSafeInteger(data.sequence) || !Array.isArray(data.ops) || data.ops.length > 400) {
       throw httpError(400, 'Invalid batch format.');
     }
     if (data.sequence <= this.session.lastSeq) return { ok: true, receivedSequence: this.session.lastSeq };
@@ -312,12 +349,49 @@ class BridgeServer extends EventEmitter {
       this.emit('event', { type: 'reset' });
       return;
     }
+    if (op.type === 'scanBegin') {
+      this.progressiveScan = true;
+      this.indexing = true;
+      this.scanComplete = false;
+      this.emitState();
+      return;
+    }
     if (op.type === 'ready') {
       this.ready = true;
       this.lastChangeAt = this.now();
-      this.log('success', 'Explorer snapshot synchronized.');
+      if (!this.progressiveScan) {
+        // Older compatible Studio plugins emit ready only after full traversal.
+        this.scanComplete = true;
+        this.indexing = false;
+        this.log('success', 'Explorer snapshot synchronized.');
+        await this.saveSnapshot();
+      } else {
+        this.log('info', 'Explorer connected. Remaining hierarchy streaming in the background.');
+      }
       this.emitState();
-      await this.saveSnapshot();
+      return;
+    }
+    if (op.type === 'scanProgress') {
+      this.scanIndexed = Math.max(this.scanIndexed, Math.max(0, Number(op.count) || 0));
+      this.emitState();
+      return;
+    }
+    if (op.type === 'scanComplete') {
+      this.indexing = false;
+      this.scanComplete = true;
+      this.scanIndexed = Math.max(this.nodes.size, Number(op.count) || 0);
+      this.log('success', `Explorer fully indexed: ${this.nodes.size} instances.`);
+      this.emitState();
+      // Save only a complete snapshot, not a misleading partial workspace.
+      this.saveSnapshot().catch((error) => this.log('warning', `Snapshot unavailable: ${error.message}`));
+      return;
+    }
+    if (op.type === 'scanLimit') {
+      this.scanLimitReached = true;
+      this.indexing = false;
+      this.scanComplete = false;
+      this.log('warning', 'Hierarchy safety limit reached; the Explorer remains incomplete.');
+      this.emitState();
       return;
     }
     if (op.type === 'upsert') {
@@ -340,8 +414,13 @@ class BridgeServer extends EventEmitter {
       node.name = cleanString(data.name, 300);
       node.parentId = cleanString(data.parentId, 120);
       node.className = cleanString(data.className, 100);
+      if (previous && previous.isScript !== isScript) {
+        this.scriptNodeCount += isScript ? 1 : -1;
+        if (typeof previous.source === 'string') this.sourceReadyCount--;
+      } else if (!previous && isScript) this.scriptNodeCount++;
       node.isScript = isScript;
-      node.sourceAvailable = data.sourceAvailable !== false;
+      node.sourceAvailable = !isScript || typeof data.source === 'string' ||
+        typeof node.source === 'string';
       this.nodes.set(node.id, node);
       this.emitWorkspaceEvent({ type: 'upsert', node: this.serializeNode(node) });
       if (isScript && typeof data.source === 'string') await this.applyStudioSource(node, data.source);
@@ -349,15 +428,21 @@ class BridgeServer extends EventEmitter {
     }
     if (op.type === 'remove') {
       if (typeof op.id !== 'string') throw httpError(400, 'Invalid node identifier.');
+      // Large subtree deletions may generate descendant removal events.
+      // Once an ancestor has removed the subtree, later child removals are no-ops.
+      if (!this.nodes.has(op.id)) return;
       const removed = new Set([op.id]);
-      let changed = true;
-      while (changed) {
-        changed = false;
-        for (const node of this.nodes.values()) {
-          if (!removed.has(node.id) && removed.has(node.parentId)) {
-            removed.add(node.id);
-            changed = true;
-          }
+      const children = new Map();
+      for (const node of this.nodes.values()) {
+        if (!children.has(node.parentId)) children.set(node.parentId, []);
+        children.get(node.parentId).push(node.id);
+      }
+      const pending = [op.id];
+      for (let cursor = 0; cursor < pending.length; cursor++) {
+        for (const childId of children.get(pending[cursor]) || []) {
+          if (removed.has(childId)) continue;
+          removed.add(childId);
+          pending.push(childId);
         }
       }
       for (const id of removed) {
@@ -365,6 +450,12 @@ class BridgeServer extends EventEmitter {
         if (node && typeof node.source === 'string') {
           await this.backup(node, 'studio-node-removed');
         }
+        if (node?.isScript) {
+          this.scriptNodeCount--;
+          if (typeof node.source === 'string') this.sourceReadyCount--;
+        }
+        this.pendingWrites.delete(id);
+        this.session?.sourceRequests.delete(id);
         this.nodes.delete(id);
       }
       this.lastChangeAt = this.now();
@@ -375,7 +466,17 @@ class BridgeServer extends EventEmitter {
       const node = this.nodes.get(op.id);
       if (!node?.isScript) return;
       if (typeof op.source !== 'string') throw httpError(400, 'Invalid source operation.');
+      this.session.sourceRequests.delete(op.id);
       await this.applyStudioSource(node, op.source);
+      return;
+    }
+    if (op.type === 'sourceUnavailable') {
+      this.session.sourceRequests.delete(op.id);
+      const node = this.nodes.get(op.id);
+      if (node?.isScript && typeof node.source !== 'string') {
+        node.sourceAvailable = false;
+        this.emitWorkspaceEvent({type: 'sourceUnavailable', id: op.id});
+      }
       return;
     }
     if (op.type === 'mutationResult') {
@@ -418,6 +519,7 @@ class BridgeServer extends EventEmitter {
           await this.applyStudioSource(node, op.source, 'cursor');
           const queued = node.queuedSource;
           node.pendingWrite = null;
+          this.pendingWrites.delete(node.id);
           node.queuedSource = null;
           if (typeof queued === 'string' && queued !== node.source) await this.enqueueWrite(node, queued);
         } else {
@@ -444,6 +546,7 @@ class BridgeServer extends EventEmitter {
       throw httpError(413, 'Script source exceeds the 256 KiB limit.');
     }
     if (source === node.source) return;
+    if (typeof node.source !== 'string') this.sourceReadyCount++;
     // Studio sometimes emits the source observer before its explicit write result.
     // Matching our pending payload is an acknowledgment, not an external conflict.
     const pending = node.pendingWrite;
@@ -460,6 +563,7 @@ class BridgeServer extends EventEmitter {
     if (isWriteEcho && node.pendingWrite === pending) {
       const queued = node.queuedSource;
       node.pendingWrite = null;
+      this.pendingWrites.delete(node.id);
       node.queuedSource = null;
       if (typeof queued === 'string' && queued !== node.source) {
         await this.enqueueWrite(node, queued);
@@ -498,6 +602,7 @@ class BridgeServer extends EventEmitter {
     }
     node.pendingWrite = { opId: crypto.randomUUID(), baseRevision,
       expectedSource, newSource: source, createdAt: this.now() };
+    this.pendingWrites.set(node.id, node.pendingWrite);
     this.emitWorkspaceEvent({ type: 'upsert', node: this.serializeNode(node) });
     return { status: 'queued', revision: node.revision };
   }
@@ -548,6 +653,7 @@ class BridgeServer extends EventEmitter {
       });
     });
     node.pendingWrite = null;
+    this.pendingWrites.delete(node.id);
     node.queuedSource = null;
     this.log('warning', `${nodePath}: ${reason} Draft protected.`);
     this.emitWorkspaceEvent({ type: 'conflict', id: node.id, message: reason });
@@ -633,6 +739,9 @@ class BridgeServer extends EventEmitter {
 
   async mutateHierarchy(request) {
     if (!this.session || !this.ready) throw new Error('Connect Roblox Studio before modifying the Explorer.');
+    if (this.progressiveScan && !this.scanComplete && request.action !== 'create' && request.action !== 'rename') {
+      throw new Error('Wait for the full hierarchy scan before moving, duplicating or deleting objects.');
+    }
     if (this.pendingQuickApply || this.quickApplyPreparing) throw new Error('Wait for Quick Apply to finish before changing the hierarchy.');
     const sessionId = this.session.sessionId;
     const payload = prepareMutation(this.nodes, request);
@@ -672,6 +781,9 @@ class BridgeServer extends EventEmitter {
 
   previewQuickApply(text, classOverrides = {}) {
     if (!this.session || !this.ready) throw new Error('Connect Roblox Studio before previewing the bundle.');
+    if (this.indexing || !this.scanComplete) {
+      throw new Error('Quick Apply requires the complete hierarchy. Wait until indexing finishes.');
+    }
     const plan = buildQuickApplyPlan(text, this.nodes, classOverrides);
     const token = crypto.randomUUID();
     // Keep only a few short-lived previews so large pasted files never accumulate.
@@ -742,12 +854,15 @@ class BridgeServer extends EventEmitter {
   }
 
   async saveSnapshot() {
-    if (this.nodes.size === 0) return;
+    if (this.nodes.size === 0 || !this.scanComplete) return;
     this.lastSnapshotAt = this.now();
-    const state = { placeKey: this.session?.placeKey || this.cachedPlaceKey,
-      placeName: this.session?.placeName || this.cachedPlaceName,
-      nodes: [...this.nodes.values()].map((node) => this.serializeNode(node)) };
-    this.snapshotWrite = this.snapshotWrite.catch(() => {}).then(() => this.storage.saveRecoverySnapshot(state));
+    const metadata = { placeKey: this.session?.placeKey || this.cachedPlaceKey,
+      placeName: this.session?.placeName || this.cachedPlaceName };
+    // Keep node identity stable if a new Studio session starts during disk I/O.
+    const snapshotNodes = new Map(this.nodes);
+    this.snapshotWrite = this.snapshotWrite.catch(() => {}).then(() =>
+      this.storage.saveRecoverySnapshotStream(metadata, snapshotNodes.values(),
+        (node) => this.serializeNode(node)));
     return this.snapshotWrite;
   }
 
@@ -770,10 +885,12 @@ class BridgeServer extends EventEmitter {
     this.pendingMutations.clear();
     this.mutationLocks.clear();
     this.ready = false;
+    this.indexing = false;
+    this.pendingWrites.clear();
     for (const node of this.nodes.values()) {
       if (node.pendingWrite) await this.failPendingWrite(node, `Session ended (${reason}).`);
     }
-    await this.saveSnapshot().catch((error) => this.log('error', `Recovery save failed: ${error.message}`));
+    if (this.scanComplete) await this.saveSnapshot().catch((error) => this.log('error', `Recovery save failed: ${error.message}`));
     this.log('warning', `Studio session ended (${reason}): ${previous.placeName}.`);
     this.rotatePairingCode();
   }

@@ -5,6 +5,9 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const zlib = require('node:zlib');
 const { promisify } = require('node:util');
+const { pipeline } = require('node:stream/promises');
+const { Readable } = require('node:stream');
+const fileStream = require('node:fs');
 const gzip = promisify(zlib.gzip);
 const gunzip = promisify(zlib.gunzip);
 
@@ -174,6 +177,36 @@ class BackupStore {
     }
     if (safeId(scriptId) !== scriptId) throw new Error('Invalid backup script identifier.');
     return fs.readFile(path.join(this.backupsPath, 'scripts', safeId(placeKey), scriptId, versionId), 'utf8');
+  }
+
+  async saveRecoverySnapshotStream({ placeKey, placeName }, nodes, serializeNode) {
+    const file = path.join(this.backupsPath, 'recovery', 'latest.json.gz');
+    const temporaryFile = `${file}.${process.pid}.${crypto.randomBytes(5).toString('hex')}.tmp`;
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    async function* chunks() {
+      let buffer = '{"savedAt":' + JSON.stringify(new Date().toISOString()) + ',"data":{' +
+        '"placeKey":' + JSON.stringify(placeKey) + ',"placeName":' + JSON.stringify(placeName) + ',"nodes":[';
+      let first = true;
+      for (const node of nodes) {
+        buffer += (first ? '' : ',') + JSON.stringify(serializeNode(node));
+        first = false;
+        // Stream manageable chunks, not one async write per instance.
+        if (buffer.length >= 256 * 1024) {
+          yield buffer;
+          buffer = '';
+          await new Promise((resolve) => setImmediate(resolve));
+        }
+      }
+      yield buffer + ']}}';
+    }
+    try {
+      await pipeline(Readable.from(chunks()), zlib.createGzip(), fileStream.createWriteStream(temporaryFile, { flags: 'wx' }));
+      await fs.rename(temporaryFile, file);
+    } catch (error) {
+      await fs.rm(temporaryFile, { force: true }).catch(() => {});
+      throw error;
+    }
+    return file;
   }
 
   async saveRecoverySnapshot(data) {

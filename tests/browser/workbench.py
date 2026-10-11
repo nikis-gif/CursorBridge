@@ -92,7 +92,9 @@ def test_workbench(page):
                         siblingOrder=index+10)
                    for index in range(110)]
     page.evaluate('nodes => window.__emitServer({type:"batch",events:nodes.map(node=>({type:"upsert",node}))})',extra_nodes)
-    page.wait_for_function('document.querySelectorAll(".tree-row").length > 100')
+    page.wait_for_function("document.querySelector('#instanceStat').textContent.includes('117')")
+    assert page.locator('.tree-row').count() < 130, 'virtualized Explorer must not mount every row'
+    assert page.locator('#treeScroller').evaluate('(node)=>node.scrollHeight > node.clientHeight')
     page.locator('#treeScroller').evaluate('(element)=>element.scrollTop=0')
     view = page.locator('#treeScroller').bounding_box()
     gutter_x = view['x'] + view['width'] - 12

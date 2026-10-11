@@ -76,6 +76,7 @@ function registerIpc() {
   const actions = {
     'bridge:copy-text': (_event, value) => clipboard.writeText(String(value).slice(0, 16 * 1024)),
     'bridge:get-state': () => bridge.getState(),
+    'bridge:request-source': (_event, id) => bridge.requestSource(id),
     'bridge:preview-quick-apply': (_event, text, overrides) => bridge.previewQuickApply(text, overrides),
     'bridge:apply-quick-apply': (_event, token) => bridge.applyQuickApply(token),
     'bridge:mutate-hierarchy': (_event, request) => bridge.mutateHierarchy(request),

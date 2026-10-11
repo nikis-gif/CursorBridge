@@ -16,7 +16,7 @@ local Defaults = {
 	},
 	Product = {
 		Name = "Cursor Bridge V2",
-		Version = "0.2.6",
+		Version = "0.2.7",
 	},
 	Advanced = {
 		DebugLogging = false,
@@ -28,17 +28,21 @@ local Defaults = {
 
 	-- Bridge-specific transport settings. These keys are not user-editable.
 	ServerURL = "http://127.0.0.1:38471",
-	PollInterval = 0.18, -- Legacy setting retained for plugin compatibility.
+	PollInterval = 0.18, -- Legacy plugin compatibility.
 	ActivePollInterval = 0.55,
 	IdlePollInterval = 1.5,
 	SourceAuditInterval = 2.0,
 	InitialRetryDelay = 2.0,
 	MaximumRetryDelay = 30.0,
+	ScanSliceSize = 96,
+	MaxQueuedScanOperations = 900,
+	MaxSourcesPerCycle = 10,
+	ScanProgressInterval = 1.5,
 	MaxBatchBytes = 700 * 1024,
 	MaxScriptBytes = 256 * 1024,
-	MaxOperationsPerBatch = 75,
+	MaxOperationsPerBatch = 350,
 	MaxPendingOperations = 30000,
-	MaxNodes = 20000,
+	MaxNodes = 250000,
 	MaxNetworkFailures = 10,
 }
 

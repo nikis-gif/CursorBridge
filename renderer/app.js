@@ -9,6 +9,7 @@ import { INSERT_GROUPS, moveTab, clipboardMutation } from './workbench-commands.
 import PlaceSearchWorker from './place-search.worker.mjs?worker';
 import { parseQuickOpenQuery, quickOpenMatches } from './quick-open.mjs';
 import { createDocumentState, recordLocalEdit, reconcileSource, canRestoreDraft } from './editor-sync.mjs';
+import { calculateExplorerWindow } from './virtual-window.mjs';
 
 self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
 
@@ -34,7 +35,16 @@ let sessionEpoch = 0;
 let selectedId = null;
 let currentStatus = {};
 let renderQueued = false;
+let lastTreeBuild = 0;
+let renderDelayTimer = null;
 let treeRows = [];
+let treeRowIds = [];
+let virtualStart = -1;
+let virtualEnd = -1;
+let virtualTruncated = false;
+let virtualFrame = null;
+let scriptNodeCount = 0;
+let pendingScriptOpenId = null;
 let anchorId = null;
 let focusedId = null;
 let pointerAnchor = null;
@@ -238,16 +248,24 @@ const iconKind = (node) => node.className === 'Script' ? 'script' : node.classNa
 function scheduleRender() {
   if (renderQueued) return;
   renderQueued = true;
-  requestAnimationFrame(() => { renderQueued = false; renderTree(); updateCounts(); });
+  // Large background imports arrive in batches. Coalesce tree rebuilding to
+  // avoid running an O(N) traversal hundreds of times during indexing.
+  const wait = currentStatus.indexing ? Math.max(0, 260 - (performance.now() - lastTreeBuild)) : 0;
+  clearTimeout(renderDelayTimer);
+  renderDelayTimer = setTimeout(() => requestAnimationFrame(() => {
+    renderQueued = false;
+    lastTreeBuild = performance.now();
+    renderTree(); updateCounts();
+  }), wait);
 }
-function rowIds() { return treeRows.map((row) => row.id); }
+function rowIds() { return treeRowIds; }
 function mutableIds() { return uniqueRoots(nodes, selected); }
 function canMutate() { return currentStatus.connected === true && currentStatus.ready === true; }
 function refreshSelectionUI() {
   const count = selected.size;
   const actions = $('selectionActions');
   actions.hidden = count === 0 || !canMutate();
-  const enabled = canMutate() && mutableIds().length > 0;
+  const enabled = canMutate() && !currentStatus.indexing && !currentStatus.scanLimitReached && mutableIds().length > 0;
   $('duplicateSelected').disabled = !enabled;
   $('moveSelected').disabled = !enabled;
   $('deleteSelected').disabled = !enabled;
@@ -292,19 +310,34 @@ function toggleExpand(id) {
 }
 function renderTree() {
   if (!canMutate()) {
-    treeRows = [];
+    treeRows = []; treeRowIds = [];
+    virtualStart = -1; virtualEnd = -1;
     $('tree').replaceChildren();
     refreshSelectionUI();
     return;
   }
+  const tree = buildExplorerRows(nodes, expanded, $('treeSearch').value, 1000000);
+  treeRows = tree.rows;
+  treeRowIds = treeRows.map((row) => row.id);
+  virtualTruncated = tree.truncated;
+  paintTreeWindow(true);
+}
+function paintTreeWindow(force = false) {
+  if (!canMutate()) return;
   const scroll = $('treeScroller');
   const scrollTop = scroll.scrollTop;
+  const visible = calculateExplorerWindow(treeRows.length, scrollTop, scroll.clientHeight);
+  if (!force && visible.start === virtualStart && visible.end === virtualEnd) return;
+  virtualStart = visible.start; virtualEnd = visible.end;
   const focusedRowId = document.activeElement?.closest('.tree-row')?.dataset.id;
-  const { rows, truncated } = buildExplorerRows(nodes, expanded, $('treeSearch').value);
-  treeRows = rows;
   const fragment = document.createDocumentFragment();
   rowElements.clear();
-  for (const data of rows) {
+  const topSpacer = document.createElement('div');
+  topSpacer.className = 'tree-virtual-spacer';
+  topSpacer.style.height = `${visible.topSpacer}px`;
+  fragment.append(topSpacer);
+  for (let index = visible.start; index < visible.end; index++) {
+    const data = treeRows[index];
     const { node, id, depth, hasChildren, expanded: isExpanded } = data;
     const row = document.createElement('div');
     row.className = `tree-row${selected.has(id) ? ' selected' : ''}${focusedId === id ? ' focused' : ''}`;
@@ -403,10 +436,14 @@ function renderTree() {
     });
     fragment.append(row);
   }
-  if (!rows.length || truncated) {
+  const bottomSpacer = document.createElement('div');
+  bottomSpacer.className = 'tree-virtual-spacer';
+  bottomSpacer.style.height = `${visible.bottomSpacer}px`;
+  fragment.append(bottomSpacer);
+  if (!treeRows.length || virtualTruncated) {
     const note = document.createElement('div'); note.className = 'tree-empty';
-    note.textContent = truncated ? 'Too many expanded rows. Collapse a branch or narrow your search.' :
-      nodes.size ? 'No matching instances.' : 'The place hierarchy appears after Studio connects.';
+    note.textContent = virtualTruncated ? 'Explorer safety limit reached; narrow your search.' :
+      nodes.size ? 'No matching instances.' : 'The hierarchy is still loading.';
     fragment.append(note);
   }
   $('tree').replaceChildren(fragment);
@@ -419,6 +456,25 @@ function renderTree() {
   }
   scroll.scrollTop = scrollTop;
   refreshSelectionUI();
+}
+$('treeScroller').addEventListener('scroll', () => {
+  if (virtualFrame !== null) return;
+  virtualFrame = requestAnimationFrame(() => {
+    virtualFrame = null;
+    paintTreeWindow();
+  });
+}, {passive: true});
+function revealTreeRow(id, focus = false) {
+  const index = treeRowIds.indexOf(id);
+  if (index < 0) return;
+  const scroller = $('treeScroller');
+  const top = index * 25;
+  if (top < scroller.scrollTop) scroller.scrollTop = top;
+  else if (top + 25 > scroller.scrollTop + scroller.clientHeight) {
+    scroller.scrollTop = top + 25 - scroller.clientHeight;
+  }
+  paintTreeWindow();
+  if (focus) rowElements.get(id)?.focus({preventScroll: true});
 }
 function setupMarqueeSelection() {
   const scroller = $('treeScroller');
@@ -490,8 +546,8 @@ function setupMarqueeSelection() {
     const y = clamp(event.clientY, viewport.top, viewport.bottom);
     origin = { x, contentY: scroller.scrollTop + y - viewport.top };
     pointer = { x, y }; additive = event.ctrlKey || event.metaKey || event.shiftKey;
-    const first = rowElements.get(treeRows[0]?.id);
-    firstRowOffset = first ? first.getBoundingClientRect().top - viewport.top + scroller.scrollTop : 0;
+    // Virtual spacers do not alter row-index geometry.
+    firstRowOffset = 0;
     initial = new Set(selected);
     activePointerId = event.pointerId;
     isMarqueeSelecting = true;
@@ -522,9 +578,8 @@ $('collapseTree').addEventListener('click', () => { expanded.clear(); scheduleRe
 $('clearSelection').addEventListener('click', () => { selected.clear(); anchorId = null; focusedId = null; paintSelection(); });
 
 function updateCounts() {
-  const scriptCount = [...nodes.values()].filter((node) => node.isScript).length;
   $('instanceStat').textContent = `${nodes.size.toLocaleString('en-US')} instances`;
-  $('scriptStat').textContent = `${scriptCount.toLocaleString('en-US')} scripts`;
+  $('scriptStat').textContent = `${scriptNodeCount.toLocaleString('en-US')} scripts`;
   refreshSelectionUI();
 }
 function getLocal(id) {
@@ -676,10 +731,20 @@ async function clearAcknowledgedDraft(id, source) {
 
 async function openScript(id) {
   const node = nodes.get(id);
-  if (!canMutate() || !node?.isScript || typeof node.source !== 'string') {
-    toast('The script source is not available in the current Studio session.', true);
+  if (!canMutate() || !node?.isScript) {
+    toast('The script is not indexed in the current Studio session.', true);
     return;
   }
+  if (typeof node.source !== 'string') {
+    pendingScriptOpenId = id;
+    toast('Loading script source from Studio...');
+    try { await api.requestSource(id); } catch (error) {
+      if (pendingScriptOpenId === id) pendingScriptOpenId = null;
+      safeError(error);
+    }
+    return;
+  }
+  pendingScriptOpenId = null;
   const epoch = ++openEpoch;
   if (!activeTabs.includes(id)) activeTabs.push(id);
   if (!models.has(id)) {
@@ -897,7 +962,14 @@ function receiveNode(node, origin='studio') {
   // Source revisions come from the authoritative bridge; never replay a stale
   // update over a newer model (including delayed IPC event delivery).
   if (old && node.revision < old.revision) return;
+  if (old?.isScript !== node.isScript) {
+    scriptNodeCount += node.isScript ? 1 : -1;
+  }
   nodes.set(node.id, node);
+  if (node.id === pendingScriptOpenId && typeof node.source === 'string') {
+    pendingScriptOpenId = null;
+    queueMicrotask(() => openScript(node.id).catch(safeError));
+  }
   if (typeof node.source === 'string' && models.has(node.id)) {
     const model = models.get(node.id), local = getLocal(node.id);
     const action = reconcileSource(local, model.getValue(), old?.source,
@@ -931,13 +1003,13 @@ function updateStatus(status) {
   currentStatus = status;
   const connected = status.connected === true;
   const ready = connected && status.ready === true;
-  $('connectionState').textContent = ready ? 'Studio connected' : connected ? 'Syncing Studio…' : 'Not connected';
+  $('connectionState').textContent = ready ? (status.indexing ? 'Studio connected · indexing' : 'Studio connected') : connected ? 'Syncing Studio…' : 'Not connected';
   $('statusLight').classList.toggle('connected', ready);
   $('explorerLed').classList.toggle('connected', ready);
   $('headerPlace').textContent = connected ? status.placeName : 'No place';
   $('placeName').textContent = connected ? status.placeName : 'No place connected';
   $('placeKey').textContent = connected ? status.placeKey : 'Waiting for a local session';
-  $('lastSeen').textContent = ready ? 'Studio is authoritative. All edits are synchronized locally.'
+  $('lastSeen').textContent = ready ? (status.indexing ? `Indexing ${Number(status.scanIndexed || status.nodeCount || 0).toLocaleString('en-US')} objects in the background. Destructive actions are temporarily locked.` : 'Studio is authoritative. All edits are synchronized locally.')
     : 'Recovery versions are stored locally. No Explorer data is shown offline.';
   $('pairingCard').hidden = connected;
   $('pairingCode').textContent = status.pairingCode || 'LINKED';
@@ -975,7 +1047,7 @@ function updateStatus(status) {
   else if (!previouslyConnected || !rowElements.size) scheduleRender();
   updateCounts();
   if (ready && selectedId) requestAnimationFrame(() => editor.layout());
-  setFooter(ready ? `Connected to ${status.placeName}.` : connected ? 'Indexing Studio hierarchy…' : 'No active Studio session');
+  setFooter(ready ? (status.scanLimitReached ? 'Scan safety limit reached; hierarchy is incomplete.' : status.indexing ? `Indexing ${Number(status.scanIndexed || status.nodeCount || 0).toLocaleString('en-US')} instances in the background…` : `Connected to ${status.placeName}.`) : connected ? 'Preparing live Studio hierarchy…' : 'No active Studio session');
 }
 function resetWorkspace() {
   // Keep unsynced source before disposing Monaco models during a new pairing.
@@ -987,7 +1059,9 @@ function resetWorkspace() {
   setSidebarView('explorer');
   clipboardState = null;
   closedTabs = [];
-  nodes.clear();selected.clear();anchorId=null;focusedId=null;expanded.clear();
+  nodes.clear();scriptNodeCount=0;pendingScriptOpenId=null;
+  treeRows=[];treeRowIds=[];virtualStart=-1;virtualEnd=-1;
+  selected.clear();anchorId=null;focusedId=null;expanded.clear();
   rowElements.clear();paintedSelection.clear();paintedFocus=null;
   pendingFocusMutations.clear();pendingFocusIds.clear();
   activeTabs.length=0;selectedId=null;++openEpoch;
@@ -1006,6 +1080,12 @@ function receiveServerEvent(event) {
   if (event.type === 'status') updateStatus(event.status);
   else if (event.type === 'upsert') receiveNode(event.node,event.origin);
   else if (event.type === 'reset') resetWorkspace();
+  else if (event.type === 'sourceUnavailable') {
+    if (event.id === pendingScriptOpenId) {
+      pendingScriptOpenId = null;
+      toast('Studio cannot read this script source. Check its permissions or size.', true);
+    }
+  }
   else if (event.type === 'remove') {
     for (const id of event.ids) {
       const local = localState.get(id), model = models.get(id);
@@ -1014,6 +1094,7 @@ function receiveServerEvent(event) {
         saveScriptDraft(id, model.getValue()).catch(safeError);
       }
       cancelScriptTimers(id);
+      if (nodes.get(id)?.isScript) scriptNodeCount--;
       nodes.delete(id);selected.delete(id);expanded.delete(id);
       const tab = activeTabs.indexOf(id);
       if (tab !== -1) activeTabs.splice(tab,1);
@@ -1213,9 +1294,7 @@ function revealInExplorer(id) {
   selected.clear(); selected.add(id); focusedId = id; anchorId = id;
   scheduleRender();
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    const row = rowElements.get(id);
-    row?.scrollIntoView({block: 'nearest'});
-    row?.focus({preventScroll: true});
+    revealTreeRow(id, true);
   }));
 }
 function copyExplorerSelection(mode) {
@@ -1710,8 +1789,7 @@ function focusRowByOffset(offset, extendSelection = false, absoluteIndex = null)
     : Math.max(0, Math.min(treeRows.length - 1, absoluteIndex));
   const id = treeRows[nextIndex].id;
   selectForRow(id, extendSelection, false);
-  rowElements.get(id)?.focus({preventScroll: true});
-  rowElements.get(id)?.scrollIntoView({block: 'nearest'});
+  revealTreeRow(id, true);
 }
 window.addEventListener('keydown',(event)=>{
   if (document.querySelector('dialog[open]')) return;
@@ -2138,7 +2216,7 @@ async function start() {
     else receiveServerEvent(event);
   });
   const state=await api.getState();
-  if (state.status.connected) for (const node of state.nodes) nodes.set(node.id,node);
+  if (state.status.connected) for (const node of state.nodes) { nodes.set(node.id,node); if (node.isScript) scriptNodeCount++; }
   for (const node of nodes.values()) if (node.parentId === 'game') expanded.add(node.id);
   updateStatus(state.status);renderTree();renderTabs();
   initializing = false;

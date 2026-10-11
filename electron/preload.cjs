@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('cursorBridge', {
   applyQuickApply: (token) => ipcRenderer.invoke('bridge:apply-quick-apply', token),
   mutateHierarchy: (request) => ipcRenderer.invoke('bridge:mutate-hierarchy', request),
   getState: () => ipcRenderer.invoke('bridge:get-state'),
+  requestSource: (id) => ipcRenderer.invoke('bridge:request-source', id),
   writeScript: (id, source, revision) => ipcRenderer.invoke('bridge:write-script', id, source, revision),
   saveDraft: (id, source, nodePath, placeKey) => ipcRenderer.invoke('bridge:save-draft', id, source, nodePath, placeKey),
   getDraft: (id) => ipcRenderer.invoke('bridge:get-draft', id),
