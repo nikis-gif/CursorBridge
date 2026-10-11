@@ -16,7 +16,7 @@ local Defaults = {
 	},
 	Product = {
 		Name = "Cursor Bridge V2",
-		Version = "0.2.5",
+		Version = "0.2.6",
 	},
 	Advanced = {
 		DebugLogging = false,
