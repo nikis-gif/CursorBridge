@@ -68,6 +68,22 @@ jobs:
         shell: pwsh
         run: npx electron-builder --win nsis --publish never
 
+      - name: Verify updater manifest matches installer
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $expected = "Cursor-Bridge-Setup-$version.exe"
+          $installerPath = Join-Path 'release' $expected
+          $manifestPath = Join-Path 'release' 'latest.yml'
+          if (-not (Test-Path -LiteralPath $installerPath)) { throw "Expected installer missing: $expected" }
+          if (-not (Test-Path -LiteralPath $manifestPath)) { throw 'Missing latest.yml' }
+          $manifest = Get-Content -LiteralPath $manifestPath -Raw
+          $base64Sha = [Convert]::ToBase64String([System.Security.Cryptography.SHA512]::HashData([IO.File]::ReadAllBytes((Resolve-Path $installerPath).Path)))
+          $size = (Get-Item -LiteralPath $installerPath).Length
+          if (-not $manifest.Contains("path: $expected")) { throw 'latest.yml path does not match installer name' }
+          if (-not $manifest.Contains("sha512: $base64Sha")) { throw 'latest.yml checksum does not match installer' }
+          if (-not $manifest.Contains("size: $size")) { throw 'latest.yml size does not match installer' }
+
       - name: Create matching version tag for manual release
         if: github.event_name == 'workflow_dispatch'
         shell: pwsh
@@ -90,8 +106,9 @@ jobs:
         shell: pwsh
         run: |
           $tag = '${{ steps.release_meta.outputs.tag }}'
-          $installer = Get-ChildItem -LiteralPath 'release' -Filter '*.exe' -File | Select-Object -First 1
-          $blockmap = Get-ChildItem -LiteralPath 'release' -Filter '*.exe.blockmap' -File | Select-Object -First 1
+          $version = node -p "require('./package.json').version"
+          $installer = Get-Item -LiteralPath (Join-Path 'release' "Cursor-Bridge-Setup-$version.exe")
+          $blockmap = Get-Item -LiteralPath (Join-Path 'release' "Cursor-Bridge-Setup-$version.exe.blockmap")
           $metadata = Join-Path $PWD 'release/latest.yml'
           $studioPlugin = Join-Path $PWD 'CursorBridgeV2.rbxmx'
           if ($null -eq $installer) { throw 'Windows installer is missing.' }
