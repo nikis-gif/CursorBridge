@@ -3,7 +3,7 @@
   <Meta name="ExplicitAutoJoints">true</Meta>
   <External>null</External>
   <External>nil</External>
-  <Item class="Model" referent="RBXE4C568F4FACB4768889952C7F65C79BD">
+  <Item class="Model" referent="RBX2790096A6CD34F4AA88DB13F7D361C00">
     <Properties>
       <token name="LevelOfDetail">0</token>
       <CoordinateFrame name="ModelMeshCFrame">
@@ -55,7 +55,7 @@
       <int64 name="SourceAssetId">-1</int64>
       <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
     </Properties>
-    <Item class="Script" referent="RBX6B918881907A4D62A13F4325D770D32C">
+    <Item class="Script" referent="RBX68BBF2DE7E94465A92833572F0C9804F">
       <Properties>
         <ProtectedString name="Source">--!strict
 
@@ -188,7 +188,7 @@ end)
           <null></null>
         </Content>
         <token name="RunContext">0</token>
-        <string name="ScriptGuid">{EE64DB84-7C14-48F5-874C-7B921582FED0}</string>
+        <string name="ScriptGuid">{741EBEA2-2F26-490D-9557-6533BF8A67A2}</string>
         <BinaryString name="AttributesSerialize"></BinaryString>
         <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
         <bool name="DefinesCapabilities">false</bool>
@@ -198,7 +198,7 @@ end)
         <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
       </Properties>
     </Item>
-    <Item class="Folder" referent="RBXBE60AF5B83DE40C899B914785CAD7394">
+    <Item class="Folder" referent="RBX3DD75DB802CC463CAC3CB32EEA6B220A">
       <Properties>
         <Color3 name="IconTint">
           <R>0</R>
@@ -213,7 +213,7 @@ end)
         <int64 name="SourceAssetId">-1</int64>
         <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
       </Properties>
-      <Item class="ModuleScript" referent="RBX98D808DDE91F4C5D935627C0DF138DE0">
+      <Item class="ModuleScript" referent="RBX7F757E94D1AC4260859071295B4AB1B4">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -261,7 +261,7 @@ end
 
 return Maid
 </ProtectedString>
-          <string name="ScriptGuid">{D08512AE-8E2A-428A-A2EF-A507549E3068}</string>
+          <string name="ScriptGuid">{F9581235-B4F8-49DC-BD69-21DC8E620C72}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -272,7 +272,7 @@ return Maid
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX253B1F033EAB4C7CB5BF1DD4E971CE45">
+    <Item class="Folder" referent="RBXAF8CE96AF97B4291A5E582EF6012F579">
       <Properties>
         <Color3 name="IconTint">
           <R>0</R>
@@ -287,7 +287,7 @@ return Maid
         <int64 name="SourceAssetId">-1</int64>
         <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
       </Properties>
-      <Item class="ModuleScript" referent="RBX0733784C484E4FCAB0B7F45F35CD2D76">
+      <Item class="ModuleScript" referent="RBX27C06C3FF78B49F9B392404F9F98CE03">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -592,7 +592,7 @@ Theme.ApplyPreset("Obsidian")
 
 return Theme
 </ProtectedString>
-          <string name="ScriptGuid">{226D34A2-7948-464B-BC79-88B9FBCD7C7A}</string>
+          <string name="ScriptGuid">{E4142A8C-8F65-43EA-9E9F-5887085D735C}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -602,7 +602,7 @@ return Theme
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX3E6C6F9BCAD44F1E9D6BB6F5CAFFBAC8">
+      <Item class="ModuleScript" referent="RBXDE6968E27EA94EC98BB40EEA04F76FC2">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -1369,7 +1369,7 @@ end
 
 return table.freeze(Primitives)
 </ProtectedString>
-          <string name="ScriptGuid">{A9D107D8-3D6D-47D5-95D1-41B170D1E051}</string>
+          <string name="ScriptGuid">{9406249D-FEE3-42FE-8EE0-D0544914C04A}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -1379,7 +1379,7 @@ return table.freeze(Primitives)
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBXD53C29A34DCD4F2F9566F1D2052A4BAF">
+      <Item class="ModuleScript" referent="RBX81C21E2545A0415BB0ECA692B7BD8ECF">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -1764,7 +1764,7 @@ end
 
 return CursorShell
 </ProtectedString>
-          <string name="ScriptGuid">{0B0EE6D9-8E8E-40EC-8EB1-AB7546B71173}</string>
+          <string name="ScriptGuid">{A06D42B1-F015-4A2E-B173-86B53AFA4E99}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -1774,7 +1774,7 @@ return CursorShell
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX024F40B58F5549C1954D5FC6DDE677FE">
+      <Item class="ModuleScript" referent="RBX0DFAEE02ED5D488DB0957A3C5E87BB35">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -2233,7 +2233,7 @@ end
 
 return BridgeWindow
 </ProtectedString>
-          <string name="ScriptGuid">{648791C7-5190-4864-9FFA-2D42B99FDE7F}</string>
+          <string name="ScriptGuid">{5AB4EE93-4248-4CA1-B2BA-B2572A5C0756}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -2244,7 +2244,7 @@ return BridgeWindow
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBXE5EF2B0134754CB9914A144AE6821573">
+    <Item class="Folder" referent="RBX080A2DB6529F4912AF5588BCF18A3B51">
       <Properties>
         <Color3 name="IconTint">
           <R>0</R>
@@ -2259,7 +2259,7 @@ return BridgeWindow
         <int64 name="SourceAssetId">-1</int64>
         <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
       </Properties>
-      <Item class="ModuleScript" referent="RBXA4264442A3CD4C8D8D8D2C776FE65280">
+      <Item class="ModuleScript" referent="RBX30A536B196D54F868AF60A2580FB02BC">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -2273,6 +2273,8 @@ local ScriptEditorService = game:GetService("ScriptEditorService")
 local Defaults = require(script.Parent.Parent.Config.Defaults)
 local HierarchyMutations = require(script.Parent.HierarchyMutations)
 local QuickApply = require(script.Parent.QuickApply)
+local WireTransfer = require(script.Parent.WireTransfer)
+local PathResolver = require(script.Parent.PathResolver)
 
 local StudioBridge = {}
 StudioBridge.__index = StudioBridge
@@ -2335,6 +2337,12 @@ function StudioBridge.new()
 	self._scriptIds = {} :: {string}
 	self._auditIndex = 0
 	self._handledOps = {} :: {[string]: boolean}
+	self._commandQueue = {} :: {any}
+	self._workerToken = nil :: any
+	self._commandReceiver = WireTransfer.NewReceiver()
+	self._commandReceipts = {} :: {[string]: number}
+	self._wireFragments = nil :: {any}?
+	self._wireHead = 1
 	self._instanceIds = setmetatable({}, { __mode = "k" }) :: {[Instance]: string}
 	self._instances = {} :: {[string]: Instance}
 	self._siblingOrder = setmetatable({}, { __mode = "k" }) :: {[Instance]: number}
@@ -2571,8 +2579,9 @@ function StudioBridge:_enqueueScan(instance: Instance)
 end
 
 function StudioBridge:_scanLoop()
+	local sessionId = self._sessionId
 	local nextProgress = 0
-	while self._alive and self._connected and self._scanHead &lt;= #self._scanQueue do
+	while self._alive and self._connected and self._sessionId == sessionId and self._scanHead &lt;= #self._scanQueue do
 		local queued = #self._queue - self._queueHead + 1
 		if queued &gt;= Defaults.MaxQueuedScanOperations or self._inFlightBatch ~= nil then
 			task.wait(0.06)
@@ -2624,7 +2633,7 @@ function StudioBridge:_scanLoop()
 		end
 		task.wait(0.02)
 	end
-	if self._alive and self._connected then
+	if self._alive and self._connected and self._sessionId == sessionId then
 		if not self._scanReadySent then self:_enqueueOperation({type = "ready"}) end
 		self:_enqueueOperation({type = if self._scanDeferred then "scanPaused" else "scanComplete",
 			count = self._scanCount})
@@ -2720,14 +2729,14 @@ end
 
 function StudioBridge:_auditChanges()
 	if #self._scriptIds == 0 then return end
-	for _ = 1, math.min(20, #self._scriptIds) do
+	for _ = 1, math.min(Defaults.SourceAuditCount, #self._scriptIds) do
 		self._auditIndex = (self._auditIndex % #self._scriptIds) + 1
 		local id = self._scriptIds[self._auditIndex]
 		local instance = self._instances[id]
 		if instance and self:_isManaged(instance) then
 			local source = self:_editorSource(instance)
 			if source and source ~= self._lastSources[id] then
-				self._sourceQueue[id] = instance
+				self:_sourceChanged(instance)
 			end
 		end
 	end
@@ -2735,80 +2744,147 @@ end
 
 function StudioBridge:_nextBatch(): {any}?
 	self:_flushSources()
-	if self._queueHead &gt; #self._queue and #self._results == 0 then
-		return nil
-	end
 	local ops: {any} = {}
-	local bytes = 2
-	-- Results must precede observer notifications to avoid false write conflicts.
-	while #self._results &gt; 0 and #ops &lt; Defaults.MaxOperationsPerBatch do
-		local op = self._results[1]
+	local bytes = 4096
+	while #ops &lt; Defaults.MaxOperationsPerBatch do
+		local op: any = nil
+		local origin = ""
+		if self._wireFragments then
+			op = self._wireFragments[self._wireHead]
+			origin = "wire"
+		elseif #self._results &gt; 0 then
+			op = self._results[1]
+			origin = "result"
+		elseif self._queueHead &lt;= #self._queue then
+			op = self._queue[self._queueHead]
+			origin = "queue"
+		else break end
 		local encoded = HttpService:JSONEncode(op)
-		if #ops &gt; 0 and bytes + #encoded &gt; Defaults.MaxBatchBytes then break end
-		table.insert(ops, table.remove(self._results, 1))
-		bytes += #encoded + 1
-	end
-	while self._queueHead &lt;= #self._queue and #ops &lt; Defaults.MaxOperationsPerBatch do
-		local op = self._queue[self._queueHead]
-		local encoded = HttpService:JSONEncode(op)
-		if #ops &gt; 0 and bytes + #encoded &gt; Defaults.MaxBatchBytes then break end
+		if origin ~= "wire" and #encoded &gt; Defaults.ChunkBytes then
+			self._wireFragments = WireTransfer.Encode(op)
+			self._wireHead = 1
+			if origin == "result" then table.remove(self._results, 1) else self._queueHead += 1 end
+			continue
+		end
+		if bytes + #encoded + 1 &gt; Defaults.MaxBatchBytes then break end
 		table.insert(ops, op)
-		self._queueHead += 1
 		bytes += #encoded + 1
+		if origin == "wire" then
+			self._wireHead += 1
+			if self._wireHead &gt; #self._wireFragments then self._wireFragments = nil end
+		elseif origin == "result" then table.remove(self._results, 1)
+		else self._queueHead += 1 end
 	end
-	if self._queueHead &gt; #self._queue then
-		self._queue = {}
-		self._queueHead = 1
-	end
-	return ops
+	if self._queueHead &gt; #self._queue then self._queue = {}; self._queueHead = 1 end
+	return if #ops &gt; 0 then ops else nil
 end
 
 function StudioBridge:_sendNextBatch()
-	local ops = self._inFlightBatch or self:_nextBatch()
-	if not ops or #ops == 0 then return end
-	self._inFlightBatch = ops
-	local sequence = self._sequence + 1
-	local data = self:_request("/v1/changes", { sequence = sequence, ops = ops }, self._token)
-	if data.receivedSequence ~= sequence then
-		error("The server did not acknowledge the expected batch.")
-	end
+	local sessionId = self._sessionId
+	local ops = self._inFlightBatch or self:_nextBatch() or {}
+	self._inFlightBatch = if #ops &gt; 0 then ops else nil
+	local sequence = self._sequence + (if #ops &gt; 0 then 1 else 0)
+	local receipts = {}
+	for id, nextPart in self._commandReceipts do table.insert(receipts, {id = id, next = nextPart}) end
+	-- Empty exchanges are authenticated heartbeats, independent of keyboard input.
+	local data = self:_request("/v2/exchange", {sequence = sequence, ops = ops, receipts = receipts}, self._token)
+	if sessionId ~= self._sessionId or not self._connected then return end
+	if data.receivedSequence ~= sequence then error("The server did not acknowledge the expected batch.") end
 	self._sequence = sequence
 	self._inFlightBatch = nil
+	for _, op in ops do
+		if op.type == "commandDone" then
+			self._handledOps[op.opId] = nil
+			self._commandReceiver.completed[op.opId] = nil
+		end
+	end
+	for _, receipt in data.receiptAcks or {} do
+		if self._commandReceipts[receipt.id] == receipt.next then self._commandReceipts[receipt.id] = nil end
+	end
+	for _, command in data.commands do
+		if command.type == "wireChunk" then
+			local completed, nextPart = WireTransfer.Accept(self._commandReceiver, command)
+			self._commandReceipts[command.id] = nextPart
+			if completed then self:_queueCommand(completed) end
+		else self:_queueCommand(command) end
+	end
+end
+
+function StudioBridge:_queueCommand(command: any)
+	if typeof(command) ~= "table" or typeof(command.opId) ~= "string" or self._handledOps[command.opId] then return end
+	self._handledOps[command.opId] = true
+	if command.type == "resolvePaths" then
+		self._latestPathRequest = command.opId
+		for index = #self._commandQueue, 1, -1 do
+			local previous = self._commandQueue[index]
+			if previous.type == "resolvePaths" then
+				table.remove(self._commandQueue, index)
+				self:_enqueueOperation({type = "commandDone", opId = previous.opId})
+			end
+		end
+	end
+	table.insert(self._commandQueue, command)
+	if self._workerToken and not self._workerToken.done then return end
+	local worker = {done = false}
+	self._workerToken = worker
+	local sessionId = self._sessionId
+	-- Editor operations may yield. Their worker must never hold the heartbeat loop.
+	task.spawn(function()
+		while self._alive and self._connected and self._sessionId == sessionId and #self._commandQueue &gt; 0 do
+			local nextCommand = table.remove(self._commandQueue, 1)
+			local succeeded, problem = pcall(function() self:_applyCommand(nextCommand) end)
+			if self._sessionId ~= sessionId or not self._connected then break end
+			if not succeeded then
+				local reply: any = {type = "result", opId = nextCommand.opId, id = nextCommand.scriptId, status = "error"}
+				if nextCommand.type == "resolvePaths" then
+					reply = {type = "resolvedPaths", opId = nextCommand.opId, error = tostring(problem)}
+				elseif nextCommand.type == "quickApply" then
+					reply = {type = "quickApplyResult", opId = nextCommand.opId, status = "error", results = {{index = -1, message = tostring(problem)}}}
+				elseif nextCommand.type == "mutate" then
+					reply = {type = "mutationResult", opId = nextCommand.opId, status = "error", results = {}}
+				elseif nextCommand.type == "loadSource" then
+					reply = {type = "sourceUnavailable", id = nextCommand.scriptId}
+				elseif nextCommand.type == "listChildren" then
+					reply = {type = "childrenPage", opId = nextCommand.opId, parentId = nextCommand.parentId, offset = nextCommand.offset, invalidated = true}
+				end
+				table.insert(self._results, reply)
+				warn("[Cursor Bridge] Command failed: " .. tostring(problem))
+			end
+			-- The operation result must precede deduplication-cache cleanup.
+			self:_enqueueOperation({type = "commandDone", opId = nextCommand.opId})
+		end
+		worker.done = true
+	end)
 end
 
 function StudioBridge:_applyCommand(command: any)
-	if typeof(command) ~= "table" or typeof(command.opId) ~= "string" then return end
-	if self._handledOps[command.opId] then return end
-	self._handledOps[command.opId] = true
+	local commandSessionId = self._sessionId
+	local function canContinue(): boolean
+		return self._alive and self._connected and self._sessionId == commandSessionId
+			and not RunService:IsRunning() and getPlaceKey() == self._placeKey
+			and (command.type ~= "resolvePaths" or self._latestPathRequest == command.opId)
+	end
+	if command.type == "resolvePaths" then
+		local reply = PathResolver.Resolve(command,
+			function(target: Instance): boolean return self:_isManaged(target) end,
+			function(target: Instance, withSource: boolean): any return self:_metadata(target, withSource) end,
+			function(target: Instance) self:_observe(target) end, canContinue)
+		if canContinue() then table.insert(self._results, reply) end
+		return
+	end
 	if command.type == "quickApply" then
-		local commandSessionId = self._sessionId
-		-- An AI bundle can contain several yielding script-editor writes.
-		-- Run it separately so heartbeat polling stays responsive.
-		task.spawn(function()
-			local ok, reply = pcall(function()
-				return QuickApply.Execute(command, self._instances, function(target: Instance)
-					return self:_isManaged(target)
-				end, function(target: Instance)
-					return self:_idFor(target)
-				end, function(): boolean
-					return self._alive and self._connected and self._sessionId == commandSessionId
-						and not RunService:IsRunning() and getPlaceKey() == self._placeKey
-				end)
-			end)
-			if not ok then
-				reply = {type = "quickApplyResult", opId = command.opId, status = "error",
-					results = {{index = -1, status = "error", message = tostring(reply)}}}
-			end
-			if self._alive and self._connected then
-				table.insert(self._results, reply)
-				for _, entry in command.entries do
-					if entry.action == "modify" and entry.scriptId then
-						local target = self._instances[entry.scriptId]
-						if target then self:_sourceChanged(target) end
-					end
+		local reply = QuickApply.Execute(command, self._instances,
+			function(target: Instance): boolean return self:_isManaged(target) end,
+			function(target: Instance): string return self:_idFor(target) end, canContinue)
+		if canContinue() then
+			table.insert(self._results, reply)
+			for _, entry in command.entries do
+				if entry.action == "modify" and entry.scriptId then
+					local target = self._instances[entry.scriptId]
+					if target then self:_sourceChanged(target) end
 				end
 			end
-		end)
+		end
 		return
 	end
 	if command.type == "listChildren" then
@@ -2877,6 +2953,8 @@ function StudioBridge:_applyCommand(command: any)
 			else
 				self:_enqueueOperation({type = "sourceUnavailable", id = command.scriptId})
 			end
+		else
+			self:_enqueueOperation({type = "sourceUnavailable", id = command.scriptId})
 		end
 		return
 	end
@@ -2892,7 +2970,7 @@ function StudioBridge:_applyCommand(command: any)
 			result = { type = "mutationResult", opId = command.opId, status = "error",
 				results = {{ id = "", status = "error", message = tostring(result) }} }
 		end
-		table.insert(self._results, result)
+		if canContinue() then table.insert(self._results, result) end
 		return
 	end
 	local instance = self._instances[command.scriptId]
@@ -2916,11 +2994,12 @@ function StudioBridge:_applyCommand(command: any)
 			local updated = false
 			local succeeded, message = pcall(function()
 				ScriptEditorService:UpdateSourceAsync(instance :: LuaSourceContainer, function(currentSource: string): string?
-					if currentSource ~= command.expectedSource then return nil end
+					if currentSource ~= command.expectedSource or not canContinue() then return nil end
 					updated = true
 					return command.newSource
 				end)
 			end)
+			if not canContinue() then return end
 			local after = self:_editorSource(instance)
 			if succeeded and updated and after == command.newSource then
 				result.status = "applied"
@@ -2934,14 +3013,15 @@ function StudioBridge:_applyCommand(command: any)
 			end
 		end
 	end
-	table.insert(self._results, result)
+	if canContinue() then table.insert(self._results, result) end
 end
 
 function StudioBridge:_syncLoop()
 	local failures = 0
-	local nextAudit = 0
-	while self._alive and self._connected do
-		if RunService:IsRunning() or getPlaceKey() ~= self._placeKey or game.Name ~= self._placeName then
+	local nextAudit, nextLog, nextCleanup = 0, 0, 0
+	local sessionId = self._sessionId
+	while self._alive and self._connected and self._sessionId == sessionId do
+		if RunService:IsRunning() or getPlaceKey() ~= self._placeKey then
 			self:_notify("Place changed or Play Test started. Session released.")
 			self:Disconnect(true)
 			return
@@ -2951,37 +3031,51 @@ function StudioBridge:_syncLoop()
 				self:_auditChanges()
 				nextAudit = os.clock() + Defaults.SourceAuditInterval
 			end
+			if os.clock() &gt;= nextCleanup then
+				for id, page in self._pageSnapshots do
+					if os.clock() - page.createdAt &gt; 600 then self._pageSnapshots[id] = nil end
+				end
+				nextCleanup = os.clock() + 60
+			end
 			self:_sendNextBatch()
-			local poll = self:_request("/v1/poll", {}, self._token)
-			for _, command in poll.commands do self:_applyCommand(command) end
 		end)
-		if not self._alive or not self._connected then return end
+		if not self._alive or not self._connected or self._sessionId ~= sessionId then return end
 		local delaySeconds: number
 		if succeeded then
 			failures = 0
 			if self._status ~= "Connected" then self:_notify("Connected") end
-			local busy = self._inFlightBatch ~= nil
+			local busy = self._inFlightBatch ~= nil or self._wireFragments ~= nil
 				or self._queueHead &lt;= #self._queue or #self._results &gt; 0
-				or self._sourceHead &lt;= #self._sourceIds
-				or self._scanHead &lt;= #self._scanQueue
+				or self._sourceHead &lt;= #self._sourceIds or self._scanHead &lt;= #self._scanQueue
+				or next(self._commandReceipts) ~= nil or (self._workerToken and not self._workerToken.done)
 			delaySeconds = if busy then Defaults.ActivePollInterval else Defaults.IdlePollInterval
 		else
-			failures += 1
+			failures = math.min(failures + 1, 1000)
 			local message = tostring(err)
+			if string.find(message, "Bridge HTTP 401", 1, true) then
+				local resumed, result = pcall(function()
+					return self:_request("/v2/resume", {studioRunId = self._studioRunId, placeKey = self._placeKey}, self._token)
+				end)
+				if resumed then self:_adoptSession(result); return
+				elseif string.find(tostring(result), "Bridge HTTP 403", 1, true)
+					or string.find(tostring(result), "Bridge HTTP 409", 1, true) then
+					self:Disconnect(false)
+					self:_notify("Session authorization ended. Pair again to continue.")
+					return
+				end
+			end
 			local rateLimited = string.find(string.lower(message), "requests exceeded limit", 1, true) ~= nil
 				or string.find(message, "429", 1, true) ~= nil
-			if failures == 1 or failures % 3 == 0 then
+			if os.clock() &gt;= nextLog then
 				warn("[Cursor Bridge] " .. message)
-				self:_notify(if rateLimited then "Studio HTTP budget exhausted; waiting..."
-					else "Local bridge temporarily unavailable; retrying...")
+				self:_notify(if rateLimited then "Studio HTTP budget exhausted; retrying automatically..."
+					else "Connection interrupted; retrying automatically...")
+				nextLog = os.clock() + 60
 			end
+			-- Transient network failure is not user inactivity. Explicit session
+			-- revocation still stops retries; an unknown edit is never reapplied.
 			delaySeconds = math.min(Defaults.MaximumRetryDelay,
 				Defaults.InitialRetryDelay * (2 ^ math.min(failures - 1, 6)))
-			if not rateLimited and failures &gt;= Defaults.MaxNetworkFailures then
-				self:_notify("Disconnected: local bridge unavailable. Re-pair to continue.")
-				self:Disconnect(false)
-				return
-			end
 		end
 		task.wait(delaySeconds)
 	end
@@ -3005,6 +3099,7 @@ function StudioBridge:Connect(pairingCode: string): (boolean, string)
 	local succeeded, result = pcall(function()
 		return self:_request("/v1/pair", {
 			code = pairingCode,
+			protocolVersion = Defaults.ProtocolVersion,
 			studioRunId = self._studioRunId,
 			placeKey = getPlaceKey(),
 			placeName = game.Name,
@@ -3024,6 +3119,17 @@ function StudioBridge:Connect(pairingCode: string): (boolean, string)
 		self:_notify("Connection failed: " .. tostring(result))
 		return false, tostring(result)
 	end
+	if result.protocolVersion ~= Defaults.ProtocolVersion then
+		pcall(function() self:_request("/v1/disconnect", {}, result.token) end)
+		return false, "Update the Windows app and Studio plugin together to v0.2.9 or later."
+	end
+	self:_adoptSession(result)
+	return true, "Pairing completed."
+end
+
+function StudioBridge:_adoptSession(result: any)
+	local previousWorker = self._workerToken
+	self:Disconnect(false)
 	self._connected = true
 	self._token = result.token
 	self._sessionId = result.sessionId
@@ -3038,6 +3144,12 @@ function StudioBridge:Connect(pairingCode: string): (boolean, string)
 	self._sourceHead = 1
 	self._results = {}
 	self._handledOps = {}
+	self._commandQueue = {}
+	self._workerToken = nil
+	self._commandReceiver = WireTransfer.NewReceiver()
+	self._commandReceipts = {}
+	self._wireFragments = nil
+	self._wireHead = 1
 	self._scanQueue = {}
 	self._scanHead = 1
 	self._scanQueued = setmetatable({}, { __mode = "k" }) :: {[Instance]: boolean}
@@ -3047,23 +3159,30 @@ function StudioBridge:Connect(pairingCode: string): (boolean, string)
 	self._pageSnapshots = {}
 	self:_enqueueOperation({ type = "reset" })
 	self:_enqueueOperation({ type = "scanBegin" })
-	self:_watchChanges()
-	self:_indexSiblingOrder(game)
-	for _, root in game:GetChildren() do
-		if MANAGED_CLASSES[root.ClassName] then
-			self:_observe(root)
-			self:_enqueueOperation({type = "upsert", node = self:_metadata(root, false)})
-			self:_enqueueScan(root)
-		end
-	end
-	-- The Explorer is usable as soon as roots are acknowledged. Deep branches
-	-- are discoverable through listChildren regardless of the auto-index budget.
-	self:_enqueueOperation({type = "ready"})
-	self._scanReadySent = true
+	local sessionId = self._sessionId
 	task.spawn(function() self:_syncLoop() end)
-	task.spawn(function() self:_scanLoop() end)
-	self:_notify("Indexing place hierarchy in the background...")
-	return true, "Pairing completed."
+	task.spawn(function()
+		while previousWorker and not previousWorker.done do
+			if self._sessionId ~= sessionId or not self._connected then return end
+			task.wait(0.1)
+		end
+		if self._sessionId ~= sessionId or not self._connected then return end
+		self:_watchChanges()
+		self:_indexSiblingOrder(game)
+		for _, root in game:GetChildren() do
+			if MANAGED_CLASSES[root.ClassName] then
+				self:_observe(root)
+				self:_enqueueOperation({type = "upsert", node = self:_metadata(root, false)})
+				self:_enqueueScan(root)
+			end
+		end
+		-- The Explorer is usable as soon as roots are acknowledged. Deep branches
+		-- are discoverable through listChildren regardless of the auto-index budget.
+		self:_enqueueOperation({type = "ready"})
+		self._scanReadySent = true
+		task.spawn(function() self:_scanLoop() end)
+		self:_notify("Indexing place hierarchy in the background...")
+	end)
 end
 
 function StudioBridge:IsConnected(): boolean
@@ -3075,6 +3194,12 @@ function StudioBridge:Disconnect(notifyServer: boolean?)
 	self._connected = false
 	self._token = nil
 	self._sessionId = nil
+	self._handledOps = {}
+	self._commandQueue = {}
+	self._commandReceiver = WireTransfer.NewReceiver()
+	self._commandReceipts = {}
+	self._wireFragments = nil
+	self._wireHead = 1
 	for _, connection in self._globalConnections do connection:Disconnect() end
 	self._globalConnections = {}
 	for _, connections in self._connections do
@@ -3114,7 +3239,7 @@ end
 
 return StudioBridge
 </ProtectedString>
-          <string name="ScriptGuid">{1CE364C9-789C-4808-891F-98CCF2075447}</string>
+          <string name="ScriptGuid">{448323CA-9EEB-4B59-8034-14A2DED8A850}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -3124,7 +3249,7 @@ return StudioBridge
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBXEE20703FDEFE4D1D916E5C8B80455FC8">
+      <Item class="ModuleScript" referent="RBX05F1DC7A48244639AFBD1EFF409EC994">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -3411,7 +3536,7 @@ end
 
 return HierarchyMutations
 </ProtectedString>
-          <string name="ScriptGuid">{4C60E1E4-AF7E-404E-853C-58C96C4D9963}</string>
+          <string name="ScriptGuid">{4BA920DD-A5B7-4944-81BB-524D3CEA8655}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -3421,7 +3546,7 @@ return HierarchyMutations
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX0F2650E90B564FCD8BE48F0E261DE644">
+      <Item class="ModuleScript" referent="RBX064020D1D5074DBDAF498740DF7F3E26">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -3435,8 +3560,9 @@ local ScriptEditorService = game:GetService("ScriptEditorService")
 
 local QuickApply = {}
 
-local MAX_ENTRIES = 20
-local MAX_SCRIPT_BYTES = 256 * 1024
+local Defaults = require(script.Parent.Parent.Config.Defaults)
+local MAX_ENTRIES = Defaults.MaxQuickApplyScripts
+local MAX_SCRIPT_BYTES = Defaults.MaxScriptBytes
 local ALLOWED_SCRIPT_CLASSES: {[string]: boolean} = {
 	Script = true,
 	LocalScript = true,
@@ -3510,6 +3636,9 @@ local function verifyGuards(guards: any, instances: {[string]: Instance}, manage
 		elseif target.Parent ~= instances[meta.parentId] then
 			return false
 		end
+		if not target.Parent then return false end
+		local unique, count = findMatchingChild(target.Parent, target.Name)
+		if count ~= 1 or unique ~= target then return false end
 	end
 	return true
 end
@@ -3592,7 +3721,9 @@ function QuickApply.Execute(command: any, instances: {[string]: Instance}, manag
 			if entry.action == "modify" then
 				local target = instances[entry.scriptId :: string] :: LuaSourceContainer
 				local original = entry.expectedSource :: string
-				local wrote, attempted = writeSource(target, entry.source, original, canContinue)
+				local wrote, attempted = writeSource(target, entry.source, original, function(): boolean
+					return canContinue() and verifyGuards(entry.guards, instances, managed)
+				end)
 				if attempted then
 					table.insert(updated, {scriptObject = target, oldSource = original, writtenSource = entry.source})
 				end
@@ -3679,7 +3810,7 @@ end
 
 return QuickApply
 </ProtectedString>
-          <string name="ScriptGuid">{201979D7-3B9D-48BA-8491-8168147C39E6}</string>
+          <string name="ScriptGuid">{590F4C15-8CB7-42B3-88FB-276B9823A57F}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -3689,8 +3820,206 @@ return QuickApply
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
+      <Item class="ModuleScript" referent="RBXB124E4635F6A4667BB650784C0CE4B12">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+local HttpService = game:GetService("HttpService")
+local Defaults = require(script.Parent.Parent.Config.Defaults)
+local WireTransfer = {}
+
+local function checksum(text: string): number
+	local a, b = 1, 0
+	for start = 1, #text, 5552 do
+		for index = start, math.min(start + 5551, #text) do
+			a += string.byte(text, index)
+			b += a
+		end
+		a %= 65521
+		b %= 65521
+	end
+	return b * 65536 + a
+end
+
+function WireTransfer.Encode(value: any): {any}
+	local body = HttpService:JSONEncode(value)
+	if #body &gt; Defaults.MaxTransferBytes then error("Encoded operation exceeds 64 MiB. Split the bundle.") end
+	local parts: {string} = {}
+	local start = 1
+	while start &lt;= #body do
+		local finish = math.min(start + Defaults.ChunkBytes - 1, #body)
+		while finish &lt; #body do
+			local byte = string.byte(body, finish + 1)
+			if byte &lt; 128 or byte &gt;= 192 then break end
+			finish -= 1
+		end
+		table.insert(parts, string.sub(body, start, finish))
+		start = finish + 1
+	end
+	local id = HttpService:GenerateGUID(false)
+	local digest = checksum(body)
+	local chunks = {}
+	for index, data in parts do
+		table.insert(chunks, {type = "wireChunk", id = id, index = index - 1,
+			count = #parts, bytes = #body, checksum = digest, data = data})
+	end
+	return chunks
+end
+
+function WireTransfer.NewReceiver(): any
+	return {active = nil, completed = {}}
+end
+
+function WireTransfer.Accept(receiver: any, chunk: any): (any?, number)
+	if typeof(chunk.id) ~= "string" or #chunk.id &lt; 1 or #chunk.id &gt; 120
+		or typeof(chunk.index) ~= "number" or chunk.index % 1 ~= 0 or chunk.index &lt; 0
+		or typeof(chunk.count) ~= "number" or chunk.count % 1 ~= 0 or chunk.count &lt; 1 or chunk.count &gt; 2048
+		or chunk.index &gt;= chunk.count or typeof(chunk.bytes) ~= "number" or chunk.bytes % 1 ~= 0
+		or chunk.bytes &lt; 1 or chunk.bytes &gt; Defaults.MaxTransferBytes
+		or typeof(chunk.data) ~= "string" or #chunk.data &gt; Defaults.ChunkBytes
+		or typeof(chunk.checksum) ~= "number" or chunk.checksum % 1 ~= 0
+		or chunk.checksum &lt; 0 or chunk.checksum &gt; 4294967295 then error("Invalid command fragment.") end
+	if receiver.completed[chunk.id] then return nil, receiver.completed[chunk.id] end
+	-- The authenticated server may supersede an unfinished read-only preview.
+	-- A new transfer can replace it only at fragment zero; no partial command runs.
+	if receiver.active and receiver.active.id ~= chunk.id and chunk.index == 0 then
+		receiver.active = nil
+	end
+	if not receiver.active then
+		if chunk.index ~= 0 then error("Command transfer must start at zero.") end
+		receiver.active = {id = chunk.id, count = chunk.count, bytes = chunk.bytes,
+			checksum = chunk.checksum, parts = {}, received = 0}
+	end
+	local active = receiver.active
+	if active.id ~= chunk.id or active.count ~= chunk.count or active.bytes ~= chunk.bytes
+		or active.checksum ~= chunk.checksum then error("Command transfer identity changed.") end
+	if chunk.index &lt; #active.parts then
+		if active.parts[chunk.index + 1] ~= chunk.data then error("Retried command fragment changed.") end
+		return nil, #active.parts
+	end
+	if chunk.index ~= #active.parts then error("Out-of-order command fragment.") end
+	active.received += #chunk.data
+	if active.received &gt; active.bytes then error("Command exceeds declared size.") end
+	table.insert(active.parts, chunk.data)
+	if #active.parts &lt; active.count then return nil, #active.parts end
+	local body = table.concat(active.parts)
+	if #body ~= active.bytes or checksum(body) ~= active.checksum then error("Command checksum mismatch.") end
+	local value = HttpService:JSONDecode(body)
+	if typeof(value) ~= "table" or value.type == "wireChunk" then error("Invalid transferred command.") end
+	receiver.active = nil
+	receiver.completed[chunk.id] = chunk.count
+	return value, chunk.count
+end
+return WireTransfer
+</ProtectedString>
+          <string name="ScriptGuid">{966DE000-40B7-4D5E-AE83-DB199DF65E65}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">WireTransfer</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX67B894988B2346DDA790D9DD382BECD2">
+        <Properties>
+          <Content name="LinkedSource">
+            <null></null>
+          </Content>
+          <ProtectedString name="Source">--!strict
+
+local Defaults = require(script.Parent.Parent.Config.Defaults)
+local PathResolver = {}
+
+-- Resolve only the requested paths against Studio, not the partially paged mirror.
+-- This function never creates an Instance or changes its source.
+function PathResolver.Resolve(command: any, managed: (Instance) -&gt; boolean,
+	metadata: (Instance, boolean) -&gt; any, observe: (Instance) -&gt; (),
+	canContinue: () -&gt; boolean): any
+	local result: any = {type = "resolvedPaths", opId = command.opId, nodes = {}, errors = {}}
+	if typeof(command.paths) ~= "table" or #command.paths &gt; Defaults.MaxQuickApplyScripts then
+		error("Invalid path resolution request.")
+	end
+	local positions: {[string]: number} = {}
+	local sourceBytes = 0
+	local cache: {[Instance]: {[string]: {Instance}}} = {}
+	local function matches(parent: Instance, name: string): {Instance}
+		if not cache[parent] then cache[parent] = {} end
+		if cache[parent][name] then return cache[parent][name] end
+		local found: {Instance} = {}
+		for index, child in parent:GetChildren() do
+			if child.Name == name and child.Parent == parent then
+				table.insert(found, child)
+				if #found &gt;= 2 then break end
+			end
+			if index % 512 == 0 then
+				task.wait()
+				if not canContinue() then error("Session changed during path resolution.") end
+			end
+		end
+		cache[parent][name] = found
+		return found
+	end
+	local function include(instance: Instance, withSource: boolean)
+		observe(instance)
+		local node = metadata(instance, withSource)
+		local position = positions[node.id]
+		if position then
+			if withSource and result.nodes[position].source == nil then
+				sourceBytes += #(node.source or "")
+				result.nodes[position] = node
+			end
+		else
+			sourceBytes += #(node.source or "")
+			table.insert(result.nodes, node)
+			positions[node.id] = #result.nodes
+		end
+		if sourceBytes &gt; Defaults.MaxQuickApplyBytes then error("Existing destination sources exceed 16 MiB. Split the bundle.") end
+	end
+	for _, path in command.paths do
+		if not canContinue() then error("Session changed during path resolution.") end
+		if typeof(path.segments) ~= "table" or #path.segments &lt; 2 or #path.segments &gt; 30 then error("Invalid path segments.") end
+		local okay, problem = pcall(function()
+			local parent: Instance = game
+			for index, component in path.segments do
+				if typeof(component) ~= "string" or #component &lt; 1 or #component &gt; 400 then error("Invalid path component.") end
+				local found = matches(parent, component)
+				local leaf = index == #path.segments
+				if #found == 0 then
+					if index == 1 then error("Roblox service was not found: " .. component) end
+					if path.status == "NEW" then break end
+					error("MODIFIED destination was not found: " .. component .. ". Nothing was created.")
+				end
+				if #found &gt; 1 and not (leaf and path.status == "NEW") then error("Ambiguous path: multiple instances named " .. component .. ".") end
+				local target = found[1]
+				if not managed(target) or target.Parent ~= parent then error("Path changed or is outside managed services.") end
+				include(target, leaf and path.status == "MODIFIED")
+				parent = target
+			end
+		end)
+		if not okay then table.insert(result.errors, {index = path.index, message = tostring(problem)}) end
+		task.wait()
+	end
+	return result
+end
+return PathResolver
+</ProtectedString>
+          <string name="ScriptGuid">{3729209A-4069-4CE5-B25A-C44CD0F06AB9}</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Name">PathResolver</string>
+          <BinaryString name="SerializedOverrides"></BinaryString>
+          <int64 name="SourceAssetId">-1</int64>
+          <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+        </Properties>
+      </Item>
     </Item>
-    <Item class="Folder" referent="RBX080F6E162FDA40CC905B5B32D07D66DE">
+    <Item class="Folder" referent="RBX0F281FE51DC949AF815D136594FB208E">
       <Properties>
         <Color3 name="IconTint">
           <R>0</R>
@@ -3705,7 +4034,7 @@ return QuickApply
         <int64 name="SourceAssetId">-1</int64>
         <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
       </Properties>
-      <Item class="ModuleScript" referent="RBX7CC8E6AA73EC4F8C8902ECB873FF16B4">
+      <Item class="ModuleScript" referent="RBX861738766318434DA0E034DD3565AC55">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -3940,7 +4269,7 @@ end
 
 return BridgeController
 </ProtectedString>
-          <string name="ScriptGuid">{0593EEC2-B971-41CE-B43B-F9A4D63AFD78}</string>
+          <string name="ScriptGuid">{740F902D-9F99-4DAA-BDA2-5D69B5C53978}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -3951,7 +4280,7 @@ return BridgeController
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX5A7D180DA38B479B9121B2B58492A219">
+    <Item class="Folder" referent="RBX33ED3F33D05547E18E94694E588CE29C">
       <Properties>
         <Color3 name="IconTint">
           <R>0</R>
@@ -3966,7 +4295,7 @@ return BridgeController
         <int64 name="SourceAssetId">-1</int64>
         <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
       </Properties>
-      <Item class="ModuleScript" referent="RBX8BF44151B9AC4F32846FD868424E1C41">
+      <Item class="ModuleScript" referent="RBX7F4344D39AD848CA8C765C0D28E379F9">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -4129,7 +4458,7 @@ end
 
 return CommandService
 </ProtectedString>
-          <string name="ScriptGuid">{AB2FD239-D3EB-44B5-B479-E0DF3244E406}</string>
+          <string name="ScriptGuid">{85478D69-E9EE-4B28-83B8-9E823CC8490C}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -4139,7 +4468,7 @@ return CommandService
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX037A90F6DAB44314B8D70EDCF70C89A4">
+      <Item class="ModuleScript" referent="RBX46E924699B5647F68DDD0BA83CD2282F">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -4254,7 +4583,7 @@ end
 
 return ShortcutService
 </ProtectedString>
-          <string name="ScriptGuid">{E98BE319-7700-40A7-A8CE-C52277D7BC9B}</string>
+          <string name="ScriptGuid">{AD3EB0A5-97B7-47CE-BA5C-B2C0E4E7819D}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -4264,7 +4593,7 @@ return ShortcutService
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX4D2DE2ADCD8C46E682D44C5E7B748B0F">
+      <Item class="ModuleScript" referent="RBX9DEC57A61BC349DDA189A80C09A213B4">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -4442,7 +4771,7 @@ end
 
 return SettingsService
 </ProtectedString>
-          <string name="ScriptGuid">{882BB587-75F4-4D61-83FC-BF897554219F}</string>
+          <string name="ScriptGuid">{B237148E-80EE-405F-8BD3-1B0422123C8C}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -4452,7 +4781,7 @@ return SettingsService
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBXDEF0017BF09B42329D6407FC528017FA">
+      <Item class="ModuleScript" referent="RBXB7BB57A7C547498AB7225F9CF3E8D77C">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -4563,7 +4892,7 @@ end
 
 return NotificationService
 </ProtectedString>
-          <string name="ScriptGuid">{25BB3304-4C05-4B9C-A07A-C79E2B097210}</string>
+          <string name="ScriptGuid">{B68EE842-DDE5-4916-8C56-056C1C0653F9}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -4573,7 +4902,7 @@ return NotificationService
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX96359BA222B44B968ACD3B28C3A1202F">
+      <Item class="ModuleScript" referent="RBX35774EDB28954FC9B1BE032DFA269038">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -4927,7 +5256,7 @@ end
 
 return ThemeService
 </ProtectedString>
-          <string name="ScriptGuid">{3674E1D7-BFA0-4085-B509-7A0085885184}</string>
+          <string name="ScriptGuid">{CB407F24-8DAB-424C-BE49-9804766E88A7}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -4937,7 +5266,7 @@ return ThemeService
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX4BA1A28B0D724C57983A3B26188D64CF">
+      <Item class="ModuleScript" referent="RBX48F4F096B43145669023DFE350D67CA7">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -4980,7 +5309,7 @@ end
 
 return Logger
 </ProtectedString>
-          <string name="ScriptGuid">{0BE9CD1E-57FA-4C25-BA07-E3B560EDAB37}</string>
+          <string name="ScriptGuid">{D23D276F-4129-4CE9-9DB7-BBBEA4E5CA66}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -4991,7 +5320,7 @@ return Logger
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBXEEEE4C19783249B5BE858FAD47B6301D">
+    <Item class="Folder" referent="RBXFB7BB408B51D440BB81C13F71472BBC3">
       <Properties>
         <Color3 name="IconTint">
           <R>0</R>
@@ -5006,7 +5335,7 @@ return Logger
         <int64 name="SourceAssetId">-1</int64>
         <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
       </Properties>
-      <Item class="ModuleScript" referent="RBX5873215C93BD49D39F9F32D34FF6A39F">
+      <Item class="ModuleScript" referent="RBX3486F9D668AA46838B900B912EB07E22">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -5029,7 +5358,7 @@ local Defaults = {
 	},
 	Product = {
 		Name = "Cursor Bridge V2",
-		Version = "0.2.8",
+		Version = "0.2.9",
 	},
 	Advanced = {
 		DebugLogging = false,
@@ -5044,7 +5373,8 @@ local Defaults = {
 	PollInterval = 0.18, -- Legacy plugin compatibility.
 	ActivePollInterval = 0.55,
 	IdlePollInterval = 1.5,
-	SourceAuditInterval = 2.0,
+	SourceAuditInterval = 5.0,
+	SourceAuditCount = 4,
 	InitialRetryDelay = 2.0,
 	MaximumRetryDelay = 30.0,
 	ScanSliceSize = 96,
@@ -5055,7 +5385,12 @@ local Defaults = {
 	MaxSourcesPerCycle = 10,
 	ScanProgressInterval = 1.5,
 	MaxBatchBytes = 700 * 1024,
-	MaxScriptBytes = 256 * 1024,
+	MaxScriptBytes = 2 * 1024 * 1024,
+	MaxQuickApplyBytes = 16 * 1024 * 1024,
+	MaxQuickApplyScripts = 128,
+	MaxTransferBytes = 64 * 1024 * 1024,
+	ChunkBytes = 64 * 1024,
+	ProtocolVersion = 2,
 	MaxOperationsPerBatch = 350,
 	MaxPendingOperations = 30000,
 	MaxNodes = 250000,
@@ -5064,7 +5399,7 @@ local Defaults = {
 
 return table.freeze(Defaults)
 </ProtectedString>
-          <string name="ScriptGuid">{F7940883-9F18-4C8F-ACA5-C53136D5A4D9}</string>
+          <string name="ScriptGuid">{DD96502F-ED67-4189-83E4-82582FE17E15}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>

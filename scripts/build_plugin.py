@@ -23,7 +23,7 @@ SHARED_STRING_CONTENTS = {EMPTY_SHARED_STRING_KEY: ""}
 MODULE_GROUPS = {
     "Packages": ("Maid",),
     "UI": ("Theme", "Primitives", "CursorShell", "BridgeWindow"),
-    "Services": ("StudioBridge", "HierarchyMutations", "QuickApply"),
+    "Services": ("StudioBridge", "HierarchyMutations", "QuickApply", "WireTransfer", "PathResolver"),
     "Controllers": ("BridgeController",),
     "Core": (
         "CommandService", "ShortcutService", "SettingsService",

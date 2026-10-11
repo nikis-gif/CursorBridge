@@ -1,3 +1,17 @@
+## 0.2.9 - Quick Apply and session reliability
+
+- Resolve requested paths directly in Studio instead of requiring manually expanded Explorer pages.
+- Preserve read-only preview, exact source/identity checks and explicit ambiguous/missing-path errors.
+- Accept 16 MiB TXT bundles, 128 scripts and 2 MiB per script, with explicit byte limits.
+- Fragment large JSON messages into acknowledged UTF-8 blocks and checkpoint failed batch retries.
+- Keep an atomic on-disk Quick Apply input draft, independent of browser storage quotas.
+- Separate yielding Studio commands from idle heartbeats; use one bidirectional exchange per cycle.
+- Recover transient transport loss only for the original token/process/Place, without replaying unknown edits.
+- Handle OS suspend/resume, bound completed-command/page caches and skip unchanged snapshots.
+- Fix delayed preview responses, empty-source guards, fallback audit queuing and full-localStorage startup.
+- Add a source publisher that verifies local/remote hashes and uses fast-forward-only GitHub commits.
+- Tests: 94 Node cases, 11 XML checks, Chromium regression suites and 96-hour accelerated idle simulation. Live Studio soak and Windows installation are not yet validated.
+
 ## 0.2.8 — Demand-Paged Large Place Explorer
 
 - Paired Roblox Studio sessions expose managed root services before the background scan finishes.

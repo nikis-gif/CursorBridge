@@ -22,7 +22,10 @@ test('transient Studio HTTP throttling uses retry backoff',()=>{
   assert.match(lua,/requests exceeded limit/);
   assert.match(lua,/InitialRetryDelay/);
   assert.match(lua,/MaximumRetryDelay/);
-  assert.match(lua,/if not rateLimited and failures >= Defaults\.MaxNetworkFailures then/);
+  assert.doesNotMatch(lua,/failures >= Defaults\.MaxNetworkFailures/);
+  assert.match(lua,/\/v2\/resume/);
+  assert.match(lua,/\/v2\/exchange/);
+  assert.match(lua,/Session authorization ended/);
   assert.match(server,/const TIMEOUT_MS = 120000/);
 });
 

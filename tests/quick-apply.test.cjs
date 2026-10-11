@@ -38,7 +38,7 @@ test('rejects garbage before first header, title-path mismatches, or missing str
   assert.throws(() => parseBundle('Hello\n' + created), /before the first SCRIPT/);
   assert.throws(() => parseBundle(block({name:'A', dest:'game/Workspace/B', status:'NEW'})), /final PATH/);
   assert.throws(() => parseBundle(block({name:'Bad',dest:'game/Workspace/Bad',status:'NEW',source:'print(10)'})), /--!strict/);
-  assert.throws(() => parseBundle('a'.repeat(MAX_BUNDLE_BYTES + 1)), /512 KiB/);
+  assert.throws(() => parseBundle('a'.repeat(MAX_BUNDLE_BYTES + 1)), /16 MiB/);
 });
 
 test('resolves exact existing script paths and missing folders for NEW', () => {

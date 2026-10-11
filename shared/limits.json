@@ -1,0 +1,10 @@
+{
+  "protocolVersion": 2,
+  "maxBundleBytes": 16777216,
+  "maxScriptBytes": 2097152,
+  "maxScripts": 128,
+  "maxResolvedSourceBytes": 16777216,
+  "maxTransferBytes": 67108864,
+  "chunkBytes": 65536,
+  "maxPacketBytes": 716800
+}

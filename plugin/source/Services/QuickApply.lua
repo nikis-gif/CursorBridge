@@ -7,8 +7,9 @@ local ScriptEditorService = game:GetService("ScriptEditorService")
 
 local QuickApply = {}
 
-local MAX_ENTRIES = 20
-local MAX_SCRIPT_BYTES = 256 * 1024
+local Defaults = require(script.Parent.Parent.Config.Defaults)
+local MAX_ENTRIES = Defaults.MaxQuickApplyScripts
+local MAX_SCRIPT_BYTES = Defaults.MaxScriptBytes
 local ALLOWED_SCRIPT_CLASSES: {[string]: boolean} = {
 	Script = true,
 	LocalScript = true,
@@ -82,6 +83,9 @@ local function verifyGuards(guards: any, instances: {[string]: Instance}, manage
 		elseif target.Parent ~= instances[meta.parentId] then
 			return false
 		end
+		if not target.Parent then return false end
+		local unique, count = findMatchingChild(target.Parent, target.Name)
+		if count ~= 1 or unique ~= target then return false end
 	end
 	return true
 end
@@ -164,7 +168,9 @@ function QuickApply.Execute(command: any, instances: {[string]: Instance}, manag
 			if entry.action == "modify" then
 				local target = instances[entry.scriptId :: string] :: LuaSourceContainer
 				local original = entry.expectedSource :: string
-				local wrote, attempted = writeSource(target, entry.source, original, canContinue)
+				local wrote, attempted = writeSource(target, entry.source, original, function(): boolean
+					return canContinue() and verifyGuards(entry.guards, instances, managed)
+				end)
 				if attempted then
 					table.insert(updated, {scriptObject = target, oldSource = original, writtenSource = entry.source})
 				end

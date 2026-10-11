@@ -1,3 +1,4 @@
+import limits from '../shared/limits.json';
 import * as monaco from 'monaco-editor';
 import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
 import './styles.css';
@@ -139,14 +140,20 @@ for (const [name, palette] of Object.entries(themePalette)) {
   });
 }
 
-let codeColorTheme = localStorage.getItem('cursor-bridge-code-theme') || 'auto';
+function readPreference(key) {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+function savePreference(key, value) {
+  try { localStorage.setItem(key, value); } catch { /* Appearance persistence must not block editing. */ }
+}
+let codeColorTheme = readPreference('cursor-bridge-code-theme') || 'auto';
 const themeLabels = { obsidian: 'Obsidian', graphite: 'Graphite', midnight: 'Midnight', aurora: 'Aurora' };
 const themeColors = { obsidian: '#0b0b0d', graphite: '#161719', midnight: '#0d121a', aurora: '#0c1517' };
 function useTheme(name) {
   if (!themeLabels[name]) name = 'obsidian';
   document.body.dataset.theme = name;
   monaco.editor.setTheme(`cursor-${codeColorTheme === 'auto' ? name : codeColorTheme}`);
-  localStorage.setItem('cursor-bridge-theme', name);
+  savePreference('cursor-bridge-theme', name);
   renderThemeOptions();
 }
 function renderThemeOptions() {
@@ -166,7 +173,7 @@ function renderThemeOptions() {
     $('themeOptions').append(button);
   }
 }
-useTheme(localStorage.getItem('cursor-bridge-theme') || 'obsidian');
+useTheme(readPreference('cursor-bridge-theme') || 'obsidian');
 
 const editor = monaco.editor.create($('monacoHost'), {
   language: 'luau', value: '', theme: `cursor-${codeColorTheme === 'auto' ? document.body.dataset.theme : codeColorTheme}`, 
@@ -209,7 +216,7 @@ function updateEditorPreferences() {
   $('wordWrapSetting').checked = editorPreferences.wordWrap;
   $('minimapSetting').checked = editorPreferences.minimap;
   $('codeThemeSetting').value = codeColorTheme;
-  localStorage.setItem(preferencesKey, JSON.stringify(editorPreferences));
+  savePreference(preferencesKey, JSON.stringify(editorPreferences));
 }
 function changeEditorZoom(delta) {
   editorPreferences.fontSize = delta === 0 ? 14
@@ -230,7 +237,7 @@ for (const [id, property, parse] of [
 $('codeThemeSetting').addEventListener('change', (event) => {
   codeColorTheme = event.target.value;
   if (codeColorTheme !== 'auto' && !themeLabels[codeColorTheme]) codeColorTheme='auto';
-  localStorage.setItem('cursor-bridge-code-theme',codeColorTheme);
+  savePreference('cursor-bridge-code-theme',codeColorTheme);
   monaco.editor.setTheme(`cursor-${codeColorTheme === 'auto' ? document.body.dataset.theme : codeColorTheme}`);
 });
 updateEditorPreferences();
@@ -262,7 +269,7 @@ function scheduleRender() {
 }
 function rowIds() { return treeRowIds; }
 function mutableIds() { return uniqueRoots(nodes, selected); }
-function canMutate() { return currentStatus.connected === true && currentStatus.ready === true; }
+function canMutate() { return currentStatus.connected === true && currentStatus.ready === true && currentStatus.protocolVersion !== 1; }
 function refreshSelectionUI() {
   const count = selected.size;
   const actions = $('selectionActions');
@@ -1052,7 +1059,8 @@ function updateStatus(status) {
   const previouslyReady = currentStatus.ready === true;
   currentStatus = status;
   const connected = status.connected === true;
-  const ready = connected && status.ready === true;
+  const incompatiblePlugin = connected && status.protocolVersion === 1;
+  const ready = connected && status.ready === true && !incompatiblePlugin;
   $('connectionState').textContent = ready ? (status.indexing ? 'Studio connected · indexing' : 'Studio connected') : connected ? 'Syncing Studio…' : 'Not connected';
   $('statusLight').classList.toggle('connected', ready);
   $('explorerLed').classList.toggle('connected', ready);
@@ -1074,9 +1082,11 @@ function updateStatus(status) {
   $('tabs').hidden = !ready;
   $('codePanel').hidden = !ready || !selectedId;
   $('welcome').hidden = ready && !!selectedId;
-  $('welcomeTitle').textContent = ready ? 'Ready when you are.'
+  $('welcomeTitle').textContent = incompatiblePlugin ? 'Update your Studio plugin.' : status.recovering ? 'Reconnecting to Studio.' : ready ? 'Ready when you are.'
     : connected ? 'Preparing your workspace.' : 'Connect your Studio.';
-  $('welcomeDescription').textContent = ready
+  $('welcomeDescription').textContent = incompatiblePlugin
+    ? 'Install the v0.2.9 Cursor Bridge plugin, disable older copies, and pair again.' : status.recovering
+    ? 'Connection interrupted. Local drafts are protected; waiting for your Studio session.' : ready
     ? 'Choose a script in Explorer to begin editing.'
     : connected ? 'Reading your place hierarchy. This usually takes a moment.'
       : 'Open Cursor Bridge in Roblox Studio and enter the pairing code below.';
@@ -1213,6 +1223,9 @@ function receiveServerEvent(event) {
     }
   }
   else if (event.type === 'quickApply') handleQuickApplyEvent(event);
+  else if (event.type === 'quickApplyProgress') {
+    if (qa('quickApplyDialog').open) quickApplyNotice(event.message);
+  }
   else if (event.type === 'update') toast(event.message);
 }
 
@@ -1997,9 +2010,9 @@ const widthKey='cursor-bridge-explorer-width';
 function setExplorerWidth(width) {
   const safe=Math.max(210,Math.min(460,width));
   document.documentElement.style.setProperty('--explorer-width',`${safe}px`);
-  localStorage.setItem(widthKey,String(safe));
+  savePreference(widthKey,String(safe));
 }
-setExplorerWidth(Number(localStorage.getItem(widthKey)) || 286);
+setExplorerWidth(Number(readPreference(widthKey)) || 286);
 $('resizeDivider').addEventListener('pointerdown',(event)=>{
   if (event.button!==0) return;
   const divider=$('resizeDivider'),startX=event.clientX,startWidth=$('explorerPane').getBoundingClientRect().width;
@@ -2045,6 +2058,8 @@ let quickApplyTimer = null;
 let quickApplyRequestEpoch = 0;
 let quickApplyApplying = false;
 let quickApplyPendingOpId = null;
+let quickApplySubmittedText = null;
+let quickApplyContext = null;
 const quickApplyOverrides = {};
 const qa = (id) => $(id);
 
@@ -2053,6 +2068,9 @@ function quickApplyNotice(message, error = false) {
   qa('quickApplyMessage').classList.toggle('qa-error', error);
 }
 function quickApplyRefreshButton() {
+  qa('quickApplyText').readOnly = quickApplyApplying;
+  qa('quickApplyFile').disabled = quickApplyApplying;
+  for (const select of qa('quickApplyEntries').querySelectorAll('select')) select.disabled = quickApplyApplying;
   const summary = quickApplyPreview?.summary;
   qa('quickApplyConfirm').disabled = !canMutate() || quickApplyApplying || !quickApplyPreview?.token ||
     !quickApplyPreview.ok || !summary || summary.errors > 0 || summary.create + summary.modify === 0;
@@ -2140,17 +2158,31 @@ async function quickApplyPreviewText() {
   quickApplyPreview = null;
   quickApplyRefreshButton();
   const bytes = new TextEncoder().encode(value).length;
-  qa('quickApplySize').textContent = `${(bytes / 1024).toFixed(1)} / 512 KiB`;
+  qa('quickApplySize').textContent = `${(bytes / 1048576).toFixed(2)} / 16 MiB`;
   if (!value.trim()) {
+    api.saveQuickApplyDraft('').catch(safeError);
     quickApplyHelp('Paste an AI-generated bundle. Every script will appear here with its resolved Studio destination.');
     qa('quickApplyEntries').replaceChildren();
     quickApplyNotice('Nothing is sent until you apply.');
     return;
   }
-  if (bytes > 512 * 1024) {
-    quickApplyHelp('Your bundle exceeds 512 KiB. Split it into smaller deliveries.');
+  if (bytes > limits.maxBundleBytes) {
+    quickApplyHelp('Your bundle exceeds 16 MiB. Split it into smaller deliveries.');
     qa('quickApplyEntries').replaceChildren();
     quickApplyNotice('Maximum bundle size exceeded.', true);
+    return;
+  }
+  try { await api.saveQuickApplyDraft(value); }
+  catch (error) {
+    if (epoch !== quickApplyRequestEpoch) return;
+    quickApplyNotice('Local recovery save failed. Keep the TXT and check disk space. ' + error.message, true);
+    return;
+  }
+  if (epoch !== quickApplyRequestEpoch) return;
+  if (currentStatus.connected && currentStatus.protocolVersion === 1) {
+    quickApplyHelp('Update the Studio plugin to v0.2.9. Exact-path Quick Apply requires both updated components.');
+    qa('quickApplyEntries').replaceChildren();
+    quickApplyNotice('Studio plugin update required. Your TXT is saved locally.', true);
     return;
   }
   if (!canMutate()) {
@@ -2159,7 +2191,7 @@ async function quickApplyPreviewText() {
     quickApplyNotice('Waiting for Roblox Studio connection.');
     return;
   }
-  quickApplyNotice('Checking the live Explorer…');
+  quickApplyNotice('Resolving exact paths in Studio. You do not need to expand folders...');
   try {
     const response = await api.previewQuickApply(value, { ...quickApplyOverrides });
     if (epoch !== quickApplyRequestEpoch) return;
@@ -2167,12 +2199,14 @@ async function quickApplyPreviewText() {
     quickApplyRenderPreview(response);
   } catch (error) {
     if (epoch !== quickApplyRequestEpoch) return;
-    quickApplyHelp(error?.message || 'Cannot read this bundle.');
+    const message = String(error?.message || 'Cannot read this bundle.').replace(/^Error invoking remote method '[^']+': (?:Error: )?/, '');
+    quickApplyHelp(message);
     qa('quickApplyEntries').replaceChildren();
-    quickApplyNotice(error?.message || 'Invalid bundle.', true);
+    quickApplyNotice(message, true);
   }
 }
 function quickApplySchedulePreview(wait = 280) {
+  quickApplyRequestEpoch++;
   clearTimeout(quickApplyTimer);
   quickApplyPreview = null;
   quickApplyRefreshButton();
@@ -2185,6 +2219,9 @@ function openQuickApply() {
   if (!quickApplyApplying) quickApplySchedulePreview(0);
 }
 function quickApplySessionChanged() {
+  const context = `${currentStatus.studioRunId}|${currentStatus.placeKey}|${canMutate()}`;
+  if (context === quickApplyContext) return;
+  quickApplyContext = context;
   qa('quickApplyPlace').textContent = canMutate() ? currentStatus.placeName : 'Studio offline';
   quickApplyPreview = null;
   quickApplyRefreshButton();
@@ -2203,8 +2240,12 @@ function handleQuickApplyEvent(event) {
   quickApplyApplying = false;
   quickApplyRefreshButton();
   if (event.status === 'applied') {
-    qa('quickApplyText').value = '';
-    localStorage.removeItem(quickApplyDraftKey);
+    if (quickApplySubmittedText === null || qa('quickApplyText').value === quickApplySubmittedText) {
+      qa('quickApplyText').value = '';
+      api.saveQuickApplyDraft('').catch(safeError);
+    }
+    quickApplySubmittedText = null;
+    try { localStorage.removeItem(quickApplyDraftKey); } catch {}
     quickApplyClearPreview();
     quickApplyHelp('All changes were confirmed by Roblox Studio. Select any script in Explorer to inspect it.');
     quickApplyNotice(`${event.count} script(s) applied in Studio.`);
@@ -2228,22 +2269,20 @@ qa('quickApplyClear').addEventListener('click', () => {
   if (quickApplyApplying) return;
   qa('quickApplyText').value = '';
   for (const key of Object.keys(quickApplyOverrides)) delete quickApplyOverrides[key];
-  localStorage.removeItem(quickApplyDraftKey);
+  try { localStorage.removeItem(quickApplyDraftKey); } catch {}
+  api.saveQuickApplyDraft('').catch(safeError);
   quickApplySchedulePreview(0);
 });
 qa('quickApplyText').addEventListener('input', () => {
   if (quickApplyApplying) return;
   for (const key of Object.keys(quickApplyOverrides)) delete quickApplyOverrides[key];
-  if (new TextEncoder().encode(qa('quickApplyText').value).length < 520 * 1024) {
-    try { localStorage.setItem(quickApplyDraftKey, qa('quickApplyText').value); } catch {}
-  }
   quickApplySchedulePreview();
 });
 qa('quickApplyFile').addEventListener('change', async (event) => {
   const file = event.target.files?.[0];
   event.target.value = '';
   if (!file || quickApplyApplying) return;
-  if (file.size > 512 * 1024) { quickApplyNotice('The selected TXT exceeds 512 KiB.', true); return; }
+  if (file.size > limits.maxBundleBytes) { quickApplyNotice('The selected TXT exceeds 16 MiB.', true); return; }
   try {
     qa('quickApplyText').value = await file.text();
     qa('quickApplyText').dispatchEvent(new Event('input', { bubbles: true }));
@@ -2259,6 +2298,7 @@ qa('quickApplyConfirm').addEventListener('click', async () => {
   if (!window.confirm(`Apply ${preview.summary.create} new and ${preview.summary.modify} modified script(s) to ${currentStatus.placeName}?\n\nAll modified script sources will be backed up first.`)) return;
   quickApplyApplying = true;
   quickApplyRefreshButton();
+  quickApplySubmittedText = qa('quickApplyText').value;
   quickApplyNotice('Saving recovery data before applying…');
   try {
     const queued = await api.applyQuickApply(preview.token);
@@ -2274,6 +2314,14 @@ qa('quickApplyConfirm').addEventListener('click', async () => {
   }
 });
 try { qa('quickApplyText').value = localStorage.getItem(quickApplyDraftKey) || ''; } catch {}
+const initialQuickApplyText = qa('quickApplyText').value;
+api?.getQuickApplyDraft().then((text) => {
+  if (quickApplyRequestEpoch === 0 && qa('quickApplyText').value === initialQuickApplyText && text) qa('quickApplyText').value = text;
+}).catch(safeError);
+qa('quickApplyDialog').addEventListener('close', () => {
+  const text = qa('quickApplyText').value;
+  if (new TextEncoder().encode(text).length <= limits.maxBundleBytes) api.saveQuickApplyDraft(text).catch(safeError);
+});
 window.addEventListener('keydown', (event) => {
   if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey || event.key.toLowerCase() !== 'l') return;
   if (document.querySelector('dialog[open]') && !qa('quickApplyDialog').open) return;

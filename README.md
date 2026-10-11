@@ -1,8 +1,16 @@
 # Cursor Bridge
 
-**Cursor Bridge v0.2.8** is a Windows-first Luau workbench connected to the **currently paired Roblox Studio place**. It comprises a local Electron/Monaco application and a Roblox Studio plugin with the existing Cursor V2 floating window. Studio remains the source of truth for the DataModel; the workbench does not run games or replace Studio's compiler.
+**Cursor Bridge v0.2.9** is a Windows-first Luau workbench connected to the **currently paired Roblox Studio place**. It comprises a local Electron/Monaco application and a Roblox Studio plugin with the existing Cursor V2 floating window. Studio remains the source of truth for the DataModel; the workbench does not run games or replace Studio's compiler.
 
 All connection traffic stays on `127.0.0.1:38471`. Source history, recovery snapshots, and unsynced drafts are stored locally on the PC.
+
+## v0.2.9 - Quick Apply and session recovery
+
+Update **both** the desktop app and Studio plugin. Quick Apply now resolves exact paths in Studio without requiring open Explorer folders. Input limits: 16 MiB per TXT, 128 scripts, 2 MiB per source. Large operations use acknowledged fragments; idle heartbeat traffic is independent of typing.
+
+Recovery is restricted to the same authorized Studio process and Place. Unknown mutation outcomes are never replayed. Healthy sessions have no maximum idle age. A deterministic test simulates 96 hours without edits; it is not a 96-hour live Windows/Studio soak or an uptime guarantee.
+
+Read [STABILITY.md](docs/STABILITY.md) for details and [UPDATE_0_2_9.md](docs/UPDATE_0_2_9.md) for the verified ZIP publishing helper. Existing recovery folders must not be deleted.
 
 ## Install and run (Windows)
 

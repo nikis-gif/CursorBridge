@@ -41,8 +41,24 @@ class BackupStore {
     await fs.mkdir(this.draftsPath, { recursive: true });
   }
 
+  async saveQuickApplyDraft(text) {
+    if (typeof text !== 'string' || Buffer.byteLength(text, 'utf8') > require('../shared/limits.json').maxBundleBytes) {
+      throw new Error('Quick Apply input exceeds 16 MiB.');
+    }
+    await atomicWrite(path.join(this.draftsPath, 'quick-apply-input.txt'), text);
+    return {ok:true};
+  }
+
+  async getQuickApplyDraft() {
+    try {
+      const file = path.join(this.draftsPath, 'quick-apply-input.txt');
+      if ((await fs.stat(file)).size > require('../shared/limits.json').maxBundleBytes) throw new Error('Saved input exceeds 16 MiB.');
+      return await fs.readFile(file, 'utf8');
+    } catch (error) { if (error.code === 'ENOENT') return ''; throw error; }
+  }
+
   async saveQuickApplyBundle({ placeKey, text, count }) {
-    if (typeof text !== 'string' || Buffer.byteLength(text, 'utf8') > 512 * 1024) {
+    if (typeof text !== 'string' || Buffer.byteLength(text, 'utf8') > require('../shared/limits.json').maxBundleBytes) {
       throw new Error('Invalid Quick Apply recovery bundle.');
     }
     const folder = path.join(this.backupsPath, 'quick-apply', safeId(placeKey));

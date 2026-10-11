@@ -21,3 +21,7 @@ CLASS: Script
 --!strict
 
 print("Hello from Cursor Bridge")
+
+Cursor Bridge v0.2.9 accepts up to 128 scripts, 16 MiB total UTF-8 TXT, and 2 MiB UTF-8 per source.
+Split larger deliveries into separate complete bundles. Never truncate a script.
+Do not change MODIFIED to NEW simply because an Explorer folder is collapsed.

@@ -2,7 +2,7 @@
 
 const path = require('node:path');
 const fs = require('node:fs');
-const { app, BrowserWindow, ipcMain, shell, dialog, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, clipboard, powerMonitor } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { BridgeServer } = require('../bridge/bridge-server.cjs');
 
@@ -55,6 +55,7 @@ async function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
+      backgroundThrottling: false,
       contextIsolation: true,
       sandbox: true,
       webSecurity: true,
@@ -77,6 +78,8 @@ function registerIpc() {
     'bridge:copy-text': (_event, value) => clipboard.writeText(String(value).slice(0, 16 * 1024)),
     'bridge:get-state': () => bridge.getState(),
     'bridge:request-source': (_event, id) => bridge.requestSource(id),
+    'bridge:save-quick-apply-draft': (_event, text) => bridge.saveQuickApplyDraft(text),
+    'bridge:get-quick-apply-draft': () => bridge.getQuickApplyDraft(),
     'bridge:preview-quick-apply': (_event, text, overrides) => bridge.previewQuickApply(text, overrides),
     'bridge:apply-quick-apply': (_event, token) => bridge.applyQuickApply(token),
     'bridge:mutate-hierarchy': (_event, request) => bridge.mutateHierarchy(request),
@@ -162,6 +165,8 @@ if (acquiredLock) {
       app.quit();
       return;
     }
+    powerMonitor.on('suspend', () => bridge.suspendForSleep());
+    powerMonitor.on('resume', () => bridge.resumeFromSleep());
     registerIpc();
     configureUpdater();
     await createWindow();

@@ -3,8 +3,9 @@
 const { MAX_SCRIPT_BYTES } = require('./bridge-server-constants.cjs');
 
 const BOUNDARY = '='.repeat(50);
-const MAX_BUNDLE_BYTES = 512 * 1024;
-const MAX_SCRIPTS = 20;
+const limits = require('../shared/limits.json');
+const MAX_BUNDLE_BYTES = limits.maxBundleBytes;
+const MAX_SCRIPTS = limits.maxScripts;
 const SCRIPT_CLASSES = new Set(['Script', 'LocalScript', 'ModuleScript']);
 const HEADER = /^={50}\nSCRIPT: ([^\n]+)\nPATH: ([^\n]+)\nSTATUS: (NEW|MODIFIED)\n(?:CLASS: (Script|LocalScript|ModuleScript)\n)?={50}\n/gm;
 
@@ -12,7 +13,7 @@ function error(message) { throw new Error(message); }
 
 function parseBundle(raw) {
   if (typeof raw !== 'string' || !raw.trim()) error('Paste an AI script bundle before previewing.');
-  if (Buffer.byteLength(raw, 'utf8') > MAX_BUNDLE_BYTES) error('Bundle exceeds the 512 KiB safety limit.');
+  if (Buffer.byteLength(raw, 'utf8') > MAX_BUNDLE_BYTES) error('Bundle exceeds the 16 MiB safety limit.');
   const text = raw.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
   const markers = [...text.matchAll(HEADER)];
   if (!markers.length) {
@@ -32,7 +33,7 @@ function parseBundle(raw) {
     if (code === '--!strict') error(`Script ${index + 1}: source is empty after --!strict.`);
     const source = code + '\n';
     if (Buffer.byteLength(source, 'utf8') > MAX_SCRIPT_BYTES) {
-      error(`Script ${index + 1} (${match[1]}): source exceeds 256 KiB.`);
+      error(`Script ${index + 1} (${match[1]}): source exceeds 2 MiB.`);
     }
     const name = match[1];
     const rawPath = match[2];

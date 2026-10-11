@@ -14,6 +14,8 @@ const online = {connected:true, ready:true,placeKey:'100-200',placeName:'Sample 
 const noSession = {connected:false,ready:false,placeKey:'offline',placeName:'Recovered Place',pairingCode:'432987'};
 window.__mutations = [];
 window.cursorBridge = {
+  saveQuickApplyDraft: async (text) => { window.__savedQuickApplyInput = text; return {ok:true}; },
+  getQuickApplyDraft: async () => '',
   onEvent(fn){window.__emitServer = fn;},
   async getState(){return {status: offline ? noSession : online, nodes:roots};},
   async getAppVersion(){return '0.2.3';},

@@ -1,2 +1,2 @@
 'use strict';
-module.exports = { MAX_SCRIPT_BYTES: 256 * 1024 };
+module.exports = { MAX_SCRIPT_BYTES: require('../shared/limits.json').maxScriptBytes };

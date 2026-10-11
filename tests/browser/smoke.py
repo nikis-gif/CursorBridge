@@ -39,10 +39,13 @@ def fixture_modules():
         "editorsync": PROJECT / "renderer/editor-sync.mjs",
         "searchworker": FIXTURES / "mock-search-worker.mjs",
     }
-    return {name: path.read_text(encoding="utf-8") for name, path in files.items()}
+    modules = {name: path.read_text(encoding="utf-8") for name, path in files.items()}
+    modules["limits"] = "export default " + (PROJECT / "shared/limits.json").read_text() + ";"
+    return modules
 
 
 IMPORTS = {
+    "import limits from '../shared/limits.json';": "limits",
     "import * as monaco from 'monaco-editor';": "monaco",
     "import EditorWorker from 'monaco-editor/editor/editor.worker?worker';": "worker",
     "import { icon } from './icons.js';": "icons",

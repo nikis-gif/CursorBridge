@@ -5,6 +5,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 const handlers = new Map();
 contextBridge.exposeInMainWorld('cursorBridge', {
   copyText: (value) => ipcRenderer.invoke('bridge:copy-text', value),
+  saveQuickApplyDraft: (text) => ipcRenderer.invoke('bridge:save-quick-apply-draft', text),
+  getQuickApplyDraft: () => ipcRenderer.invoke('bridge:get-quick-apply-draft'),
   previewQuickApply: (text, overrides) => ipcRenderer.invoke('bridge:preview-quick-apply', text, overrides),
   applyQuickApply: (token) => ipcRenderer.invoke('bridge:apply-quick-apply', token),
   mutateHierarchy: (request) => ipcRenderer.invoke('bridge:mutate-hierarchy', request),
