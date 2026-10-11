@@ -1,5 +1,14 @@
 // Original outline icons. The restricted Vanilla 3 archive is not bundled.
 const glyphs = {
+  home: '<path d="m3 10 9-7 9 7v10H3zM9 20v-7h6v7"/>',
+  layout: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/>',
+  'layout-right': '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/>',
+  split: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M12 4v16"/>',
+  'split-horizontal': '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 12h18"/>',
+  sparkles: '<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5zM20 2v4M18 4h4"/>',
+  'code-brackets': '<path d="m8 6-6 6 6 6m8-12 6 6-6 6M14 4l-4 16"/>',
+  'arrow-up': '<path d="M12 20V4m-7 7 7-7 7 7"/>',
+  shield: '<path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6"/>',
   folder:'<path d="M3 6h7l2 2h9v11H3z"/>',
   Workspace:'<path d="M12 2 21 7 12 12 3 7zM3 7v10l9 5 9-5V7M12 12v10"/>',
   Part:'<path d="M12 3 20 8 12 13 4 8zM4 8v9l8 4 8-4V8M12 13v8"/>',

@@ -2,6 +2,8 @@ import limits from '../shared/limits.json';
 import * as monaco from 'monaco-editor';
 import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
 import './styles.css';
+import './workspace.css';
+import { mountWorkspace } from './workspace-ui.mjs';
 import { icon } from './icons.js';
 import { findHierarchyCompletion, makeMonacoSuggestions } from './luau-completion.mjs';
 import { buildExplorerRows, uniqueRoots, isNodeInside, pathForNode } from './explorer-model.mjs';
@@ -22,6 +24,9 @@ const childPages = new Map();
 const childLoads = new Set();
 const selected = new Set();
 const models = new Map();
+const modelDocumentIds = new WeakMap();
+const primaryViewStates = new Map();
+let workspace = null;
 const localState = new Map();
 const activeTabs = [];
 const draftTimers = new Map();
@@ -116,10 +121,11 @@ monaco.languages.setMonarchTokensProvider('luau', {
 });
 
 const themePalette = {
-  obsidian: { background: '08080A', fg: 'F2F1EF', keyword: 'B6A3D6', string: 'B9CCA6', comment: '656677' },
-  graphite: { background: '1B1D21', fg: 'ECEDF0', keyword: 'C1AFDB', string: 'B9CFAD', comment: '777F8C' },
-  midnight: { background: '0D1420', fg: 'EAF0FB', keyword: 'A4BDED', string: 'AFD4BD', comment: '627D99' },
-  aurora: { background: '0A161A', fg: 'EAF5F4', keyword: 'A4D6CF', string: 'B7D3AB', comment: '628B8B' },
+  discord: { background: '313338', fg: 'F2F3F5', keyword: 'B9ACFF', string: '9CDBBE', comment: '969DAE' },
+  obsidian: { background: '25252C', fg: 'F2F1EF', keyword: 'B6A3D6', string: 'B9CCA6', comment: '656677' },
+  graphite: { background: '303339', fg: 'ECEDF0', keyword: 'C1AFDB', string: 'B9CFAD', comment: '777F8C' },
+  midnight: { background: '202B3E', fg: 'EAF0FB', keyword: 'A4BDED', string: 'AFD4BD', comment: '627D99' },
+  aurora: { background: '203437', fg: 'EAF5F4', keyword: 'A4D6CF', string: 'B7D3AB', comment: '628B8B' },
 };
 for (const [name, palette] of Object.entries(themePalette)) {
   monaco.editor.defineTheme(`cursor-${name}`, {
@@ -147,11 +153,12 @@ function savePreference(key, value) {
   try { localStorage.setItem(key, value); } catch { /* Appearance persistence must not block editing. */ }
 }
 let codeColorTheme = readPreference('cursor-bridge-code-theme') || 'auto';
-const themeLabels = { obsidian: 'Obsidian', graphite: 'Graphite', midnight: 'Midnight', aurora: 'Aurora' };
-const themeColors = { obsidian: '#0b0b0d', graphite: '#161719', midnight: '#0d121a', aurora: '#0c1517' };
+const themeLabels = { discord: 'Discord', obsidian: 'Obsidian', graphite: 'Graphite', midnight: 'Midnight', aurora: 'Aurora' };
+const themeColors = { discord: '#5865f2', obsidian: '#0b0b0d', graphite: '#161719', midnight: '#0d121a', aurora: '#0c1517' };
 function useTheme(name) {
-  if (!themeLabels[name]) name = 'obsidian';
+  if (!themeLabels[name]) name = 'discord';
   document.body.dataset.theme = name;
+  api?.setWindowTheme?.(name)?.catch(() => { /* Theme sync cannot block editing. */ });
   monaco.editor.setTheme(`cursor-${codeColorTheme === 'auto' ? name : codeColorTheme}`);
   savePreference('cursor-bridge-theme', name);
   renderThemeOptions();
@@ -173,7 +180,7 @@ function renderThemeOptions() {
     $('themeOptions').append(button);
   }
 }
-useTheme(readPreference('cursor-bridge-theme') || 'obsidian');
+useTheme(readPreference('cursor-bridge-theme') || 'discord');
 
 const editor = monaco.editor.create($('monacoHost'), {
   language: 'luau', value: '', theme: `cursor-${codeColorTheme === 'auto' ? document.body.dataset.theme : codeColorTheme}`, 
@@ -211,6 +218,7 @@ function updateEditorPreferences() {
     wordWrap: editorPreferences.wordWrap ? 'on' : 'off',
     minimap: {enabled: editorPreferences.minimap},
   });
+  workspace?.syncPreferences(editorPreferences);
   $('fontSizeSetting').value = String(editorPreferences.fontSize);
   $('fontFamilySetting').value = editorPreferences.fontFamily;
   $('wordWrapSetting').checked = editorPreferences.wordWrap;
@@ -246,7 +254,7 @@ monaco.languages.registerCompletionItemProvider('luau', {
   triggerCharacters: ['.', '"', "'"],
   provideCompletionItems(model, position) {
     const line = model.getLineContent(position.lineNumber).slice(0, position.column - 1);
-    return { suggestions: makeMonacoSuggestions(findHierarchyCompletion(line, nodes, selectedId), monaco, position) };
+    return { suggestions: makeMonacoSuggestions(findHierarchyCompletion(line, nodes, modelDocumentIds.get(model) || selectedId), monaco, position) };
   },
 });
 
@@ -628,6 +636,7 @@ $('collapseTree').addEventListener('click', () => { expanded.clear(); scheduleRe
 $('clearSelection').addEventListener('click', () => { selected.clear(); anchorId = null; focusedId = null; paintSelection(); });
 
 function updateCounts() {
+  workspace?.refresh();
   $('instanceStat').textContent = `${nodes.size.toLocaleString('en-US')} instances`;
   $('scriptStat').textContent = `${scriptNodeCount.toLocaleString('en-US')} scripts`;
   refreshSelectionUI();
@@ -637,6 +646,7 @@ function getLocal(id) {
   return localState.get(id);
 }
 function updateEditorStatus() {
+  workspace?.refresh();
   const node = nodes.get(selectedId);
   if (!node) return;
   const local = getLocal(selectedId);
@@ -648,12 +658,13 @@ function updateEditorStatus() {
   else if (local.dirty) label = 'Unsynced local changes';
   else if (node.pending) label = 'Syncing...';
   $('syncIndicator').textContent = label;
-  $('syncIndicator').classList.toggle('warning', local.dirty || local.manualResolve || node.pending);
+  $('syncIndicator').classList.toggle('warning', Boolean(local.dirty || local.manualResolve || node.pending));
   $('applyDraft').hidden = !local.manualResolve || !canMutate();
   $('reloadStudio').hidden = !local.manualResolve;
   editor.updateOptions({ readOnly: !canMutate() });
 }
 function renderTabs() {
+  workspace?.refresh();
   $('tabs').replaceChildren();
   if (!activeTabs.length) {
     const placeholder = document.createElement('span'); placeholder.className = 'tabs-placeholder';
@@ -668,6 +679,7 @@ function renderTabs() {
     item.draggable = true;
     item.dataset.id = id;
     item.setAttribute('role', 'tab');
+    item.tabIndex = selectedId === id ? 0 : -1;
     item.setAttribute('aria-selected', String(selectedId === id));
     const symbol = document.createElement('span'); symbol.className = 'tab-icon'; addIcon(symbol, classIcon(node), 15);
     const label = document.createElement('span'); label.className = 'tab-label'; label.textContent = node.name;
@@ -677,6 +689,16 @@ function renderTabs() {
     close.addEventListener('click',(event)=>{event.stopPropagation();closeTab(id);});
     item.append(close);
     item.addEventListener('click',()=>openScript(id).catch(safeError));
+    item.addEventListener('keydown', (event) => {
+      if (event.target.closest('button')) return;
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault(); openScript(id).catch(safeError);
+      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        const next = (activeTabs.indexOf(id) + (event.key === 'ArrowRight' ? 1 : -1) + activeTabs.length) % activeTabs.length;
+        openScript(activeTabs[next]).then(() => $('tabs').querySelector('.tab.active')?.focus()).catch(safeError);
+      }
+    });
     item.addEventListener('auxclick', (event) => { if (event.button === 1) closeTab(id); });
     item.addEventListener('dragstart', (event) => {
       event.dataTransfer.effectAllowed = 'move';
@@ -801,11 +823,19 @@ async function openScript(id) {
     const model = monaco.editor.createModel(node.source, 'luau',
       monaco.Uri.parse(`inmemory://cursor/${encodeURIComponent(id)}.luau`));
     models.set(id, model);
+    modelDocumentIds.set(model, id);
+    model.onDidChangeContent(() => handleDocumentEdit(id));
     getLocal(id).knownRevision = node.revision;
   }
   // Activate the editor synchronously; fetching recovery must not block typing.
+  workspace?.showEditor();
+  const changedDocument = selectedId !== id || editor.getModel() !== models.get(id);
+  if (changedDocument && selectedId && editor.getModel()) primaryViewStates.set(selectedId, editor.saveViewState());
   selectedId = id;
-  editor.setModel(models.get(id));
+  if (changedDocument) {
+    editor.setModel(models.get(id));
+    editor.restoreViewState(primaryViewStates.get(id) || null);
+  }
   let parent = nodes.get(node.parentId);
   while (parent) { expanded.add(parent.id); parent = nodes.get(parent.parentId); }
   $('welcome').hidden = true;
@@ -858,6 +888,7 @@ function closeTab(id) {
   const index = activeTabs.indexOf(id);
   if (index !== -1) activeTabs.splice(index, 1);
   if (selectedId === id) {
+    if (editor.getModel()) primaryViewStates.set(id, editor.saveViewState());
     selectedId = null; ++openEpoch; editor.setModel(null);
     if (activeTabs.length) openScript(activeTabs.at(-1)).catch(safeError);
     else { $('welcome').hidden = false; $('codePanel').hidden = true; }
@@ -940,9 +971,9 @@ async function flushStudioWrite(id) {
     }
   }
 }
-editor.onDidChangeModelContent(() => {
-  if (suppressChange || !selectedId) return;
-  const id = selectedId, model = models.get(id);
+function handleDocumentEdit(id) {
+  if (suppressChange || !nodes.has(id)) return;
+  const model = models.get(id);
   if (!model) return;
   const local = getLocal(id);
   recordLocalEdit(local, model.getValue(), nodes.get(id)?.source);
@@ -957,7 +988,7 @@ editor.onDidChangeModelContent(() => {
   }
   updateEditorStatus(); renderTabs();
   if (sidebarMode === 'search') schedulePlaceSearch(260);
-});
+}
 editor.onDidChangeCursorPosition((event) => {
   $('cursorPosition').textContent = `Ln ${event.position.lineNumber}, Col ${event.position.column}`;
 });
@@ -1061,6 +1092,7 @@ function updateStatus(status) {
   const connected = status.connected === true;
   const incompatiblePlugin = connected && status.protocolVersion === 1;
   const ready = connected && status.ready === true && !incompatiblePlugin;
+  if (!ready) workspace?.closeSplit({ focus: false });
   $('connectionState').textContent = ready ? (status.indexing ? 'Studio connected · indexing' : 'Studio connected') : connected ? 'Syncing Studio…' : 'Not connected';
   $('statusLight').classList.toggle('connected', ready);
   $('explorerLed').classList.toggle('connected', ready);
@@ -1082,14 +1114,14 @@ function updateStatus(status) {
   $('tabs').hidden = !ready;
   $('codePanel').hidden = !ready || !selectedId;
   $('welcome').hidden = ready && !!selectedId;
-  $('welcomeTitle').textContent = incompatiblePlugin ? 'Update your Studio plugin.' : status.recovering ? 'Reconnecting to Studio.' : ready ? 'Ready when you are.'
-    : connected ? 'Preparing your workspace.' : 'Connect your Studio.';
+  $('welcomeTitle').textContent = incompatiblePlugin ? 'Update your Studio plugin.' : status.recovering ? 'Reconnecting to Studio.' : ready ? 'Ready to build something?'
+    : connected ? 'Preparing your workspace.' : 'Your next idea starts here.';
   $('welcomeDescription').textContent = incompatiblePlugin
-    ? 'Install the v0.2.9 Cursor Bridge plugin, disable older copies, and pair again.' : status.recovering
+    ? 'Install the v0.3.0 Cursor Bridge plugin, disable older copies, and pair again.' : status.recovering
     ? 'Connection interrupted. Local drafts are protected; waiting for your Studio session.' : ready
-    ? 'Choose a script in Explorer to begin editing.'
+    ? 'Your Studio is connected. Open a script, shape your workspace, and make something yours.'
     : connected ? 'Reading your place hierarchy. This usually takes a moment.'
-      : 'Open Cursor Bridge in Roblox Studio and enter the pairing code below.';
+      : 'Connect Roblox Studio to a workspace that makes room for your next idea.';
   $('welcomeTip').hidden = !ready;
 
   if (previouslyConnected && !connected) {
@@ -1114,6 +1146,8 @@ function updateStatus(status) {
   }
 }
 function resetWorkspace() {
+  workspace?.resetSession();
+  primaryViewStates.clear();
   // Keep unsynced source before disposing Monaco models during a new pairing.
   persistUnsentDrafts();
   sessionEpoch++;
@@ -1130,6 +1164,7 @@ function resetWorkspace() {
   rowElements.clear();paintedSelection.clear();paintedFocus=null;
   pendingFocusMutations.clear();pendingFocusIds.clear();
   activeTabs.length=0;selectedId=null;++openEpoch;
+  editor.setModel(null);
   for (const model of models.values()) model.dispose();
   models.clear();localState.clear();editor.setModel(null);
   $('welcome').hidden=false;$('codePanel').hidden=true;
@@ -1165,6 +1200,8 @@ function receiveServerEvent(event) {
   }
   else if (event.type === 'remove') {
     for (const id of event.ids) {
+      workspace?.removeDocument(id);
+      primaryViewStates.delete(id);
       const local = localState.get(id), model = models.get(id);
       if (local?.dirty && model) {
         storeSafetyJournal(id, model.getValue());
@@ -1230,6 +1267,8 @@ function receiveServerEvent(event) {
 }
 
 function hidePopovers() {
+  $('layoutPanel').hidden = true;
+  $('layoutToggle').setAttribute('aria-expanded', 'false');
   $('contextMenu').hidden = true;
   $('sessionPanel').hidden = true;
   $('themePanel').hidden = true;
@@ -1245,7 +1284,7 @@ $('sessionToggle').addEventListener('click', (event) => { event.stopPropagation(
 $('themeToggle').addEventListener('click', (event) => { event.stopPropagation(); togglePopover('themePanel'); });
 $('closeSession').addEventListener('click', hidePopovers);
 document.addEventListener('pointerdown', (event) => {
-  if (!event.target.closest('.floating-panel, #sessionToggle, #themeToggle, #explorerMore, #newNode')) hidePopovers();
+  if (!event.target.closest('.floating-panel, #sessionToggle, #themeToggle, #explorerMore, #newNode, #layoutToggle, #railLayout, #dashboardLayout')) hidePopovers();
 });
 function menuItem(name, glyph, handler, { disabled = false, shortcut = '', danger = false } = {}) {
   const button = document.createElement('button');
@@ -1348,6 +1387,9 @@ function showContextMenu(x, y, targetId) {
 function showTabMenu(x, y, tabId) {
   hidePopovers();
   const menu = $('contextMenu'); menu.replaceChildren();
+  menu.append(menuItem('Open to the side', 'split', () => workspace?.openSplit(tabId, 'vertical'), {shortcut:'Ctrl \\'}));
+  menu.append(menuItem('Open below', 'split-horizontal', () => workspace?.openSplit(tabId, 'horizontal')));
+  menu.append(menuDivider());
   menu.append(menuItem('Close tab', 'close', () => closeTab(tabId), {shortcut:'Ctrl W'}));
   menu.append(menuItem('Close other tabs', 'close', () => {
     for (const id of [...activeTabs]) if (id !== tabId) closeTab(id);
@@ -1546,6 +1588,7 @@ $('treeSearch').addEventListener('keydown',(event)=>{ if (event.key==='Escape') 
 // Search operates on the actual script sources supplied by the connected Studio.
 // The background worker prevents expensive searches from blocking editing/selection.
 function setSidebarView(mode, focusInput = false) {
+  if (canMutate()) workspace?.revealExplorer();
   sidebarMode = mode === 'search' ? 'search' : 'explorer';
   const searching = sidebarMode === 'search';
   $('explorerFilter').hidden = searching;
@@ -1891,7 +1934,7 @@ window.addEventListener('keydown',(event)=>{
     if (canMutate()) {$('treeSearch').focus(); $('treeSearch').select();}
     return;
   }
-  if (mod && key === 'k') {
+  if (mod && key === 'k' && !event.altKey) {
     event.preventDefault();
     if (canMutate()) {$('treeSearch').focus(); $('treeSearch').select();}
     return;
@@ -2003,26 +2046,6 @@ $('viewBackups').addEventListener('click',async()=>{
     }
     $('historyDialog').showModal();
   }catch(error){safeError(error);}
-});
-
-// Explorer width is stored locally; the divider works without native window chrome.
-const widthKey='cursor-bridge-explorer-width';
-function setExplorerWidth(width) {
-  const safe=Math.max(210,Math.min(460,width));
-  document.documentElement.style.setProperty('--explorer-width',`${safe}px`);
-  savePreference(widthKey,String(safe));
-}
-setExplorerWidth(Number(readPreference(widthKey)) || 286);
-$('resizeDivider').addEventListener('pointerdown',(event)=>{
-  if (event.button!==0) return;
-  const divider=$('resizeDivider'),startX=event.clientX,startWidth=$('explorerPane').getBoundingClientRect().width;
-  divider.setPointerCapture(event.pointerId);divider.classList.add('resizing');
-  const drag=(move)=>setExplorerWidth(startWidth+move.clientX-startX);
-  const stop=()=>{divider.classList.remove('resizing');divider.removeEventListener('pointermove',drag);divider.removeEventListener('pointerup',stop);divider.removeEventListener('pointercancel',stop);};
-  divider.addEventListener('pointermove',drag);divider.addEventListener('pointerup',stop);divider.addEventListener('pointercancel',stop);
-});
-$('resizeDivider').addEventListener('keydown',(event)=>{
-  if (event.key==='ArrowLeft' || event.key==='ArrowRight') {event.preventDefault();setExplorerWidth($('explorerPane').getBoundingClientRect().width+(event.key==='ArrowRight'?15:-15));}
 });
 
 // Quick Apply uses the exact plain-text delivery contract; it never executes AI text.
@@ -2180,7 +2203,7 @@ async function quickApplyPreviewText() {
   }
   if (epoch !== quickApplyRequestEpoch) return;
   if (currentStatus.connected && currentStatus.protocolVersion === 1) {
-    quickApplyHelp('Update the Studio plugin to v0.2.9. Exact-path Quick Apply requires both updated components.');
+    quickApplyHelp('Update the Studio plugin to v0.3.0. Exact-path Quick Apply requires both updated components.');
     qa('quickApplyEntries').replaceChildren();
     quickApplyNotice('Studio plugin update required. Your TXT is saved locally.', true);
     return;
@@ -2328,6 +2351,21 @@ window.addEventListener('keydown', (event) => {
   event.preventDefault(); event.stopImmediatePropagation();
   openQuickApply();
 }, true);
+
+workspace = mountWorkspace({
+  monaco, editor, platform: api?.platform,
+  getSnapshot: () => ({ ready: canMutate(), status: currentStatus, currentId: selectedId,
+    openIds: activeTabs, scriptCount: scriptNodeCount, sidebarMode }),
+  getDocument: (id) => {
+    const node = nodes.get(id), model = models.get(id);
+    return node && model ? { id, model, name: node.name, className: node.className,
+      path: pathForNode(nodes, id), pending: node.pending, local: getLocal(id) } : null;
+  },
+  getEditorPreferences: () => editorPreferences,
+  openScript, openQuickOpen, openPlaceSearch, openQuickApply, setSidebarView,
+  hidePopovers, toast, safeError, saveDocument: flushStudioWrite,
+});
+window.addEventListener('pagehide', () => workspace?.dispose(), { once: true });
 
 async function start() {
   if (!api) {setFooter('Launch Cursor Bridge through the Windows application.');return;}

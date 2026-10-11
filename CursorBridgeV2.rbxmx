@@ -3,7 +3,7 @@
   <Meta name="ExplicitAutoJoints">true</Meta>
   <External>null</External>
   <External>nil</External>
-  <Item class="Model" referent="RBX2790096A6CD34F4AA88DB13F7D361C00">
+  <Item class="Model" referent="RBXFF1CBF02B0CC41D9BDD9B0A9294E3639">
     <Properties>
       <token name="LevelOfDetail">0</token>
       <CoordinateFrame name="ModelMeshCFrame">
@@ -55,7 +55,7 @@
       <int64 name="SourceAssetId">-1</int64>
       <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
     </Properties>
-    <Item class="Script" referent="RBX68BBF2DE7E94465A92833572F0C9804F">
+    <Item class="Script" referent="RBX051B0DDBF5B64A4FA03B87DB4DE1CAAC">
       <Properties>
         <ProtectedString name="Source">--!strict
 
@@ -188,7 +188,7 @@ end)
           <null></null>
         </Content>
         <token name="RunContext">0</token>
-        <string name="ScriptGuid">{741EBEA2-2F26-490D-9557-6533BF8A67A2}</string>
+        <string name="ScriptGuid">{3034B9C8-9DBE-4587-99A8-4E0DF6E9FD74}</string>
         <BinaryString name="AttributesSerialize"></BinaryString>
         <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
         <bool name="DefinesCapabilities">false</bool>
@@ -198,7 +198,7 @@ end)
         <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
       </Properties>
     </Item>
-    <Item class="Folder" referent="RBX3DD75DB802CC463CAC3CB32EEA6B220A">
+    <Item class="Folder" referent="RBX950BD008418F412383B85D7B49A41DCF">
       <Properties>
         <Color3 name="IconTint">
           <R>0</R>
@@ -213,7 +213,7 @@ end)
         <int64 name="SourceAssetId">-1</int64>
         <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
       </Properties>
-      <Item class="ModuleScript" referent="RBX7F757E94D1AC4260859071295B4AB1B4">
+      <Item class="ModuleScript" referent="RBXAB067C0BD4D54FB7AB0513427E1569A5">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -261,7 +261,7 @@ end
 
 return Maid
 </ProtectedString>
-          <string name="ScriptGuid">{F9581235-B4F8-49DC-BD69-21DC8E620C72}</string>
+          <string name="ScriptGuid">{7613D17B-A864-4EAA-B2A3-C55AC1218D1A}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -272,7 +272,7 @@ return Maid
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBXAF8CE96AF97B4291A5E582EF6012F579">
+    <Item class="Folder" referent="RBX0BD2C45E3F6848B69B03FEBD4B240DF6">
       <Properties>
         <Color3 name="IconTint">
           <R>0</R>
@@ -287,7 +287,7 @@ return Maid
         <int64 name="SourceAssetId">-1</int64>
         <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
       </Properties>
-      <Item class="ModuleScript" referent="RBX27C06C3FF78B49F9B392404F9F98CE03">
+      <Item class="ModuleScript" referent="RBX040A70933E6641A5BD78606FAD25259D">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -356,6 +356,38 @@ local BASE: {[string]: Color3} = {
 }
 
 local PRESETS: {[string]: {[string]: Color3}} = {
+	Discord = {
+		Background = Color3.fromRGB(30, 31, 34),
+		Surface = Color3.fromRGB(49, 51, 56),
+		SurfaceRaised = Color3.fromRGB(43, 45, 49),
+		SurfaceHover = Color3.fromRGB(64, 66, 73),
+		SurfaceActive = Color3.fromRGB(56, 58, 64),
+		SurfaceSelected = Color3.fromRGB(66, 72, 110),
+		SurfaceDisabled = Color3.fromRGB(38, 40, 44),
+		Overlay = Color3.fromRGB(23, 24, 27),
+		GradientTop = Color3.fromRGB(54, 57, 66),
+		GradientBottom = Color3.fromRGB(43, 45, 49),
+		Border = Color3.fromRGB(67, 69, 76),
+		BorderSoft = Color3.fromRGB(57, 59, 65),
+		BorderStrong = Color3.fromRGB(100, 104, 126),
+		Text = Color3.fromRGB(242, 243, 245),
+		TextMuted = Color3.fromRGB(181, 185, 194),
+		TextFaint = Color3.fromRGB(148, 153, 163),
+		TextDisabled = Color3.fromRGB(100, 104, 114),
+		Focus = Color3.fromRGB(161, 169, 255),
+		Accent = Color3.fromRGB(88, 101, 242),
+		AccentHover = Color3.fromRGB(112, 123, 250),
+		AccentSoft = Color3.fromRGB(66, 72, 110),
+		AccentFaint = Color3.fromRGB(47, 51, 76),
+		AccentText = Color3.fromRGB(255, 255, 255),
+		Secondary = Color3.fromRGB(161, 169, 255),
+		SecondarySoft = Color3.fromRGB(52, 57, 87),
+		Success = Color3.fromRGB(105, 217, 176),
+		Warning = Color3.fromRGB(232, 191, 128),
+		Danger = Color3.fromRGB(242, 139, 151),
+		Ring = Color3.fromRGB(161, 169, 255),
+		Selection = Color3.fromRGB(66, 72, 110),
+	},
 	Graphite = {},
 	Midnight = {
 		Background = Color3.fromRGB(7, 10, 15),
@@ -491,15 +523,15 @@ local LEGACY_ALIASES = {
 	Ember = "Obsidian",
 }
 
-Theme.PresetNames = table.freeze({"Graphite", "Midnight", "Obsidian", "Monochrome", "Aurora", "Rainbow"})
-Theme.ActivePreset = "Obsidian"
+Theme.PresetNames = table.freeze({"Discord", "Graphite", "Midnight", "Obsidian", "Monochrome", "Aurora", "Rainbow"})
+Theme.ActivePreset = "Discord"
 Theme.ReduceMotion = false
 Theme.AnimationsEnabled = true
 
-Theme.RadiusSmall = 4
-Theme.RadiusMedium = 6
-Theme.RadiusLarge = 8
-Theme.RadiusXLarge = 10
+Theme.RadiusSmall = 6
+Theme.RadiusMedium = 9
+Theme.RadiusLarge = 13
+Theme.RadiusXLarge = 16
 Theme.ControlHeight = 26
 Theme.Spacing4 = 4
 Theme.Spacing8 = 8
@@ -571,10 +603,10 @@ function Theme.ApplyRainbowHue(hue: number)
 end
 
 function Theme.ApplyPreset(name: string?): string
-	local requested = name or "Obsidian"
+	local requested = name or "Discord"
 	local presetName = LEGACY_ALIASES[requested] or requested
 	if PRESETS[presetName] == nil then
-		presetName = "Obsidian"
+		presetName = "Discord"
 	end
 
 	for key, value in BASE do
@@ -588,11 +620,11 @@ function Theme.ApplyPreset(name: string?): string
 	return presetName
 end
 
-Theme.ApplyPreset("Obsidian")
+Theme.ApplyPreset("Discord")
 
 return Theme
 </ProtectedString>
-          <string name="ScriptGuid">{E4142A8C-8F65-43EA-9E9F-5887085D735C}</string>
+          <string name="ScriptGuid">{A0582E8A-5F2E-4F1C-92FC-B3D90A704D00}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -602,7 +634,7 @@ return Theme
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBXDE6968E27EA94EC98BB40EEA04F76FC2">
+      <Item class="ModuleScript" referent="RBX35CC55A568D74640BBB453051ABBB9C2">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -1369,7 +1401,7 @@ end
 
 return table.freeze(Primitives)
 </ProtectedString>
-          <string name="ScriptGuid">{9406249D-FEE3-42FE-8EE0-D0544914C04A}</string>
+          <string name="ScriptGuid">{971AEA56-389A-49DA-8A09-556799E88A73}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -1379,7 +1411,7 @@ return table.freeze(Primitives)
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX81C21E2545A0415BB0ECA692B7BD8ECF">
+      <Item class="ModuleScript" referent="RBX046797B3F92C43E9BCA18EBD972BDD8F">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -1764,7 +1796,7 @@ end
 
 return CursorShell
 </ProtectedString>
-          <string name="ScriptGuid">{A06D42B1-F015-4A2E-B173-86B53AFA4E99}</string>
+          <string name="ScriptGuid">{F29C3DC8-F259-4F8E-9075-0ED11097EBA1}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -1774,7 +1806,7 @@ return CursorShell
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX0DFAEE02ED5D488DB0957A3C5E87BB35">
+      <Item class="ModuleScript" referent="RBX8A8D9FBCADF247848B172FB065C98086">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -1790,12 +1822,12 @@ local Primitives = require(Root.UI.Primitives)
 
 local PLUGIN_ICON = "rbxassetid://132318313203288"
 local GUI_NAME = "CursorBridgeV2UI"
-local DEFAULT_SIZE = Vector2.new(548, 356)
-local MIN_SIZE = Vector2.new(470, 312)
+local DEFAULT_SIZE = Vector2.new(590, 390)
+local MIN_SIZE = Vector2.new(500, 370)
 local MAX_SIZE = Vector2.new(760, 510)
-local TITLE_HEIGHT = 30
+local TITLE_HEIGHT = 34
 local FOOTER_HEIGHT = 28
-local SIDEBAR_WIDTH = 208
+local SIDEBAR_WIDTH = 216
 
 local BridgeWindow = {}
 BridgeWindow.__index = BridgeWindow
@@ -1897,17 +1929,17 @@ function BridgeWindow.new(_pluginObject: Plugin)
 		Name = "CursorIcon",
 		BackgroundTransparency = 1,
 		Image = PLUGIN_ICON,
-		Position = UDim2.fromOffset(9, 7),
+		Position = UDim2.fromOffset(9, 9),
 		Size = UDim2.fromOffset(16, 16),
 	}, titleBar)
-	local title = Primitives.Label(titleBar, "Cursor Bridge V2", 10, Theme.Text, true)
+	local title = Primitives.Label(titleBar, "Cursor Bridge", 11, Theme.Text, true)
 	title.Position = UDim2.fromOffset(32, 0)
 	title.Size = UDim2.new(1, -162, 1, 0)
 	title.TextTruncate = Enum.TextTruncate.AtEnd
 
 	local minimize = Primitives.Button(titleBar, "", 26, "Ghost")
 	minimize.Name = "MinimizeButton"
-	minimize.Position = UDim2.new(1, -91, 0, 3)
+	minimize.Position = UDim2.new(1, -91, 0, 5)
 	minimize.Size = UDim2.fromOffset(26, 24)
 	minimize.BackgroundTransparency = 1
 	local minimizeIcon = Primitives.Icon(minimize, "Minimize", 12)
@@ -1916,7 +1948,7 @@ function BridgeWindow.new(_pluginObject: Plugin)
 
 	local close = Primitives.Button(titleBar, "", 26, "Ghost")
 	close.Name = "CloseButton"
-	close.Position = UDim2.new(1, -28, 0, 3)
+	close.Position = UDim2.new(1, -28, 0, 5)
 	close.Size = UDim2.fromOffset(26, 24)
 	close.BackgroundTransparency = 1
 	local closeIcon = Primitives.Icon(close, "Close", 12)
@@ -1932,10 +1964,10 @@ function BridgeWindow.new(_pluginObject: Plugin)
 		ClipsDescendants = true,
 	}, chrome)
 
-	local heading = Primitives.Label(body, "STUDIO CONNECTION", 9, Theme.TextMuted, true)
+	local heading = Primitives.Label(body, "YOUR STUDIO WORKSPACE", 10, Theme.TextMuted, true)
 	heading.Position = UDim2.fromOffset(13, 8)
 	heading.Size = UDim2.new(1, -160, 0, 20)
-	local subtitle = Primitives.Label(body, "Secure local synchronization", 8, Theme.TextFaint, false)
+	local subtitle = Primitives.Label(body, "Your scripts. One connected workspace.", 9, Theme.TextFaint, false)
 	subtitle.Position = UDim2.fromOffset(13, 26)
 	subtitle.Size = UDim2.new(1, -160, 0, 16)
 
@@ -1955,7 +1987,7 @@ function BridgeWindow.new(_pluginObject: Plugin)
 	Primitives.Corner(sidebar, Theme.RadiusMedium)
 	Primitives.Stroke(sidebar, Theme.BorderSoft)
 
-	local pairingTitle = Primitives.Label(sidebar, "PAIR WITH DESKTOP", 9, Theme.Text, true)
+	local pairingTitle = Primitives.Label(sidebar, "CONNECT YOUR WORKSPACE", 9, Theme.Text, true)
 	pairingTitle.Position = UDim2.fromOffset(12, 11)
 	pairingTitle.Size = UDim2.new(1, -24, 0, 22)
 	note(sidebar, "Enter the code from Cursor Bridge for Windows.", 38)
@@ -1965,7 +1997,7 @@ function BridgeWindow.new(_pluginObject: Plugin)
 	codeBox.Position = UDim2.fromOffset(12, 83)
 	codeBox.Size = UDim2.new(1, -24, 0, 32)
 	codeBox.Font = Enum.Font.Code
-	codeBox.TextSize = 16
+	codeBox.TextSize = 20
 	codeBox.TextXAlignment = Enum.TextXAlignment.Center
 	codeBox.Text = ""
 
@@ -1999,7 +2031,7 @@ function BridgeWindow.new(_pluginObject: Plugin)
 	Primitives.Corner(details, Theme.RadiusMedium)
 	Primitives.Stroke(details, Theme.BorderSoft)
 
-	local statusTitle = Primitives.Label(details, "SESSION STATUS", 9, Theme.Text, true)
+	local statusTitle = Primitives.Label(details, "STUDIO SESSION", 9, Theme.Text, true)
 	statusTitle.Position = UDim2.fromOffset(12, 11)
 	statusTitle.Size = UDim2.new(1, -100, 0, 22)
 	local statusBadge = Primitives.Badge(details, "IDLE", "neutral")
@@ -2040,7 +2072,7 @@ function BridgeWindow.new(_pluginObject: Plugin)
 	}, footer)
 	local footerDivider = Primitives.Divider(footer, false)
 	footerDivider.Position = UDim2.new(0, 0, 0, 0)
-	local footerLabel = Primitives.Label(footer, "One active Studio session  /  Live monitoring", 8, Theme.TextFaint, false)
+	local footerLabel = Primitives.Label(footer, "Local connection  /  Backups managed on desktop", 8, Theme.TextFaint, false)
 	footerLabel.Position = UDim2.fromOffset(12, 0)
 	footerLabel.Size = UDim2.new(1, -24, 1, 0)
 
@@ -2233,7 +2265,7 @@ end
 
 return BridgeWindow
 </ProtectedString>
-          <string name="ScriptGuid">{5AB4EE93-4248-4CA1-B2BA-B2572A5C0756}</string>
+          <string name="ScriptGuid">{0E695847-2014-4B2B-8583-9DAF2BF48ADF}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -2244,7 +2276,7 @@ return BridgeWindow
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX080A2DB6529F4912AF5588BCF18A3B51">
+    <Item class="Folder" referent="RBXFE01BC901527469DBB67A326552569B4">
       <Properties>
         <Color3 name="IconTint">
           <R>0</R>
@@ -2259,7 +2291,7 @@ return BridgeWindow
         <int64 name="SourceAssetId">-1</int64>
         <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
       </Properties>
-      <Item class="ModuleScript" referent="RBX30A536B196D54F868AF60A2580FB02BC">
+      <Item class="ModuleScript" referent="RBX4BC3383DD24E4B538D61FD101F2DA6B3">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -3239,7 +3271,7 @@ end
 
 return StudioBridge
 </ProtectedString>
-          <string name="ScriptGuid">{448323CA-9EEB-4B59-8034-14A2DED8A850}</string>
+          <string name="ScriptGuid">{C29C8A2E-59C3-487E-853B-7801BDEEC1A8}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -3249,7 +3281,7 @@ return StudioBridge
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX05F1DC7A48244639AFBD1EFF409EC994">
+      <Item class="ModuleScript" referent="RBXFE7EFE8068A742048FB259735D62DA48">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -3536,7 +3568,7 @@ end
 
 return HierarchyMutations
 </ProtectedString>
-          <string name="ScriptGuid">{4BA920DD-A5B7-4944-81BB-524D3CEA8655}</string>
+          <string name="ScriptGuid">{F534FE3C-1379-498C-9032-3CEAF1C32143}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -3546,7 +3578,7 @@ return HierarchyMutations
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX064020D1D5074DBDAF498740DF7F3E26">
+      <Item class="ModuleScript" referent="RBX1C04E2D605344DC78E496098B3B017C8">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -3810,7 +3842,7 @@ end
 
 return QuickApply
 </ProtectedString>
-          <string name="ScriptGuid">{590F4C15-8CB7-42B3-88FB-276B9823A57F}</string>
+          <string name="ScriptGuid">{5DDC2EF1-6637-4F06-A213-9EFA57907E94}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -3820,7 +3852,7 @@ return QuickApply
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBXB124E4635F6A4667BB650784C0CE4B12">
+      <Item class="ModuleScript" referent="RBX5B6B9E7247F9484AA5F108A9B2F0564F">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -3915,7 +3947,7 @@ function WireTransfer.Accept(receiver: any, chunk: any): (any?, number)
 end
 return WireTransfer
 </ProtectedString>
-          <string name="ScriptGuid">{966DE000-40B7-4D5E-AE83-DB199DF65E65}</string>
+          <string name="ScriptGuid">{F8D07F27-2862-4742-AA85-CE0930932BDA}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -3925,7 +3957,7 @@ return WireTransfer
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX67B894988B2346DDA790D9DD382BECD2">
+      <Item class="ModuleScript" referent="RBXDBFDD9FD98BD45C6B5FB7BF7547A0F3A">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -4008,7 +4040,7 @@ function PathResolver.Resolve(command: any, managed: (Instance) -&gt; boolean,
 end
 return PathResolver
 </ProtectedString>
-          <string name="ScriptGuid">{3729209A-4069-4CE5-B25A-C44CD0F06AB9}</string>
+          <string name="ScriptGuid">{3B0F7E76-1EB2-4BA9-86D5-00C59C5BD7D1}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -4019,7 +4051,7 @@ return PathResolver
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX0F281FE51DC949AF815D136594FB208E">
+    <Item class="Folder" referent="RBX677916379D484EA0A41FB7EA933A42B0">
       <Properties>
         <Color3 name="IconTint">
           <R>0</R>
@@ -4034,7 +4066,7 @@ return PathResolver
         <int64 name="SourceAssetId">-1</int64>
         <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
       </Properties>
-      <Item class="ModuleScript" referent="RBX861738766318434DA0E034DD3565AC55">
+      <Item class="ModuleScript" referent="RBX34C461EFC85D4412BECEE8FE340E841A">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -4269,7 +4301,7 @@ end
 
 return BridgeController
 </ProtectedString>
-          <string name="ScriptGuid">{740F902D-9F99-4DAA-BDA2-5D69B5C53978}</string>
+          <string name="ScriptGuid">{AB5FC8DB-5226-457F-92F4-17BECBEC4E55}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -4280,7 +4312,7 @@ return BridgeController
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBX33ED3F33D05547E18E94694E588CE29C">
+    <Item class="Folder" referent="RBX8CD232C3CF3D4A8D955A058B7A7B9F38">
       <Properties>
         <Color3 name="IconTint">
           <R>0</R>
@@ -4295,7 +4327,7 @@ return BridgeController
         <int64 name="SourceAssetId">-1</int64>
         <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
       </Properties>
-      <Item class="ModuleScript" referent="RBX7F4344D39AD848CA8C765C0D28E379F9">
+      <Item class="ModuleScript" referent="RBX119905A46C4C463F8E4155E87C1F5263">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -4458,7 +4490,7 @@ end
 
 return CommandService
 </ProtectedString>
-          <string name="ScriptGuid">{85478D69-E9EE-4B28-83B8-9E823CC8490C}</string>
+          <string name="ScriptGuid">{00C377CC-FCDE-4EBC-8572-10DDEDA26BC2}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -4468,7 +4500,7 @@ return CommandService
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX46E924699B5647F68DDD0BA83CD2282F">
+      <Item class="ModuleScript" referent="RBXF702157CC0644B859593D8FC5F4F45F7">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -4583,7 +4615,7 @@ end
 
 return ShortcutService
 </ProtectedString>
-          <string name="ScriptGuid">{AD3EB0A5-97B7-47CE-BA5C-B2C0E4E7819D}</string>
+          <string name="ScriptGuid">{89978ADE-F031-4907-AD42-6D0CE66B2E7A}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -4593,7 +4625,7 @@ return ShortcutService
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX9DEC57A61BC349DDA189A80C09A213B4">
+      <Item class="ModuleScript" referent="RBX61A6FB59AA564A9BB9DA6F44BF0853AA">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -4771,7 +4803,7 @@ end
 
 return SettingsService
 </ProtectedString>
-          <string name="ScriptGuid">{B237148E-80EE-405F-8BD3-1B0422123C8C}</string>
+          <string name="ScriptGuid">{EF7DAFFB-83C6-4BC0-831B-0F439B647084}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -4781,7 +4813,7 @@ return SettingsService
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBXB7BB57A7C547498AB7225F9CF3E8D77C">
+      <Item class="ModuleScript" referent="RBX086D4364C98940CCB8C9FC1F0CF92F4E">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -4892,7 +4924,7 @@ end
 
 return NotificationService
 </ProtectedString>
-          <string name="ScriptGuid">{B68EE842-DDE5-4916-8C56-056C1C0653F9}</string>
+          <string name="ScriptGuid">{F66D51EE-EE74-4E13-9DBE-C37B4CA5763E}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -4902,7 +4934,7 @@ return NotificationService
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX35774EDB28954FC9B1BE032DFA269038">
+      <Item class="ModuleScript" referent="RBXF8A9AFA32E114B57BACBA65BDAD9541B">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -5158,14 +5190,14 @@ function ThemeService:Initialize()
 		return
 	end
 	local preset = self._settings:Get("Appearance.Theme")
-	theme.ApplyPreset(if typeof(preset) == "string" then preset else "Obsidian")
+	theme.ApplyPreset(if typeof(preset) == "string" then preset else "Discord")
 	theme.ReduceMotion = self._settings:Get("Appearance.ReduceMotion") == true
 	theme.AnimationsEnabled = self._settings:Get("Appearance.Animations") ~= false
 end
 
 function ThemeService:GetActivePreset(): string
 	local theme = self._theme
-	return if theme then theme.GetActivePreset() else "Obsidian"
+	return if theme then theme.GetActivePreset() else "Discord"
 end
 
 function ThemeService:GetPresetNames(): {string}
@@ -5182,7 +5214,7 @@ end
 function ThemeService:SetPreset(name: string, root: Instance?): string
 	local theme = self._theme
 	if not theme then
-		return "Obsidian"
+		return "Discord"
 	end
 
 	self:_stopRainbow()
@@ -5256,7 +5288,7 @@ end
 
 return ThemeService
 </ProtectedString>
-          <string name="ScriptGuid">{CB407F24-8DAB-424C-BE49-9804766E88A7}</string>
+          <string name="ScriptGuid">{8CA7E74E-F35D-4147-AF41-F661BAF7435F}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -5266,7 +5298,7 @@ return ThemeService
           <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="RBX48F4F096B43145669023DFE350D67CA7">
+      <Item class="ModuleScript" referent="RBXD5452A872AD74A69B2C3CBD9F086468D">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -5309,7 +5341,7 @@ end
 
 return Logger
 </ProtectedString>
-          <string name="ScriptGuid">{D23D276F-4129-4CE9-9DB7-BBBEA4E5CA66}</string>
+          <string name="ScriptGuid">{319B3958-D7AA-410B-8555-737EFC92A0C1}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
@@ -5320,7 +5352,7 @@ return Logger
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="RBXFB7BB408B51D440BB81C13F71472BBC3">
+    <Item class="Folder" referent="RBX4AB8662633F046B886013693902C5149">
       <Properties>
         <Color3 name="IconTint">
           <R>0</R>
@@ -5335,7 +5367,7 @@ return Logger
         <int64 name="SourceAssetId">-1</int64>
         <SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
       </Properties>
-      <Item class="ModuleScript" referent="RBX3486F9D668AA46838B900B912EB07E22">
+      <Item class="ModuleScript" referent="RBX50DB51A81B104FF8AD519FB5FC674819">
         <Properties>
           <Content name="LinkedSource">
             <null></null>
@@ -5346,7 +5378,7 @@ return Logger
 local Defaults = {
 	Version = 2,
 	Appearance = {
-		Theme = "Obsidian",
+		Theme = "Discord",
 		ReduceMotion = false,
 		Animations = true,
 		Density = "Comfortable",
@@ -5358,7 +5390,7 @@ local Defaults = {
 	},
 	Product = {
 		Name = "Cursor Bridge V2",
-		Version = "0.2.9",
+		Version = "0.3.0",
 	},
 	Advanced = {
 		DebugLogging = false,
@@ -5399,7 +5431,7 @@ local Defaults = {
 
 return table.freeze(Defaults)
 </ProtectedString>
-          <string name="ScriptGuid">{DD96502F-ED67-4189-83E4-82582FE17E15}</string>
+          <string name="ScriptGuid">{B659EFEC-7770-4A4E-A0F9-A376DB36AD67}</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>

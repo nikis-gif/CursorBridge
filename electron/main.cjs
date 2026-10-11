@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const { app, BrowserWindow, ipcMain, shell, dialog, clipboard, powerMonitor } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { BridgeServer } = require('../bridge/bridge-server.cjs');
+const { windowStyleForTheme } = require('./window-theme.cjs');
 
 let mainWindow = null;
 let bridge = null;
@@ -48,7 +49,9 @@ async function createWindow() {
     title: 'Cursor Bridge',
     width: 1440, height: 890,
     minWidth: 1000, minHeight: 680,
-    backgroundColor: '#08080a',
+    backgroundColor: '#1e1f22',
+    titleBarStyle: 'hidden',
+    ...(process.platform !== 'darwin' ? { titleBarOverlay: windowStyleForTheme('discord') } : {}),
     show: false,
     icon: path.join(ROOT, 'assets', 'CursorIcon.png'),
     autoHideMenuBar: true,
@@ -75,6 +78,15 @@ async function createWindow() {
 
 function registerIpc() {
   const actions = {
+    'bridge:set-window-theme': (event, name) => {
+      if (!mainWindow || mainWindow.isDestroyed() || event.sender !== mainWindow.webContents ||
+          event.senderFrame !== mainWindow.webContents.mainFrame) return { ok: false };
+      const style = windowStyleForTheme(name);
+      if (!style) return { ok: false };
+      if (process.platform !== 'darwin') mainWindow.setTitleBarOverlay(style);
+      mainWindow.setBackgroundColor(style.color);
+      return { ok: true };
+    },
     'bridge:copy-text': (_event, value) => clipboard.writeText(String(value).slice(0, 16 * 1024)),
     'bridge:get-state': () => bridge.getState(),
     'bridge:request-source': (_event, id) => bridge.requestSource(id),

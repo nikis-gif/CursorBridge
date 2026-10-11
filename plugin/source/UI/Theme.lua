@@ -62,6 +62,38 @@ local BASE: {[string]: Color3} = {
 }
 
 local PRESETS: {[string]: {[string]: Color3}} = {
+	Discord = {
+		Background = Color3.fromRGB(30, 31, 34),
+		Surface = Color3.fromRGB(49, 51, 56),
+		SurfaceRaised = Color3.fromRGB(43, 45, 49),
+		SurfaceHover = Color3.fromRGB(64, 66, 73),
+		SurfaceActive = Color3.fromRGB(56, 58, 64),
+		SurfaceSelected = Color3.fromRGB(66, 72, 110),
+		SurfaceDisabled = Color3.fromRGB(38, 40, 44),
+		Overlay = Color3.fromRGB(23, 24, 27),
+		GradientTop = Color3.fromRGB(54, 57, 66),
+		GradientBottom = Color3.fromRGB(43, 45, 49),
+		Border = Color3.fromRGB(67, 69, 76),
+		BorderSoft = Color3.fromRGB(57, 59, 65),
+		BorderStrong = Color3.fromRGB(100, 104, 126),
+		Text = Color3.fromRGB(242, 243, 245),
+		TextMuted = Color3.fromRGB(181, 185, 194),
+		TextFaint = Color3.fromRGB(148, 153, 163),
+		TextDisabled = Color3.fromRGB(100, 104, 114),
+		Focus = Color3.fromRGB(161, 169, 255),
+		Accent = Color3.fromRGB(88, 101, 242),
+		AccentHover = Color3.fromRGB(112, 123, 250),
+		AccentSoft = Color3.fromRGB(66, 72, 110),
+		AccentFaint = Color3.fromRGB(47, 51, 76),
+		AccentText = Color3.fromRGB(255, 255, 255),
+		Secondary = Color3.fromRGB(161, 169, 255),
+		SecondarySoft = Color3.fromRGB(52, 57, 87),
+		Success = Color3.fromRGB(105, 217, 176),
+		Warning = Color3.fromRGB(232, 191, 128),
+		Danger = Color3.fromRGB(242, 139, 151),
+		Ring = Color3.fromRGB(161, 169, 255),
+		Selection = Color3.fromRGB(66, 72, 110),
+	},
 	Graphite = {},
 	Midnight = {
 		Background = Color3.fromRGB(7, 10, 15),
@@ -197,15 +229,15 @@ local LEGACY_ALIASES = {
 	Ember = "Obsidian",
 }
 
-Theme.PresetNames = table.freeze({"Graphite", "Midnight", "Obsidian", "Monochrome", "Aurora", "Rainbow"})
-Theme.ActivePreset = "Obsidian"
+Theme.PresetNames = table.freeze({"Discord", "Graphite", "Midnight", "Obsidian", "Monochrome", "Aurora", "Rainbow"})
+Theme.ActivePreset = "Discord"
 Theme.ReduceMotion = false
 Theme.AnimationsEnabled = true
 
-Theme.RadiusSmall = 4
-Theme.RadiusMedium = 6
-Theme.RadiusLarge = 8
-Theme.RadiusXLarge = 10
+Theme.RadiusSmall = 6
+Theme.RadiusMedium = 9
+Theme.RadiusLarge = 13
+Theme.RadiusXLarge = 16
 Theme.ControlHeight = 26
 Theme.Spacing4 = 4
 Theme.Spacing8 = 8
@@ -277,10 +309,10 @@ function Theme.ApplyRainbowHue(hue: number)
 end
 
 function Theme.ApplyPreset(name: string?): string
-	local requested = name or "Obsidian"
+	local requested = name or "Discord"
 	local presetName = LEGACY_ALIASES[requested] or requested
 	if PRESETS[presetName] == nil then
-		presetName = "Obsidian"
+		presetName = "Discord"
 	end
 
 	for key, value in BASE do
@@ -294,6 +326,6 @@ function Theme.ApplyPreset(name: string?): string
 	return presetName
 end
 
-Theme.ApplyPreset("Obsidian")
+Theme.ApplyPreset("Discord")
 
 return Theme
