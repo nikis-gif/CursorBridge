@@ -80,16 +80,59 @@ jobs:
             git push origin "refs/tags/$tag"
           }
 
-      - name: Publish Windows installer and update metadata
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win nsis --publish always
+      - name: Build Windows installer without parallel publishing
+        shell: pwsh
+        run: npx electron-builder --win nsis --publish never
 
-      - name: Upload Roblox Studio plugin to the release
+      - name: Publish one atomic GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
-        run: gh release upload '${{ steps.release_meta.outputs.tag }}' CursorBridgeV2.rbxmx --clobber
+        run: |
+          $tag = '${{ steps.release_meta.outputs.tag }}'
+          $assets = @(Get-ChildItem -Path release -File | Where-Object {
+            $_.Name -match '\.(exe|blockmap)
+      - name: Verify release is publicly published
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $isDraft = gh release view '${{ steps.release_meta.outputs.tag }}' --json isDraft --jq '.isDraft'
+          if ($LASTEXITCODE -ne 0 -or $isDraft -ne 'false') { throw 'The release is still a draft and cannot be downloaded publicly.' }
+ -or $_.Name -eq 'latest.yml'
+          } | Select-Object -ExpandProperty FullName)
+          $assets += (Resolve-Path 'CursorBridgeV2.rbxmx').Path
+          if (-not ($assets | Where-Object { $_ -match '\.exe
+      - name: Verify release is publicly published
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $isDraft = gh release view '${{ steps.release_meta.outputs.tag }}' --json isDraft --jq '.isDraft'
+          if ($LASTEXITCODE -ne 0 -or $isDraft -ne 'false') { throw 'The release is still a draft and cannot be downloaded publicly.' }
+ }) -or
+              -not ($assets | Where-Object { $_ -match 'latest\.yml
+      - name: Verify release is publicly published
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $isDraft = gh release view '${{ steps.release_meta.outputs.tag }}' --json isDraft --jq '.isDraft'
+          if ($LASTEXITCODE -ne 0 -or $isDraft -ne 'false') { throw 'The release is still a draft and cannot be downloaded publicly.' }
+ }) -or
+              -not ($assets | Where-Object { $_ -match '\.rbxmx
+      - name: Verify release is publicly published
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $isDraft = gh release view '${{ steps.release_meta.outputs.tag }}' --json isDraft --jq '.isDraft'
+          if ($LASTEXITCODE -ne 0 -or $isDraft -ne 'false') { throw 'The release is still a draft and cannot be downloaded publicly.' }
+ })) {
+            throw 'Missing required release assets.'
+          }
+          gh release create $tag $assets --title $tag --notes "Cursor Bridge $tag" --latest --verify-tag
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub release publication failed.' }
 
       - name: Verify release is publicly published
         env:
