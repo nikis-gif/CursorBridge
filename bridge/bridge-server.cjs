@@ -9,7 +9,7 @@ const { prepareMutation, descendantsOf, sourceFingerprint, MAX_BACKUP_SCRIPTS } 
 
 const MAX_BODY_BYTES = 1024 * 1024;
 const { MAX_SCRIPT_BYTES } = require('./bridge-server-constants.cjs');
-const TIMEOUT_MS = 6500;
+const TIMEOUT_MS = 45000; // Allow Studio HTTP throttling to recover without releasing the local session.
 const PORT = 38471;
 
 function httpError(code, message) {
