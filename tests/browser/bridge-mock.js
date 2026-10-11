@@ -18,7 +18,7 @@ window.cursorBridge = {
   getQuickApplyDraft: async () => '',
   onEvent(fn){window.__emitServer = fn;},
   async getState(){return {status: offline ? noSession : online, nodes:roots};},
-  async getAppVersion(){return '0.3.0';},
+  async getAppVersion(){return '0.3.1';},
   async getDraft(){return null;},
   async saveDraft(){}, async clearDraft(){}, async writeScript(){return {status:'queued'};},
   async mutateHierarchy(command){const opId=`mut-${window.__mutations.length+1}`; window.__mutations.push({...command,opId});return {status:'queued',opId,count:1};},

@@ -249,14 +249,17 @@ function ThemeService:Initialize()
 		return
 	end
 	local preset = self._settings:Get("Appearance.Theme")
-	theme.ApplyPreset(if typeof(preset) == "string" then preset else "Discord")
+	local applied = theme.ApplyPreset(if typeof(preset) == "string" then preset else "Obsidian")
+	if applied ~= preset then
+		self._settings:Set("Appearance.Theme", applied)
+	end
 	theme.ReduceMotion = self._settings:Get("Appearance.ReduceMotion") == true
 	theme.AnimationsEnabled = self._settings:Get("Appearance.Animations") ~= false
 end
 
 function ThemeService:GetActivePreset(): string
 	local theme = self._theme
-	return if theme then theme.GetActivePreset() else "Discord"
+	return if theme then theme.GetActivePreset() else "Obsidian"
 end
 
 function ThemeService:GetPresetNames(): {string}
@@ -273,7 +276,7 @@ end
 function ThemeService:SetPreset(name: string, root: Instance?): string
 	local theme = self._theme
 	if not theme then
-		return "Discord"
+		return "Obsidian"
 	end
 
 	self:_stopRainbow()

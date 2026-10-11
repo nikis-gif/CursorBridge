@@ -1,5 +1,13 @@
 # Cursor Bridge
 
+### v0.3.1 - Refined interface
+
+A quieter English workbench with consistent outline icons, a compact default
+window (up to 1080 x 700), and Obsidian restored as the default Studio theme.
+Split editing, docking, shortcuts and draft protection are retained.
+Release notes: [PT-BR and English](docs/RELEASE_0_3_1.md).
+
+
 
 **0.3.0 - Discord Cloud Workspace.** The desktop now includes a session dashboard,
 Discord-inspired theme, dockable Explorer, native themed Windows caption controls,

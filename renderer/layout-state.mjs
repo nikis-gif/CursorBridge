@@ -4,7 +4,7 @@ export const LAYOUT_DEFAULTS = Object.freeze({
   version: 1,
   sidebarSide: 'left',
   sidebarVisible: true,
-  sidebarWidth: 286,
+  sidebarWidth: 248,
   splitDirection: 'vertical',
   splitRatio: 0.5,
   reduceMotion: false,
@@ -45,7 +45,7 @@ export function saveLayout(storage, value) {
 }
 
 export function resizeSidebar(width, movement, side = 'left') {
-  return bounded(width + movement * (side === 'right' ? -1 : 1), 210, 460, 286);
+  return bounded(width + movement * (side === 'right' ? -1 : 1), 210, 460, LAYOUT_DEFAULTS.sidebarWidth);
 }
 
 export function splitRatioAt(bounds, x, y, direction) {

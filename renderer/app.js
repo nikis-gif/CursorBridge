@@ -121,11 +121,11 @@ monaco.languages.setMonarchTokensProvider('luau', {
 });
 
 const themePalette = {
-  discord: { background: '313338', fg: 'F2F3F5', keyword: 'B9ACFF', string: '9CDBBE', comment: '969DAE' },
-  obsidian: { background: '25252C', fg: 'F2F1EF', keyword: 'B6A3D6', string: 'B9CCA6', comment: '656677' },
-  graphite: { background: '303339', fg: 'ECEDF0', keyword: 'C1AFDB', string: 'B9CFAD', comment: '777F8C' },
-  midnight: { background: '202B3E', fg: 'EAF0FB', keyword: 'A4BDED', string: 'AFD4BD', comment: '627D99' },
-  aurora: { background: '203437', fg: 'EAF5F4', keyword: 'A4D6CF', string: 'B7D3AB', comment: '628B8B' },
+  cursor: { background: '202124', fg: 'F2F3F5', keyword: 'B9ACFF', string: '9CDBBE', comment: '969DAE' },
+  obsidian: { background: '101013', fg: 'F2F1EF', keyword: 'B6A3D6', string: 'B9CCA6', comment: '858590' },
+  graphite: { background: '1B1D21', fg: 'ECEDF0', keyword: 'C1AFDB', string: 'B9CFAD', comment: '777F8C' },
+  midnight: { background: '121A27', fg: 'EAF0FB', keyword: 'A4BDED', string: 'AFD4BD', comment: '627D99' },
+  aurora: { background: '112022', fg: 'EAF5F4', keyword: 'A4D6CF', string: 'B7D3AB', comment: '628B8B' },
 };
 for (const [name, palette] of Object.entries(themePalette)) {
   monaco.editor.defineTheme(`cursor-${name}`, {
@@ -152,11 +152,17 @@ function readPreference(key) {
 function savePreference(key, value) {
   try { localStorage.setItem(key, value); } catch { /* Appearance persistence must not block editing. */ }
 }
-let codeColorTheme = readPreference('cursor-bridge-code-theme') || 'auto';
-const themeLabels = { discord: 'Discord', obsidian: 'Obsidian', graphite: 'Graphite', midnight: 'Midnight', aurora: 'Aurora' };
-const themeColors = { discord: '#5865f2', obsidian: '#0b0b0d', graphite: '#161719', midnight: '#0d121a', aurora: '#0c1517' };
+const themeLabels = { obsidian: 'Obsidian', cursor: 'Cursor', graphite: 'Graphite', midnight: 'Midnight', aurora: 'Aurora' };
+const themeColors = { obsidian: '#0b0b0d', cursor: '#202124', graphite: '#161719', midnight: '#0d121a', aurora: '#0c1517' };
+function normalizeThemeName(name, fallback = 'obsidian') {
+  // Preserve the old palette preference under its new product-specific name.
+  if (name === 'discord') name = 'cursor';
+  return Object.hasOwn(themeLabels, name) ? name : fallback;
+}
+let codeColorTheme = normalizeThemeName(readPreference('cursor-bridge-code-theme'), 'auto');
+savePreference('cursor-bridge-code-theme', codeColorTheme);
 function useTheme(name) {
-  if (!themeLabels[name]) name = 'discord';
+  name = normalizeThemeName(name);
   document.body.dataset.theme = name;
   api?.setWindowTheme?.(name)?.catch(() => { /* Theme sync cannot block editing. */ });
   monaco.editor.setTheme(`cursor-${codeColorTheme === 'auto' ? name : codeColorTheme}`);
@@ -180,7 +186,7 @@ function renderThemeOptions() {
     $('themeOptions').append(button);
   }
 }
-useTheme(readPreference('cursor-bridge-theme') || 'discord');
+useTheme(readPreference('cursor-bridge-theme') || 'obsidian');
 
 const editor = monaco.editor.create($('monacoHost'), {
   language: 'luau', value: '', theme: `cursor-${codeColorTheme === 'auto' ? document.body.dataset.theme : codeColorTheme}`, 
@@ -1114,14 +1120,14 @@ function updateStatus(status) {
   $('tabs').hidden = !ready;
   $('codePanel').hidden = !ready || !selectedId;
   $('welcome').hidden = ready && !!selectedId;
-  $('welcomeTitle').textContent = incompatiblePlugin ? 'Update your Studio plugin.' : status.recovering ? 'Reconnecting to Studio.' : ready ? 'Ready to build something?'
-    : connected ? 'Preparing your workspace.' : 'Your next idea starts here.';
+  $('welcomeTitle').textContent = incompatiblePlugin ? 'Update your Studio plugin.' : status.recovering ? 'Reconnecting to Studio.' : ready ? 'Workspace'
+    : connected ? 'Preparing your workspace.' : 'Connect to Roblox Studio';
   $('welcomeDescription').textContent = incompatiblePlugin
-    ? 'Install the v0.3.0 Cursor Bridge plugin, disable older copies, and pair again.' : status.recovering
+    ? 'Install the v0.3.1 Cursor Bridge plugin, disable older copies, and pair again.' : status.recovering
     ? 'Connection interrupted. Local drafts are protected; waiting for your Studio session.' : ready
-    ? 'Your Studio is connected. Open a script, shape your workspace, and make something yours.'
+    ? 'Open a script from Explorer or use a workspace action below.'
     : connected ? 'Reading your place hierarchy. This usually takes a moment.'
-      : 'Connect Roblox Studio to a workspace that makes room for your next idea.';
+      : 'Enter the pairing code in the Cursor Bridge plugin to start editing.';
   $('welcomeTip').hidden = !ready;
 
   if (previouslyConnected && !connected) {
