@@ -475,6 +475,7 @@ end
 
 function StudioBridge:_syncLoop()
 	local failures = 0
+	local nextAudit = 0
 	while self._alive and self._connected do
 		if RunService:IsRunning() or getPlaceKey() ~= self._placeKey or game.Name ~= self._placeName then
 			self:_notify("Place changed or Play Test started. Session released.")
@@ -482,33 +483,50 @@ function StudioBridge:_syncLoop()
 			return
 		end
 		local succeeded, err = pcall(function()
-			self:_auditChanges()
+			-- Source events are immediate; a rotating audit is a fallback, not a per-poll workload.
+			if os.clock() >= nextAudit then
+				self:_auditChanges()
+				nextAudit = os.clock() + Defaults.SourceAuditInterval
+			end
 			self:_sendNextBatch()
 			local poll = self:_request("/v1/poll", {}, self._token)
 			for _, command in poll.commands do
 				self:_applyCommand(command)
 			end
 		end)
-		-- The plugin may unload while a local HTTP request is in flight.
-		if not self._alive or not self._connected then
-			return
-		end
+		if not self._alive or not self._connected then return end
+		local delaySeconds: number
 		if succeeded then
 			failures = 0
 			if self._status ~= "Connected" then self:_notify("Connected") end
+			-- Idle sessions consume only a small, predictable HTTP budget.
+			-- Pending changes/results are sent faster, without exceeding the cap.
+			local busy = self._inFlightBatch ~= nil
+				or self._queueHead <= #self._queue
+				or #self._results > 0
+				or next(self._sourceQueue) ~= nil
+			delaySeconds = if busy then Defaults.ActivePollInterval else Defaults.IdlePollInterval
 		else
 			failures += 1
+			local message = tostring(err)
+			local rateLimited = string.find(string.lower(message), "requests exceeded limit", 1, true) ~= nil
+				or string.find(message, "429", 1, true) ~= nil
+			-- A shared Studio rate limit can involve other plugins. Waiting is not
+			-- the same as losing the authenticated local session.
 			if failures == 1 or failures % 3 == 0 then
-				warn("[Cursor Bridge] " .. tostring(err))
-				self:_notify("Network interruption: reconnecting...")
+				warn("[Cursor Bridge] " .. message)
+				self:_notify(if rateLimited then "Studio HTTP budget exhausted; waiting..."
+					else "Local bridge temporarily unavailable; retrying...")
 			end
-			if failures >= Defaults.MaxNetworkFailures then
-				self:_notify("Disconnected: network/session expired. Re-pair to continue.")
+			delaySeconds = math.min(Defaults.MaximumRetryDelay,
+				Defaults.InitialRetryDelay * (2 ^ math.min(failures - 1, 6)))
+			if not rateLimited and failures >= Defaults.MaxNetworkFailures then
+				self:_notify("Disconnected: local bridge unavailable. Re-pair to continue.")
 				self:Disconnect(false)
 				return
 			end
 		end
-		task.wait(Defaults.PollInterval)
+		task.wait(delaySeconds)
 	end
 end
 
