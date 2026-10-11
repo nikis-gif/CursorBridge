@@ -1,5 +1,15 @@
 ## 0.2.9 - Quick Apply and session reliability
 
+## 0.3.1 - Refined interface
+
+- Compact neutral workbench with consistent outline icons and text-first actions.
+- Removed decorative home cards, gradients, and promotional copy.
+- Default desktop window is at most 1080 x 700 and fits the usable display area.
+- Restore Obsidian as the default and first Studio plugin theme; rename the extra preset to Cursor.
+- Preserve saved layout, other palettes, shared-document split editing, and recovery safeguards.
+- English app/plugin UI; bilingual PT-BR and English release notes and title.
+
+
 
 ## 0.3.0 - Discord Cloud Workspace
 

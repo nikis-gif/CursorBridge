@@ -2,10 +2,11 @@
 
 const path = require('node:path');
 const fs = require('node:fs');
-const { app, BrowserWindow, ipcMain, shell, dialog, clipboard, powerMonitor } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, clipboard, powerMonitor, screen } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { BridgeServer } = require('../bridge/bridge-server.cjs');
 const { windowStyleForTheme } = require('./window-theme.cjs');
+const { initialWindowBounds } = require('./window-bounds.cjs');
 
 let mainWindow = null;
 let bridge = null;
@@ -47,11 +48,10 @@ function sendToRenderer(event) {
 async function createWindow() {
   mainWindow = new BrowserWindow({
     title: 'Cursor Bridge',
-    width: 1440, height: 890,
-    minWidth: 1000, minHeight: 680,
-    backgroundColor: '#1e1f22',
+    ...initialWindowBounds(screen.getPrimaryDisplay().workArea),
+    backgroundColor: '#0b0b0d',
     titleBarStyle: 'hidden',
-    ...(process.platform !== 'darwin' ? { titleBarOverlay: windowStyleForTheme('discord') } : {}),
+    ...(process.platform !== 'darwin' ? { titleBarOverlay: windowStyleForTheme('obsidian') } : {}),
     show: false,
     icon: path.join(ROOT, 'assets', 'CursorIcon.png'),
     autoHideMenuBar: true,

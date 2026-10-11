@@ -4,7 +4,7 @@
 local Defaults = {
 	Version = 2,
 	Appearance = {
-		Theme = "Discord",
+		Theme = "Obsidian",
 		ReduceMotion = false,
 		Animations = true,
 		Density = "Comfortable",
@@ -16,7 +16,7 @@ local Defaults = {
 	},
 	Product = {
 		Name = "Cursor Bridge V2",
-		Version = "0.3.0",
+		Version = "0.3.1",
 	},
 	Advanced = {
 		DebugLogging = false,

@@ -28,6 +28,7 @@ export function mountWorkspace(adapter) {
   const pressed = (id, value) => $(id).setAttribute('aria-pressed', String(value));
   const remember = (subscription) => { if (subscription?.dispose) subscriptions.push(subscription); };
   const snapshot = () => adapter.getSnapshot();
+  const sidebarWidthOnScreen = () => $('explorerPane').getBoundingClientRect().width || layout.sidebarWidth;
 
   function applyLayout(persist = true) {
     layout = normalizeLayout(layout);
@@ -37,7 +38,7 @@ export function mountWorkspace(adapter) {
     $('editorArea').dataset.splitDirection = layout.splitDirection;
     document.documentElement.style.setProperty('--explorer-width', `${layout.sidebarWidth}px`);
     $('editorArea').style.setProperty('--split-ratio', String(layout.splitRatio));
-    $('resizeDivider').setAttribute('aria-valuenow', String(Math.round(layout.sidebarWidth)));
+    $('resizeDivider').setAttribute('aria-valuenow', String(Math.round(sidebarWidthOnScreen())));
     $('splitDivider').setAttribute('aria-valuenow', String(Math.round(layout.splitRatio * 100)));
     $('splitDivider').setAttribute('aria-orientation', layout.splitDirection === 'vertical' ? 'vertical' : 'horizontal');
     pressed('dockLeft', layout.sidebarSide === 'left');
@@ -146,6 +147,8 @@ export function mountWorkspace(adapter) {
     const doc = secondaryId && adapter.getDocument(secondaryId);
     if (secondaryId && (!doc?.model || doc.model.isDisposed())) closeSplit({ focus: false });
     document.body.dataset.sessionReady = String(ready);
+    $('tabs').hidden = !ready || state.openIds.length === 0;
+    $('workspaceSummary').hidden = !ready;
     const showCode = ready && !!current && !home;
     $('welcome').hidden = showCode;
     $('codePanel').hidden = !showCode;
@@ -167,11 +170,11 @@ export function mountWorkspace(adapter) {
     for (const id of ['railExplorer', 'railSearch', 'dashboardBrowse', 'dashboardSearch']) $(id).disabled = !ready;
     text('windowWorkspace', ready ? state.status.placeName || 'Workspace' : 'Local workspace');
     text('dashboardSession', ready ? state.status.placeName || 'Connected' : 'Not connected');
-    text('dashboardSessionHint', ready ? 'Connected locally to Roblox Studio' : 'Pair your Studio to start building');
+    text('dashboardSessionHint', ready ? 'Local session' : 'Not connected');
     text('dashboardScripts', ready ? state.scriptCount.toLocaleString('en-US') : '--');
-    text('dashboardScriptsHint', ready && (state.status.indexing || state.status.onDemand) ? 'Indexed so far' : 'Scripts in this session');
+    text('dashboardScriptsHint', ready && (state.status.indexing || state.status.onDemand) ? 'Indexed scripts' : 'Scripts');
     text('dashboardEditors', ready ? new Set([...state.openIds, ...(secondaryId ? [secondaryId] : [])]).size : '0');
-    text('dashboardStatus', ready ? 'Workspace online' : 'Local-first workspace');
+    text('dashboardStatus', ready ? 'Studio connected' : 'Not connected');
     $('dashboardStatus').classList.toggle('online', ready);
     if (showSecond && doc) {
       text('secondaryTabName', doc.name);
@@ -200,7 +203,7 @@ export function mountWorkspace(adapter) {
     if (open) $('dockLeft').focus();
   }
 
-  for (const id of ['layoutToggle', 'railLayout', 'dashboardLayout']) listen($(id), 'click', toggleLayout);
+  for (const id of ['layoutToggle', 'dashboardLayout']) listen($(id), 'click', toggleLayout);
   listen($('closeLayout'), 'click', adapter.hidePopovers);
   listen($('railHome'), 'click', showHome);
   listen($('railExplorer'), 'click', () => { revealExplorer(); adapter.setSidebarView('explorer', true); refresh(); });
@@ -209,7 +212,6 @@ export function mountWorkspace(adapter) {
   listen($('dashboardBrowse'), 'click', adapter.openQuickOpen);
   listen($('dashboardSearch'), 'click', () => { revealExplorer(); adapter.openPlaceSearch(); });
   for (const id of ['dashboardRecovery', 'railRecovery']) listen($(id), 'click', () => $('openBackups').click());
-  listen($('railAppearance'), 'click', () => $('themeToggle').click());
   listen($('railHelp'), 'click', () => $('explorerHelp').click());
   listen($('dockLeft'), 'click', () => setLayout({ sidebarSide: 'left', sidebarVisible: true }));
   listen($('dockRight'), 'click', () => setLayout({ sidebarSide: 'right', sidebarVisible: true }));
@@ -241,7 +243,7 @@ export function mountWorkspace(adapter) {
     listen(handle, 'pointerdown', (event) => {
       if (event.button !== 0) return;
       event.preventDefault();
-      const initial = { x: event.clientX, y: event.clientY, width: layout.sidebarWidth };
+      const initial = { x: event.clientX, y: event.clientY, width: sidebarWidthOnScreen() };
       const pointer = event.pointerId;
       handle.setPointerCapture(pointer);
       handle.classList.add('resizing');
@@ -273,10 +275,10 @@ export function mountWorkspace(adapter) {
     splitRatio: splitRatioAt($('editorArea').getBoundingClientRect(), event.clientX, event.clientY, layout.splitDirection),
   }, false));
   listen($('resizeDivider'), 'keydown', (event) => {
-    if (event.key === 'Home') { event.preventDefault(); setLayout({ sidebarWidth: 286 }); }
+    if (event.key === 'Home') { event.preventDefault(); setLayout({ sidebarWidth: LAYOUT_DEFAULTS.sidebarWidth }); }
     if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
     event.preventDefault();
-    setLayout({ sidebarWidth: resizeSidebar(layout.sidebarWidth, event.key === 'ArrowRight' ? 15 : -15, layout.sidebarSide) });
+    setLayout({ sidebarWidth: resizeSidebar(sidebarWidthOnScreen(), event.key === 'ArrowRight' ? 15 : -15, layout.sidebarSide) });
   });
   listen($('splitDivider'), 'keydown', (event) => {
     const keys = layout.splitDirection === 'vertical' ? ['ArrowLeft', 'ArrowRight'] : ['ArrowUp', 'ArrowDown'];
@@ -286,7 +288,7 @@ export function mountWorkspace(adapter) {
     setLayout({ splitRatio: layout.splitRatio + (event.key === keys[1] ? 0.025 : -0.025) });
   });
   listen($('splitDivider'), 'dblclick', () => setLayout({ splitRatio: 0.5 }));
-  listen($('resizeDivider'), 'dblclick', () => setLayout({ sidebarWidth: 286 }));
+  listen($('resizeDivider'), 'dblclick', () => setLayout({ sidebarWidth: LAYOUT_DEFAULTS.sidebarWidth }));
 
   function clearDrag() {
     dragKind = null;

@@ -1,11 +1,10 @@
-// Original outline icons. The restricted Vanilla 3 archive is not bundled.
+// A single outline family. Navigation and instance icons share the same stroke and color.
 const glyphs = {
   home: '<path d="m3 10 9-7 9 7v10H3zM9 20v-7h6v7"/>',
   layout: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/>',
   'layout-right': '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/>',
   split: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M12 4v16"/>',
   'split-horizontal': '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 12h18"/>',
-  sparkles: '<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5zM20 2v4M18 4h4"/>',
   'code-brackets': '<path d="m8 6-6 6 6 6m8-12 6 6-6 6M14 4l-4 16"/>',
   'arrow-up': '<path d="M12 20V4m-7 7 7-7 7 7"/>',
   shield: '<path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6"/>',
@@ -56,65 +55,38 @@ const glyphs = {
   help:'<circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 6 1c0 2-3 2-3 5M12 18h.01"/>',
   edit:'<path d="M4 16V20h4l12-12-4-4zM14 6l4 4"/>',
   check:'<path d="M4 12l5 5L20 6"/>',
-};
-// Original class illustrations use Studio-like color semantics without copying
-// Vanilla 3 assets. The supplied Vanilla archive forbids app embedding.
-const classArtwork = {
-  Camera: '<rect x="3" y="6" width="18" height="14" rx="3" fill="#87949D"/><path d="M7 6l2-3h6l2 3" fill="#AAB6BF"/><circle cx="12" cy="13" r="4.1" fill="#354753" stroke="#CFD6DB" stroke-width="1.8"/><circle cx="12" cy="13" r="1.8" fill="#728D9D"/>',
-  Terrain: '<path d="M3 5h18v14H3z" fill="#37654C"/><path d="M3 15l4-6 4 4 5-7 5 8v5H3z" fill="#72BA8F"/><path d="m8 12 3 3 3-3 4 5H3z" fill="#408564"/>',
-  MeshPart: '<path d="m12 2 9 5.5v9L12 22l-9-5.5v-9z" fill="#A0AEB7"/><path d="m12 2 9 5.5-9 5.5-9-5.5z" fill="#C8D3D8"/><path d="M3 7.5 12 13l9-5.5M12 13v9" stroke="#657F8F" fill="none" stroke-width="1.2"/>',
-  SpawnLocation: '<rect x="2" y="6" width="20" height="14" rx="1.5" fill="#90BEA5"/><path d="M4 12h16M12 7v12" stroke="#447E61" stroke-width="1.8"/><circle cx="12" cy="13" r="3" fill="#D8F2DC"/>',
-  Attachment: '<circle cx="12" cy="12" r="6" fill="#A8C2D5"/><path d="M12 1v7M12 16v7M1 12h7M16 12h7" stroke="#6590B1" stroke-width="2"/><circle cx="12" cy="12" r="2.2" fill="#547695"/>',
-  Configuration: '<rect x="3" y="4" width="18" height="16" rx="3" fill="#768BA4"/><path d="M7 9h10M7 15h10" stroke="#DCE6ED" stroke-width="1.5"/><circle cx="10" cy="9" r="2.4" fill="#C9DDEA"/><circle cx="15" cy="15" r="2.4" fill="#C9DDEA"/>',
-  RemoteEvent: '<rect x="2.5" y="5" width="19" height="14" rx="3" fill="#9EB9E7"/><path d="m6 12 5-4v3h7v2h-7v3z" fill="#365B87"/>',
-  RemoteFunction: '<rect x="2.5" y="5" width="19" height="14" rx="3" fill="#91BED7"/><path d="m6 10 4-3v2h8v2h-8v2zM18 15l-4 3v-2H6v-2h8v-2z" fill="#315F78"/>',
-  BindableEvent: '<circle cx="12" cy="12" r="10" fill="#B0A3DD"/><path d="M12 5v7l5 3" stroke="#554B82" stroke-width="2.1" stroke-linecap="round" fill="none"/>',
-  BindableFunction: '<circle cx="12" cy="12" r="10" fill="#ACA5DB"/><path d="M8 8l-4 4 4 4m8-8 4 4-4 4M14 6l-4 12" stroke="#584D85" stroke-width="1.9" fill="none"/>',
-  BoolValue: '<rect x="3" y="3" width="18" height="18" rx="4" fill="#BCAFE0"/><path d="m7 12 3 3 7-7" stroke="#56437B" stroke-width="2.4" fill="none" stroke-linecap="round"/>',
-  IntValue: '<rect x="3" y="3" width="18" height="18" rx="4" fill="#C1B2A5"/><text x="12" y="16.3" text-anchor="middle" font-size="11" font-family="Arial" font-weight="bold" fill="#695646">123</text>',
-  NumberValue: '<rect x="3" y="3" width="18" height="18" rx="4" fill="#C1B2A5"/><text x="12" y="16" text-anchor="middle" font-size="11" font-family="Arial" font-weight="bold" fill="#695646">#</text>',
-  StringValue: '<rect x="3" y="3" width="18" height="18" rx="4" fill="#B2CDA5"/><path d="M7 8h10M7 12h8M7 16h6" stroke="#3B7044" stroke-width="1.6" stroke-linecap="round"/>',
-  ObjectValue: '<path d="m12 2 9 5-9 5-9-5z" fill="#C7B5D5"/><path d="M3 7v10l9 5V12z" fill="#A98EC0"/><path d="M21 7v10l-9 5V12z" fill="#876BA6"/>',
-  ScreenGui: '<rect x="2" y="4" width="20" height="16" rx="2" fill="#8EAAD6"/><rect x="4.5" y="7" width="15" height="10.5" fill="#C5D6F0"/><path d="M7 10h10M7 13h6" stroke="#5A76A7" stroke-width="1.5"/>',
-  Frame: '<rect x="3" y="3" width="18" height="18" rx="2" fill="#94ACC9"/><rect x="6" y="6" width="12" height="12" fill="#D9E4F1"/>',
-  TextLabel: '<rect x="2" y="4" width="20" height="16" rx="2" fill="#839DD5"/><text x="12" y="16" font-size="11" font-family="Arial" text-anchor="middle" fill="#E8ECFC">T</text>',
-  TextButton: '<rect x="2" y="4" width="20" height="16" rx="4" fill="#729CDB"/><text x="12" y="16" font-size="11" font-family="Arial" text-anchor="middle" font-weight="bold" fill="#EAF1FC">T</text>',
-  ImageLabel: '<rect x="2" y="4" width="20" height="16" rx="2" fill="#83AF9F"/><path d="M4 18l6-8 4 4 3-3 3 7z" fill="#D8F1DC"/><circle cx="8" cy="8" r="2" fill="#DCEFE0"/>',
-  ImageButton: '<rect x="2" y="4" width="20" height="16" rx="4" fill="#73A79A"/><path d="m4 18 6-8 4 4 3-3 3 7z" fill="#D8F1DC"/>',
-  UIListLayout: '<rect x="3" y="4" width="4" height="4" rx="1" fill="#AEAACB"/><rect x="3" y="10" width="4" height="4" rx="1" fill="#AEAACB"/><rect x="3" y="16" width="4" height="4" rx="1" fill="#AEAACB"/><path d="M10 6h11M10 12h11M10 18h11" stroke="#BFC2D4" stroke-width="2"/>',
-  UICorner: '<path d="M5 20V9q0-5 5-5h10" fill="none" stroke="#B3A8CA" stroke-width="4" stroke-linecap="round"/>',
-  UIPadding: '<path d="M4 4h16v16H4z" fill="#9296AF"/><path d="M8 8h8v8H8z" fill="#333C51"/>',
-  Sound: '<path d="M3 9h5l6-5v16l-6-5H3z" fill="#9CAFE0"/><path d="M17 8q5 4 0 8m2-12q9 8 0 16" stroke="#DCE7FA" stroke-width="1.7" fill="none" stroke-linecap="round"/>',
-  Animation: '<rect x="3" y="3" width="18" height="18" rx="4" fill="#A8A2D8"/><path d="m9 7 8 5-8 5z" fill="#E6DFFC"/>',
-  Folder: '<path fill="#D9B579" d="M2.5 6h6l2.5 2.5H21a1 1 0 0 1 1 1V19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a1 1 0 0 1 .5-1z"/><path fill="#F6DBAA" d="M3 8h18v3H3z"/>',
-  Script: '<path fill="#5AB98D" d="M5 2h10l5 5v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path fill="#A5F0CF" d="M15 2v6h5z"/><path d="m7 12 3 3-3 3m6 0h4" fill="none" stroke="#124831" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
-  LocalScript: '<path fill="#6FADD6" d="M5 2h10l5 5v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path fill="#C2E4F9" d="M15 2v6h5z"/><path d="m10 12-3 3 3 3m4-6 3 3-3 3" fill="none" stroke="#174660" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
-  ModuleScript: '<path fill="#AE98D9" d="M5 2h10l5 5v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path fill="#E2D5F7" d="M15 2v6h5z"/><path d="m9 12-3 3 3 3m6-6 3 3-3 3" fill="none" stroke="#4D356F" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
-  Workspace: '<circle cx="12" cy="12" r="10" fill="#4299BF"/><path d="M3 12h18M12 2c-7 7-7 13 0 20M12 2c7 7 7 13 0 20M5 7h14M5 17h14" fill="none" stroke="#CBEEFB" stroke-opacity=".86" stroke-width="1.2"/>',
-  Part: '<path d="m12 2 9 5.5v9L12 22l-9-5.5v-9z" fill="#8799AB"/><path d="m12 2 9 5.5-9 5.5-9-5.5z" fill="#BECBD5"/><path d="M12 13v9M3 7.5 12 13l9-5.5" fill="none" stroke="#556977" stroke-width="1.1"/>',
-  Model: '<path fill="#A3B8CB" d="M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z"/><path d="M7 3v8M17 13v8" stroke="#5E7B97" stroke-width="1.1"/>',
-  Players: '<circle cx="8" cy="7.5" r="3.5" fill="#E9C475"/><circle cx="17" cy="8" r="3" fill="#A7D8AA"/><path d="M1.5 20c0-4 2-7 6.5-7s7 3 7 7v1H1.5z" fill="#74B3D0"/><path d="M14 14c5-3 9 .5 9 7h-6" fill="#80B7AB"/>',
-  Lighting: '<path d="M9 17h6M10 20h4" stroke="#D8B34A" stroke-width="2.2" stroke-linecap="round"/><path d="M12 2a7 7 0 0 0-4 12l1.2 3h5.6l1.2-3A7 7 0 0 0 12 2z" fill="#F4D37F"/><path d="m9 11 2 2 4-5" fill="none" stroke="#9C7827" stroke-width="1.4"/>',
-  ReplicatedStorage: '<path d="m12 2 9 5-9 5-9-5z" fill="#7AC4BF"/><path d="M3 7v10l9 5V12z" fill="#50A69E"/><path d="M21 7v10l-9 5V12z" fill="#359087"/><path d="M12 12v10M3 7l9 5 9-5" fill="none" stroke="#C7F1EB" stroke-width="1.1"/>',
-  ReplicatedFirst: '<path fill="#5AACC1" d="M2 2h9v9H2zM13 2h9v9h-9zM2 13h9v9H2zM13 13h9v9h-9z"/><path fill="#B5E4EE" d="M5 5h3v3H5zM16 16h3v3h-3z"/>',
-  ServerScriptService: '<rect x="3" y="2.5" width="18" height="19" rx="3" fill="#64BB98"/><path d="m8 8 3 4-3 4m6 1h4" fill="none" stroke="#1B6345" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
-  ServerStorage: '<rect x="2.5" y="4" width="19" height="17" rx="2.5" fill="#9CC29D"/><path d="M2.5 9h19" stroke="#4E7851" stroke-width="2"/><rect x="9" y="13" width="6" height="2" rx="1" fill="#456C48"/>',
-  StarterGui: '<rect x="2" y="3" width="20" height="16" rx="2.5" fill="#9C9ED3"/><rect x="5" y="6" width="14" height="10" rx="1" fill="#C9CEED"/><path d="M9 22h6M12 19v3" stroke="#8D92BF" stroke-width="2" stroke-linecap="round"/>',
-  StarterPack: '<rect x="2" y="8" width="20" height="13" rx="2" fill="#DEBD87"/><path d="M8 8V5h8v3" fill="none" stroke="#EECFA0" stroke-width="2.4"/><path d="M9 13h6M12 10v6" stroke="#8D6D3D" stroke-width="1.7"/>',
-  StarterPlayer: '<circle cx="12" cy="6.7" r="4.5" fill="#D7BE8D"/><path d="M3 22v-4c0-5 4-7.5 9-7.5s9 2.5 9 7.5v4z" fill="#AEBADE"/>',
-  SoundService: '<path d="M3 9h5l6-5v16l-6-5H3z" fill="#98B1E3"/><path d="M17 8q5 4 0 8m2-12q9 8 0 16" stroke="#C4D4F6" stroke-width="1.7" fill="none" stroke-linecap="round"/>',
-  Teams: '<circle cx="8" cy="8" r="4" fill="#E3A88C"/><circle cx="17" cy="8" r="3.3" fill="#87C2A1"/><path d="M2 21c0-5 3-8 6.5-8s7 3 7 8zm12-6c4-3 8-1 8 6h-5" fill="#AAA8D8"/>',
-  TextChatService: '<path d="M2 4h20v14H10l-5 4v-4H2z" fill="#A6BBD1"/><path d="M6 9h12M6 13h8" stroke="#4A607A" stroke-width="1.5" stroke-linecap="round"/>',
-  Chat: '<path d="M2 4h20v15H10l-5 3v-3H2z" fill="#8CB9C8"/><path d="M6 9h12M6 13h9" stroke="#3E6574" stroke-width="1.6"/>',
-  MaterialService: '<path d="m12 2 10 5-10 6L2 7z" fill="#D3BFA3"/><path d="m2 11 10 5 10-5M2 16l10 5 10-5" stroke="#B6A083" stroke-width="3" fill="none" stroke-linejoin="round"/>',
-  LocalizationService: '<circle cx="12" cy="12" r="10" fill="#86B0CE"/><path d="M2 12h20M12 2c-7 7-7 13 0 20M12 2c7 7 7 13 0 20" fill="none" stroke="#D2E8F8" stroke-width="1.1"/>',
-  TestService: '<rect x="3" y="3" width="18" height="18" rx="3" fill="#B6B6D4"/><path d="m7 12 3 3 7-7" fill="none" stroke="#41446E" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>',
+  import: '<path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/>',
+  Camera: '<rect x="3" y="6" width="18" height="14" rx="2"/><path d="m8 6 2-3h4l2 3"/><circle cx="12" cy="13" r="4"/>',
+  Terrain: '<path d="M3 20h18L15 5l-5 8-3-4zM13 8l3 3 1-1"/>',
+  MeshPart: '<path d="m12 3 8 5v9l-8 4-8-4V8zM4 8l8 5 8-5M12 13v8M4 8l8 13"/>',
+  SpawnLocation: '<rect x="3" y="5" width="18" height="15" rx="1"/><path d="M12 7v11M5 13h14"/><circle cx="12" cy="13" r="3"/>',
+  Attachment: '<circle cx="12" cy="12" r="6"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/>',
+  RemoteEvent: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 12h10m-4-4 4 4-4 4"/>',
+  RemoteFunction: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10l-3-3M17 15H7l3 3"/>',
+  BindableEvent: '<circle cx="12" cy="12" r="9"/><path d="M7 12h10m-4-4 4 4-4 4"/>',
+  BindableFunction: '<circle cx="12" cy="12" r="9"/><path d="M7 9h10l-3-3M17 15H7l3 3"/>',
+  BoolValue: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="m8 12 3 3 5-6"/>',
+  NumberValue: '<path d="M9 4 7 20M17 4l-2 16M4 9h17M3 15h17"/>',
+  StringValue: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h8M7 16h6"/>',
+  Frame: '<rect x="3" y="3" width="18" height="18" rx="1"/><rect x="7" y="7" width="10" height="10" rx="1"/>',
+  TextLabel: '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M8 8h8M12 8v8M10 16h4"/>',
+  TextButton: '<rect x="3" y="4" width="18" height="16" rx="4"/><path d="M8 8h8M12 8v8M10 16h4"/>',
+  ImageLabel: '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="m3 17 6-6 4 4 4-4 4 4"/><circle cx="16" cy="8" r="1"/>',
+  ImageButton: '<rect x="3" y="4" width="18" height="16" rx="4"/><path d="m4 17 5-6 4 4 4-4 4 4"/>',
+  UIListLayout: '<path d="M9 5h12M9 12h12M9 19h12M3 5h1M3 12h1M3 19h1"/>',
+  UICorner: '<path d="M5 21V10a6 6 0 0 1 6-6h10"/>',
+  UIPadding: '<rect x="3" y="3" width="18" height="18"/><rect x="7" y="7" width="10" height="10" stroke-dasharray="2 2"/>',
+  Animation: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="m9 7 8 5-8 5z"/>',
 };
 
+const aliases = Object.freeze({
+  Configuration: 'sliders', IntValue: 'NumberValue', ObjectValue: 'Part',
+  ScreenGui: 'StarterGui', Sound: 'SoundService',
+});
+
 export function icon(name, size = 16) {
-  const classImage = classArtwork[name];
-  if (classImage) {
-    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" role="img">${classImage}</svg>`;
-  }
-  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyphs[name] || glyphs.service}</svg>`;
+  const key = Object.hasOwn(aliases, name) ? aliases[name] : name;
+  const glyph = Object.hasOwn(glyphs, key) ? glyphs[key] : glyphs.service;
+  const pixels = Number.isFinite(size) ? Math.max(8, Math.min(48, size)) : 16;
+  return `<svg width="${pixels}" height="${pixels}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyph}</svg>`;
 }

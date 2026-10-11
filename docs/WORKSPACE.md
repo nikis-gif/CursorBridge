@@ -1,25 +1,39 @@
-# Workspace controls (0.3.0)
+# Workspace v0.3.1
 
-The desktop workbench combines a compact activity rail, session dashboard and
-rounded editor groups. These are presentation changes: Roblox Studio is still
+The default desktop window is up to 1080 x 700 logical pixels, capped at 90% of
+the display work area. The initial Explorer width is 248 pixels. Saved layout
+preferences remain in effect. Use Layout > Reset workspace layout to reset only
+visual preferences, not scripts or recovery data.
+
+New installations use Obsidian. In the Studio plugin, Obsidian is the first and
+default preset; the previous v0.3.0 default migrates to Obsidian. Other explicit
+plugin palettes are preserved. The additional neutral preset is called Cursor.
+The entire app and plugin interface is in English; release notes include PT-BR
+and English. Stable version tags keep the standard vMAJOR.MINOR.PATCH format.
+
+# Workspace controls
+
+The desktop workbench combines a compact activity rail, a text-first home screen
+and separate editor groups. These are presentation changes: Roblox Studio is still
 authoritative and scripts still use the existing revision, conflict and backup rules.
 
 ## Appearance and title bar
 
-New installations use Discord. Existing installations keep their saved theme;
-select **Appearance > Discord** to use the new palette. Code colors, font, wrap
+New installations use Obsidian. Existing desktop installations retain their saved
+theme, with the previous v0.3.0 default renamed to Cursor. Select
+**Appearance > Obsidian** for the default dark palette. Code colors, font, wrap
 and minimap remain independent settings. Windows minimize, maximize, restore,
 close and snap behavior use native caption controls, not simulated HTML buttons.
 The title bar follows the selected workbench theme.
 
 **Layout > Reduce animations** and the operating system reduced-motion preference
-suppress decorative CSS animations. No external fonts, remote chat service or
-cloud account is required. The AI card opens the existing Quick Apply review;
-it does not send a prompt to an AI provider.
+disable interface transitions. No external fonts, remote chat service or cloud
+account is required. Quick Apply opens the existing bundle review; it does not
+send a prompt to an AI provider.
 
 ## Explorer
 
-Drag the grip next to **YOUR PLACE** onto the left or right drop target. The same
+Drag the grip in the Explorer toolbar onto the left or right drop target. The same
 choices are available in the Layout menu. Drag the divider to resize the Explorer,
 or focus it and use the left/right arrow keys. Home or a double-click resets its
 width. Ctrl+B toggles the Explorer. Search shortcuts reveal it when necessary.

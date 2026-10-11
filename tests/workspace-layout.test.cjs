@@ -13,7 +13,7 @@ test('layout preferences validate bounded numbers, enums and malformed storage',
   assert.equal(result.sidebarSide, 'left');
   assert.equal(result.splitDirection, 'vertical');
   assert.equal(result.reduceMotion, false);
-  for (const n of [NaN, Infinity, -Infinity, '400']) assert.equal(normalizeLayout({ sidebarWidth: n }).sidebarWidth, 286);
+  for (const n of [NaN, Infinity, -Infinity, '400']) assert.equal(normalizeLayout({ sidebarWidth: n }).sidebarWidth, LAYOUT_DEFAULTS.sidebarWidth);
   assert.deepEqual(loadLayout({ getItem: () => '{bad' }), LAYOUT_DEFAULTS);
   assert.deepEqual(loadLayout({ getItem() { throw Error('denied'); } }), LAYOUT_DEFAULTS);
 });
@@ -45,9 +45,9 @@ test('Explorer resize handles reversed docking and split geometry clamps safely'
 });
 
 test('native title bar accepts only explicit workbench themes', () => {
-  assert.deepEqual(windowStyleForTheme('discord'), { color: '#1e1f22', symbolColor: '#f2f3f5', height: 36 });
+  assert.deepEqual(windowStyleForTheme('cursor'), { color: '#191a1c', symbolColor: '#f2f3f5', height: 36 });
   for (const name of ['obsidian', 'graphite', 'midnight', 'aurora']) assert.match(windowStyleForTheme(name).color, /^#[a-f0-9]{6}$/);
   for (const input of [null, {}, '__proto__', 'constructor', 'red', '<script>']) assert.equal(windowStyleForTheme(input), null);
-  const first = windowStyleForTheme('discord'); first.height = 100;
-  assert.equal(windowStyleForTheme('discord').height, 36);
+  const first = windowStyleForTheme('cursor'); first.height = 100;
+  assert.equal(windowStyleForTheme('cursor').height, 36);
 });

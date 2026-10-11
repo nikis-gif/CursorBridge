@@ -6,42 +6,37 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self' blob:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'none'" />
   <title>Cursor Bridge</title>
 </head>
-<body data-theme="discord">
+<body data-theme="obsidian">
 <div id="app">
   <div class="window-titlebar" aria-label="Application title bar">
-    <div class="window-titlebar-content"><span class="window-app-name">Cursor Bridge</span><span class="window-title-divider">/</span><span id="windowWorkspace">Local workspace</span><span class="window-local-badge">LOCAL</span></div>
+    <div class="window-titlebar-content"><span class="window-app-name">Cursor Bridge</span><span class="window-title-divider">/</span><span id="windowWorkspace">Local workspace</span></div>
   </div>
   <header class="app-header">
-    <div class="brand-lockup"><img class="brand-mark" src="./CursorIcon.png" alt="" /><span class="brand-name">Workspace</span><span class="brand-divider"></span><span class="brand-workspace" id="headerPlace">Workspace</span></div>
+    <div class="brand-lockup"><span class="brand-name">Workspace</span><span class="brand-divider"></span><span class="brand-workspace" id="headerPlace">Workspace</span></div>
     <div class="header-actions">
       <button class="header-status" id="sessionToggle" aria-haspopup="true" aria-expanded="false" title="Session details"><span class="status-light" id="statusLight"></span><span id="connectionState">Waiting for Studio</span><span data-icon="chevron-down"></span></button>
-      <button class="quick-launcher" id="quickApplyLauncher" title="Quick Apply AI script bundle (Ctrl+L)" aria-label="Quick Apply"><span data-icon="edit"></span> Quick Apply <kbd>Ctrl L</kbd></button>
-      <button class="icon-button quiet" id="layoutToggle" title="Workspace layout" aria-label="Workspace layout" aria-haspopup="dialog" aria-expanded="false"><span data-icon="layout"></span></button>
-      <button class="icon-button quiet" id="themeToggle" title="Appearance" aria-label="Appearance"><span data-icon="sliders"></span></button>
+      <button class="quick-launcher" id="quickApplyLauncher" title="Import a script bundle (Ctrl+L)" aria-label="Quick Apply">Quick Apply <kbd>Ctrl L</kbd></button>
+      <button class="header-button" id="layoutToggle" title="Workspace layout" aria-label="Workspace layout" aria-haspopup="dialog" aria-expanded="false">Layout</button>
+      <button class="header-button" id="themeToggle" title="Appearance" aria-label="Appearance">Appearance</button>
     </div>
   </header>
   <div class="workbench">
     <nav class="activity-rail" aria-label="Workspace navigation">
-      <button class="rail-button rail-brand" id="railHome" aria-label="Workspace home" title="Workspace home" aria-pressed="true"><span data-icon="home"></span><span class="rail-tooltip">Workspace</span></button>
-      <span class="rail-divider"></span>
+      <button class="rail-button" id="railHome" aria-label="Workspace home" title="Workspace home" aria-pressed="true"><span data-icon="home"></span><span class="rail-tooltip">Workspace</span></button>
       <button class="rail-button" id="railExplorer" aria-label="Explorer" title="Explorer (Ctrl+Shift+E)" aria-pressed="false"><span data-icon="folder"></span><span class="rail-tooltip">Explorer</span></button>
       <button class="rail-button" id="railSearch" aria-label="Find in Place" title="Find in Place (Ctrl+Shift+F)" aria-pressed="false"><span data-icon="search"></span><span class="rail-tooltip">Search</span></button>
-      <button class="rail-button rail-ai" id="railQuickApply" aria-label="Open Quick Apply" title="Quick Apply (Ctrl+L)"><span data-icon="sparkles"></span><span class="rail-tooltip">Quick Apply</span></button>
-      <span class="rail-divider"></span>
+      <button class="rail-button" id="railQuickApply" aria-label="Open Quick Apply" title="Quick Apply (Ctrl+L)"><span data-icon="import"></span><span class="rail-tooltip">Quick Apply</span></button>
       <button class="rail-button" id="railRecovery" aria-label="Open recovery files" title="Recovery files"><span data-icon="history"></span><span class="rail-tooltip">Recovery</span></button>
       <div class="rail-spacer"></div>
-      <button class="rail-button" id="railLayout" aria-label="Customize layout" title="Customize layout"><span data-icon="layout"></span><span class="rail-tooltip">Layout</span></button>
-      <button class="rail-button" id="railAppearance" aria-label="Open appearance settings" title="Appearance"><span data-icon="sliders"></span><span class="rail-tooltip">Appearance</span></button>
       <button class="rail-button rail-help" id="railHelp" aria-label="Keyboard shortcuts" title="Keyboard shortcuts"><span data-icon="help"></span><span class="rail-tooltip">Shortcuts</span></button>
     </nav>
     <aside class="explorer-pane" id="explorerPane" hidden>
-      <div class="explorer-dock-heading"><span>YOUR PLACE</span><button id="explorerDragHandle" class="icon-button quiet small" draggable="true" title="Drag Explorer to either side, or use Workspace layout" aria-label="Drag Explorer to change its dock position"><span data-icon="grip"></span></button></div>
       <div class="explorer-heading">
         <div class="side-modes" role="tablist" aria-label="Sidebar views">
           <button id="explorerView" class="side-mode active" type="button" role="tab" aria-selected="true" aria-controls="treeScroller" title="Explorer (Ctrl+Shift+E)">Explorer</button>
-          <button id="placeSearchView" class="side-mode" type="button" role="tab" aria-selected="false" aria-controls="placeSearchPanel" title="Find in Place (Ctrl+Shift+F)"><span data-icon="search"></span><span>Search</span></button>
+          <button id="placeSearchView" class="side-mode" type="button" role="tab" aria-selected="false" aria-controls="placeSearchPanel" title="Find in Place (Ctrl+Shift+F)"><span>Search</span></button>
         </div>
-        <div class="toolbar" id="explorerToolbar"><button class="icon-button quiet" id="newNode" title="Create instance" aria-label="Create instance"><span data-icon="plus"></span></button><button class="icon-button quiet" id="collapseTree" title="Collapse all" aria-label="Collapse all"><span data-icon="collapse"></span></button><button class="icon-button quiet" id="explorerMore" title="Explorer actions" aria-label="Explorer actions"><span data-icon="more"></span></button></div>
+        <div class="toolbar" id="explorerToolbar"><button id="explorerDragHandle" class="icon-button quiet small" draggable="true" title="Drag Explorer to either side, or use Workspace layout" aria-label="Drag Explorer to change its dock position"><span data-icon="grip"></span></button><button class="icon-button quiet" id="newNode" title="Create instance" aria-label="Create instance"><span data-icon="plus"></span></button><button class="icon-button quiet" id="collapseTree" title="Collapse all" aria-label="Collapse all"><span data-icon="collapse"></span></button><button class="icon-button quiet" id="explorerMore" title="Explorer actions" aria-label="Explorer actions"><span data-icon="more"></span></button></div>
       </div>
       <div class="search-wrap" id="explorerFilter"><span data-icon="search"></span><input id="treeSearch" type="search" placeholder="Filter instances" autocomplete="off" spellcheck="false" aria-label="Search instances" /><kbd>Ctrl K</kbd></div>
       <div class="tree-scroller" id="treeScroller" role="tree" aria-label="Roblox Explorer"><div id="tree" class="tree"></div></div>
@@ -71,35 +66,32 @@
         <button class="icon-button quiet" id="explorerHelp" title="Keyboard shortcuts" aria-label="Keyboard shortcuts"><span data-icon="help"></span></button>
       </div>
     </aside>
-    <div class="resize-divider" id="resizeDivider" hidden title="Drag to resize the Explorer" role="separator" aria-label="Resize Explorer" aria-orientation="vertical" tabindex="0" aria-valuemin="210" aria-valuemax="460" aria-valuenow="286"></div>
+    <div class="resize-divider" id="resizeDivider" hidden title="Drag to resize the Explorer" role="separator" aria-label="Resize Explorer" aria-orientation="vertical" tabindex="0" aria-valuemin="210" aria-valuemax="460" aria-valuenow="248"></div>
     <div class="editor-area" id="editorArea">
     <main class="editor-pane" id="primaryPane" aria-label="Primary editor group">
       <div class="tabs" id="tabs" role="tablist" aria-label="Open scripts" hidden><span class="tabs-placeholder">No scripts open</span></div>
       <section class="welcome-panel" id="welcome" aria-label="Workspace overview">
         <div class="dashboard-content">
-          <div class="dashboard-eyebrow"><span class="workspace-status" id="dashboardStatus">Local-first workspace</span><span class="dashboard-kicker">A LITTLE SPACE TO BUILD BIG THINGS</span></div>
-          <div class="welcome-mark"><span data-icon="code-brackets"></span></div>
-          <h1 id="welcomeTitle">Your next idea starts here.</h1>
-          <p id="welcomeDescription">Connect Roblox Studio, find your flow, and give your scripts a little more room.</p>
-          <div class="pairing-card" id="pairingCard"><div class="pairing-copy"><span>Connect your Studio</span><small>Enter this code in the Cursor Bridge plugin.</small></div><div class="pairing-code"><strong id="pairingCode">------</strong><button class="icon-button" id="copyCode" title="Copy pairing code" aria-label="Copy pairing code"><span data-icon="copy"></span></button></div></div>
-          <div class="dashboard-stats">
-            <div class="dashboard-stat"><span class="stat-icon"><span data-icon="plug"></span></span><span class="stat-label">Studio session</span><strong id="dashboardSession">Not connected</strong><small id="dashboardSessionHint">Pair your Studio to start building</small></div>
-            <div class="dashboard-stat"><span class="stat-icon"><span data-icon="code-brackets"></span></span><span class="stat-label">Scripts</span><strong id="dashboardScripts">--</strong><small id="dashboardScriptsHint">Scripts in this session</small></div>
-            <div class="dashboard-stat"><span class="stat-icon"><span data-icon="layout"></span></span><span class="stat-label">Open scripts</span><strong id="dashboardEditors">0</strong><small>One workspace. Your own flow.</small></div>
+          <div class="workspace-status" id="dashboardStatus">Not connected</div>
+          <h1 id="welcomeTitle">Connect to Roblox Studio</h1>
+          <p id="welcomeDescription">Enter the pairing code in the Cursor Bridge plugin to start editing.</p>
+          <div class="pairing-card" id="pairingCard">
+            <div class="pairing-copy"><span>Pairing code</span><small>Cursor Bridge plugin in Roblox Studio</small></div>
+            <div class="pairing-code"><strong id="pairingCode">------</strong><button class="icon-button quiet" id="copyCode" title="Copy pairing code" aria-label="Copy pairing code"><span data-icon="copy"></span></button></div>
           </div>
-          <div class="dashboard-compose">
-            <div class="compose-heading"><span class="compose-symbol"><span data-icon="sparkles"></span></span><div><h2>From an idea to your Studio.</h2><p>Bring a script bundle from your AI. Review every change before applying.</p></div><span class="compose-badge">QUICK APPLY</span></div>
-            <button class="compose-input" id="dashboardCompose"><span>Paste your AI script bundle...</span><span class="compose-hint">Ctrl L</span><span class="compose-send"><span data-icon="arrow-up"></span></span></button>
-            <div class="compose-footnote"><span data-icon="shield"></span>Your originals are backed up before changes are applied.</div>
+          <div class="workspace-summary" id="workspaceSummary" hidden>
+            <div class="summary-session"><strong id="dashboardSession">Not connected</strong><span id="dashboardSessionHint">Local session</span></div>
+            <div class="summary-count"><strong id="dashboardScripts">0</strong><span id="dashboardScriptsHint">Scripts</span></div>
+            <div class="summary-count"><strong id="dashboardEditors">0</strong><span>Open</span></div>
           </div>
-          <div class="dashboard-actions">
-            <button class="dashboard-action" id="dashboardBrowse"><span data-icon="folder"></span><span>Open a script</span><kbd>Ctrl P</kbd></button>
-            <button class="dashboard-action" id="dashboardSearch"><span data-icon="search"></span><span>Find in Place</span><span data-icon="chevron"></span></button>
-            <button class="dashboard-action" id="dashboardRecovery"><span data-icon="history"></span><span>Recovery files</span><span data-icon="chevron"></span></button>
-            <button class="dashboard-action" id="dashboardLayout"><span data-icon="layout"></span><span>Make it yours</span><span data-icon="chevron"></span></button>
+          <div class="dashboard-actions" aria-label="Workspace actions">
+            <button class="dashboard-action" id="dashboardBrowse"><span>Open script</span><kbd>Ctrl P</kbd></button>
+            <button class="dashboard-action" id="dashboardCompose"><span>Quick Apply</span><kbd>Ctrl L</kbd></button>
+            <button class="dashboard-action" id="dashboardSearch"><span>Find in Place</span><kbd>Ctrl Shift F</kbd></button>
+            <button class="dashboard-action" id="dashboardRecovery"><span>Recovery files</span></button>
+            <button class="dashboard-action" id="dashboardLayout"><span>Workspace layout</span></button>
           </div>
-          <div class="welcome-tip" id="welcomeTip"><span data-icon="pointer"></span> Drag the Explorer grip to change sides. Drag a script tab to open a second view.</div>
-          <div class="dashboard-signoff"><span class="bottom-bullet connected"></span> Local by design. Built for your next commit.</div>
+          <p class="welcome-tip" id="welcomeTip">Open a script, then use Ctrl+\ to split the editor.</p>
         </div>
       </section>
       <section class="code-panel" id="codePanel" hidden>
@@ -110,18 +102,18 @@
     </main>
     <div class="split-divider" id="splitDivider" hidden tabindex="0" role="separator" aria-label="Resize editor groups" aria-orientation="vertical" aria-valuemin="25" aria-valuemax="75" aria-valuenow="50" title="Drag to resize. Double-click to balance."></div>
     <section class="secondary-pane editor-pane" id="secondaryPane" hidden aria-label="Secondary editor group">
-      <div class="secondary-tabs" role="tablist" aria-label="Secondary script view"><div class="secondary-tab" id="secondaryTab" draggable="true" role="tab" aria-selected="true" tabindex="0"><span data-icon="code-brackets"></span><span id="secondaryTabName"></span><span class="split-view-badge">2ND VIEW</span><button id="closeSecondary" class="tab-close" aria-label="Close secondary view" title="Close secondary view"><span data-icon="close"></span></button></div></div>
+      <div class="secondary-tabs" role="tablist" aria-label="Secondary script view"><div class="secondary-tab" id="secondaryTab" draggable="true" role="tab" aria-selected="true" tabindex="0"><span data-icon="Script"></span><span id="secondaryTabName"></span><span class="split-view-badge">Split</span><button id="closeSecondary" class="tab-close" aria-label="Close secondary view" title="Close secondary view"><span data-icon="close"></span></button></div></div>
       <div class="editor-topline"><span class="document-path" id="secondaryPath"></span><div class="editor-actions"><span class="sync-indicator" id="secondarySync">Synced</span><button class="tool-text" id="secondaryReview" hidden>Review in main</button><button class="icon-button quiet" id="focusPrimary" title="Open this script in the main group" aria-label="Open in main group"><span data-icon="open"></span></button></div></div>
       <div class="monaco-host" id="secondaryMonacoHost"></div>
       <div class="editor-statusbar"><span id="secondaryType">Luau</span><div><span id="secondaryCursor">Ln 1, Col 1</span><span>Shared document</span></div></div>
     </section>
-    <div class="workspace-drop split-drop-right" data-kind="tab" data-direction="vertical"><span data-icon="split"></span><strong>Open side by side</strong><span>Same document. Another perspective.</span></div>
+    <div class="workspace-drop split-drop-right" data-kind="tab" data-direction="vertical"><span data-icon="split"></span><strong>Open side by side</strong><span>Shared document, independent cursor and scroll.</span></div>
     <div class="workspace-drop split-drop-bottom" data-kind="tab" data-direction="horizontal"><span data-icon="split-horizontal"></span><strong>Open below</strong></div>
     </div>
     <div class="workspace-drop dock-drop-left" data-kind="panel" data-side="left"><span data-icon="layout"></span><strong>Dock Explorer left</strong></div>
     <div class="workspace-drop dock-drop-right" data-kind="panel" data-side="right"><span data-icon="layout"></span><strong>Dock Explorer right</strong></div>
   </div>
-  <div class="app-footer"><span id="bottomMessage">Waiting for local pairing</span><span id="appVersion">v0.3.0</span></div>
+  <div class="app-footer"><span id="bottomMessage">Waiting for local pairing</span><span id="appVersion">v0.3.1</span></div>
 
   <div class="floating-panel session-panel" id="sessionPanel" hidden>
     <div class="popover-heading">Studio session <button class="icon-button quiet small" id="closeSession" aria-label="Close session details"><span data-icon="close"></span></button></div>
@@ -137,19 +129,19 @@
     <div class="popover-heading">Appearance & editor</div>
     <div class="appearance-label">Workbench theme</div><div id="themeOptions" class="theme-options"></div>
     <div class="appearance-divider"></div>
-    <label class="appearance-field"><span>Code colors</span><select id="codeThemeSetting" aria-label="Script editor color theme"><option value="auto">Follow workbench</option><option value="discord">Discord</option><option value="obsidian">Obsidian</option><option value="graphite">Graphite</option><option value="midnight">Midnight</option><option value="aurora">Aurora</option></select></label>
+    <label class="appearance-field"><span>Code colors</span><select id="codeThemeSetting" aria-label="Script editor color theme"><option value="auto">Follow workbench</option><option value="obsidian">Obsidian</option><option value="cursor">Cursor</option><option value="graphite">Graphite</option><option value="midnight">Midnight</option><option value="aurora">Aurora</option></select></label>
     <label class="appearance-field"><span>Font</span><select id="fontFamilySetting" aria-label="Editor font"><option value="Cascadia Code, JetBrains Mono, Consolas, monospace">Cascadia Code</option><option value="JetBrains Mono, Consolas, monospace">JetBrains Mono</option><option value="Consolas, monospace">Consolas</option><option value="monospace">System Mono</option></select></label>
     <label class="appearance-field"><span>Font size</span><input id="fontSizeSetting" type="number" min="11" max="24" step="1" aria-label="Editor font size" /></label>
     <label class="appearance-field"><span>Word wrap</span><input id="wordWrapSetting" type="checkbox" aria-label="Wrap long lines" /></label>
     <label class="appearance-field"><span>Minimap</span><input id="minimapSetting" type="checkbox" aria-label="Show code minimap" /></label>
   </div>
   <div class="floating-panel layout-panel" id="layoutPanel" role="dialog" aria-labelledby="layoutTitle" hidden>
-    <div class="popover-heading"><span id="layoutTitle">Make room for your workflow</span><button class="icon-button quiet small" id="closeLayout" aria-label="Close layout settings"><span data-icon="close"></span></button></div>
-    <p class="layout-description">Arrange your workspace. Your code stays right where it belongs.</p>
-    <div class="appearance-label">EXPLORER POSITION</div>
+    <div class="popover-heading"><span id="layoutTitle">Workspace layout</span><button class="icon-button quiet small" id="closeLayout" aria-label="Close layout settings"><span data-icon="close"></span></button></div>
+    <p class="layout-description">Panel positions and editor groups.</p>
+    <div class="appearance-label">Explorer position</div>
     <div class="layout-segments"><button id="dockLeft" aria-pressed="true"><span data-icon="layout"></span>Left</button><button id="dockRight" aria-pressed="false"><span data-icon="layout-right"></span>Right</button></div>
     <label class="appearance-field"><span>Show Explorer <kbd>Ctrl B</kbd></span><input id="sidebarVisibleSetting" type="checkbox" checked /></label>
-    <div class="appearance-divider"></div><div class="appearance-label">EDITOR GROUPS</div>
+    <div class="appearance-divider"></div><div class="appearance-label">Editor groups</div>
     <div class="layout-segments"><button id="layoutVertical" aria-pressed="true"><span data-icon="split"></span>Side by side</button><button id="layoutHorizontal" aria-pressed="false"><span data-icon="split-horizontal"></span>Stacked</button></div>
     <p class="layout-description">Open a script first, then split it into two synchronized views. Each has its own cursor and scroll.</p>
     <div class="appearance-divider"></div><label class="appearance-field"><span>Reduce animations</span><input id="reduceMotionSetting" type="checkbox" /></label>
@@ -162,13 +154,13 @@
 
   <dialog id="quickApplyDialog" class="modal quick-apply-dialog" aria-labelledby="quickApplyTitle">
     <div class="qa-header">
-      <div class="qa-heading"><span class="eyebrow">CURSOR BRIDGE / SCRIPT DELIVERY</span><h2 id="quickApplyTitle">Quick Apply<span class="qa-accent">.</span></h2><p>One AI response. Every script in the right place.</p></div>
+      <div class="qa-heading"><h2 id="quickApplyTitle">Quick Apply</h2><p>Review and apply a script bundle to Roblox Studio.</p></div>
       <button type="button" class="icon-button quiet qa-close" data-close="quickApplyDialog" aria-label="Close Quick Apply"><span data-icon="close"></span></button>
     </div>
     <div class="qa-body">
       <div class="qa-input-pane">
-        <div class="qa-pane-top"><label for="quickApplyText">AI script bundle <span class="qa-extension">.txt</span></label><button class="qa-inline" id="quickCopyFormat" type="button"><span data-icon="copy"></span> Copy AI format</button></div>
-        <textarea id="quickApplyText" class="qa-text" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="Paste the complete AI-generated TXT here…
+        <div class="qa-pane-top"><label for="quickApplyText">Script bundle <span class="qa-extension">.txt</span></label><button class="qa-inline" id="quickCopyFormat" type="button"><span data-icon="copy"></span> Copy AI format</button></div>
+        <textarea id="quickApplyText" class="qa-text" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="Paste a script bundle here…
 
 ==================================================
 SCRIPT: Main
