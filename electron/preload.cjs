@@ -4,6 +4,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 const handlers = new Map();
 contextBridge.exposeInMainWorld('cursorBridge', {
+  platform: process.platform,
+  setWindowTheme: (name) => ipcRenderer.invoke('bridge:set-window-theme', name),
   copyText: (value) => ipcRenderer.invoke('bridge:copy-text', value),
   saveQuickApplyDraft: (text) => ipcRenderer.invoke('bridge:save-quick-apply-draft', text),
   getQuickApplyDraft: () => ipcRenderer.invoke('bridge:get-quick-apply-draft'),

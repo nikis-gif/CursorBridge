@@ -1,0 +1,58 @@
+name: Workspace validation
+
+on:
+  push:
+    branches: ['redesign/discord-cloud']
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workspace-validation-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Install browser regression tooling
+        run: |
+          python -m pip install -r tests/browser/requirements.txt
+          python -m playwright install --with-deps chromium
+      - name: Run application regression tests
+        run: npm test
+      - name: Build production renderer
+        run: npm run build
+      - name: Validate Studio plugin source and generated XML
+        run: |
+          python scripts/build_plugin.py
+          python -m unittest discover -s tests -p test_plugin_build.py -v
+      - name: Verify navigation, Quick Apply and draft recovery
+        run: npm run test:ui
+      - name: Verify split workspace with real Monaco
+        run: npm run test:ui:workspace
+      - name: Verify large places and large AI bundles
+        run: |
+          npm run test:ui:load
+          npm run test:ui:stability
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workspace-regression-artifacts
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7

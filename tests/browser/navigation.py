@@ -88,7 +88,9 @@ def test_search(page):
     # Capture a real screenshot of the renderer for visual review.
     page.locator('#placeSearchInput').fill('hello')
     page.wait_for_function('document.querySelector("#placeSearchSummary").textContent.includes("results in")')
-    page.screenshot(path=str(PROJECT / 'docs/navigation-preview.png'), full_page=True)
+    output = PROJECT / 'test-results' / 'navigation-preview.png'
+    output.parent.mkdir(parents=True, exist_ok=True)
+    page.screenshot(path=str(output), full_page=True)
 
 
 def test_quick_open(page):

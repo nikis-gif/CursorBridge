@@ -9,12 +9,12 @@ local Primitives = require(Root.UI.Primitives)
 
 local PLUGIN_ICON = "rbxassetid://132318313203288"
 local GUI_NAME = "CursorBridgeV2UI"
-local DEFAULT_SIZE = Vector2.new(548, 356)
-local MIN_SIZE = Vector2.new(470, 312)
+local DEFAULT_SIZE = Vector2.new(590, 390)
+local MIN_SIZE = Vector2.new(500, 370)
 local MAX_SIZE = Vector2.new(760, 510)
-local TITLE_HEIGHT = 30
+local TITLE_HEIGHT = 34
 local FOOTER_HEIGHT = 28
-local SIDEBAR_WIDTH = 208
+local SIDEBAR_WIDTH = 216
 
 local BridgeWindow = {}
 BridgeWindow.__index = BridgeWindow
@@ -116,17 +116,17 @@ function BridgeWindow.new(_pluginObject: Plugin)
 		Name = "CursorIcon",
 		BackgroundTransparency = 1,
 		Image = PLUGIN_ICON,
-		Position = UDim2.fromOffset(9, 7),
+		Position = UDim2.fromOffset(9, 9),
 		Size = UDim2.fromOffset(16, 16),
 	}, titleBar)
-	local title = Primitives.Label(titleBar, "Cursor Bridge V2", 10, Theme.Text, true)
+	local title = Primitives.Label(titleBar, "Cursor Bridge", 11, Theme.Text, true)
 	title.Position = UDim2.fromOffset(32, 0)
 	title.Size = UDim2.new(1, -162, 1, 0)
 	title.TextTruncate = Enum.TextTruncate.AtEnd
 
 	local minimize = Primitives.Button(titleBar, "", 26, "Ghost")
 	minimize.Name = "MinimizeButton"
-	minimize.Position = UDim2.new(1, -91, 0, 3)
+	minimize.Position = UDim2.new(1, -91, 0, 5)
 	minimize.Size = UDim2.fromOffset(26, 24)
 	minimize.BackgroundTransparency = 1
 	local minimizeIcon = Primitives.Icon(minimize, "Minimize", 12)
@@ -135,7 +135,7 @@ function BridgeWindow.new(_pluginObject: Plugin)
 
 	local close = Primitives.Button(titleBar, "", 26, "Ghost")
 	close.Name = "CloseButton"
-	close.Position = UDim2.new(1, -28, 0, 3)
+	close.Position = UDim2.new(1, -28, 0, 5)
 	close.Size = UDim2.fromOffset(26, 24)
 	close.BackgroundTransparency = 1
 	local closeIcon = Primitives.Icon(close, "Close", 12)
@@ -151,10 +151,10 @@ function BridgeWindow.new(_pluginObject: Plugin)
 		ClipsDescendants = true,
 	}, chrome)
 
-	local heading = Primitives.Label(body, "STUDIO CONNECTION", 9, Theme.TextMuted, true)
+	local heading = Primitives.Label(body, "YOUR STUDIO WORKSPACE", 10, Theme.TextMuted, true)
 	heading.Position = UDim2.fromOffset(13, 8)
 	heading.Size = UDim2.new(1, -160, 0, 20)
-	local subtitle = Primitives.Label(body, "Secure local synchronization", 8, Theme.TextFaint, false)
+	local subtitle = Primitives.Label(body, "Your scripts. One connected workspace.", 9, Theme.TextFaint, false)
 	subtitle.Position = UDim2.fromOffset(13, 26)
 	subtitle.Size = UDim2.new(1, -160, 0, 16)
 
@@ -174,7 +174,7 @@ function BridgeWindow.new(_pluginObject: Plugin)
 	Primitives.Corner(sidebar, Theme.RadiusMedium)
 	Primitives.Stroke(sidebar, Theme.BorderSoft)
 
-	local pairingTitle = Primitives.Label(sidebar, "PAIR WITH DESKTOP", 9, Theme.Text, true)
+	local pairingTitle = Primitives.Label(sidebar, "CONNECT YOUR WORKSPACE", 9, Theme.Text, true)
 	pairingTitle.Position = UDim2.fromOffset(12, 11)
 	pairingTitle.Size = UDim2.new(1, -24, 0, 22)
 	note(sidebar, "Enter the code from Cursor Bridge for Windows.", 38)
@@ -184,7 +184,7 @@ function BridgeWindow.new(_pluginObject: Plugin)
 	codeBox.Position = UDim2.fromOffset(12, 83)
 	codeBox.Size = UDim2.new(1, -24, 0, 32)
 	codeBox.Font = Enum.Font.Code
-	codeBox.TextSize = 16
+	codeBox.TextSize = 20
 	codeBox.TextXAlignment = Enum.TextXAlignment.Center
 	codeBox.Text = ""
 
@@ -218,7 +218,7 @@ function BridgeWindow.new(_pluginObject: Plugin)
 	Primitives.Corner(details, Theme.RadiusMedium)
 	Primitives.Stroke(details, Theme.BorderSoft)
 
-	local statusTitle = Primitives.Label(details, "SESSION STATUS", 9, Theme.Text, true)
+	local statusTitle = Primitives.Label(details, "STUDIO SESSION", 9, Theme.Text, true)
 	statusTitle.Position = UDim2.fromOffset(12, 11)
 	statusTitle.Size = UDim2.new(1, -100, 0, 22)
 	local statusBadge = Primitives.Badge(details, "IDLE", "neutral")
@@ -259,7 +259,7 @@ function BridgeWindow.new(_pluginObject: Plugin)
 	}, footer)
 	local footerDivider = Primitives.Divider(footer, false)
 	footerDivider.Position = UDim2.new(0, 0, 0, 0)
-	local footerLabel = Primitives.Label(footer, "One active Studio session  /  Live monitoring", 8, Theme.TextFaint, false)
+	local footerLabel = Primitives.Label(footer, "Local connection  /  Backups managed on desktop", 8, Theme.TextFaint, false)
 	footerLabel.Position = UDim2.fromOffset(12, 0)
 	footerLabel.Size = UDim2.new(1, -24, 1, 0)
 

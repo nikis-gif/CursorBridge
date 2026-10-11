@@ -2,6 +2,8 @@ name: Build and publish Windows release
 
 on:
   push:
+    branches: ['main']
+    paths: ['package.json']
     tags:
       - 'v*'
   workflow_dispatch:
@@ -14,7 +16,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  regression:
+    uses: ./.github/workflows/workspace-validation.yml
+    permissions:
+      contents: read
+
   windows-release:
+    needs: regression
     runs-on: windows-latest
     steps:
       - name: Check out release source
@@ -35,7 +43,7 @@ jobs:
         shell: pwsh
         run: |
           $version = node -p "require('./package.json').version"
-          $tag = if ('${{ github.event_name }}' -eq 'workflow_dispatch') { "v$version" } else { '${{ github.ref_name }}' }
+          $tag = if ('${{ github.ref_type }}' -eq 'tag') { '${{ github.ref_name }}' } else { "v$version" }
           $repository = '${{ github.repository }}'
           $owner = node -p "require('./package.json').build.publish[0].owner"
           $repo = node -p "require('./package.json').build.publish[0].repo"
@@ -84,8 +92,8 @@ jobs:
           if (-not $manifest.Contains("sha512: $base64Sha")) { throw 'latest.yml checksum does not match installer' }
           if (-not $manifest.Contains("size: $size")) { throw 'latest.yml size does not match installer' }
 
-      - name: Create matching version tag for manual release
-        if: github.event_name == 'workflow_dispatch'
+      - name: Create matching version tag for branch or manual release
+        if: github.ref_type != 'tag'
         shell: pwsh
         run: |
           $tag = '${{ steps.release_meta.outputs.tag }}'
@@ -116,7 +124,12 @@ jobs:
           if (-not (Test-Path -LiteralPath $metadata)) { throw 'latest.yml is missing.' }
           if (-not (Test-Path -LiteralPath $studioPlugin)) { throw 'Roblox plugin is missing.' }
           $assets = @($installer.FullName, $blockmap.FullName, $metadata, $studioPlugin)
-          gh release create $tag $assets --title $tag --notes "Cursor Bridge $tag" --latest --verify-tag
+          $notesFile = Join-Path 'docs' "RELEASE_$($version.Replace('.', '_')).md"
+          if (Test-Path -LiteralPath $notesFile) {
+            gh release create $tag $assets --title "Cursor Bridge $tag" --notes-file $notesFile --latest --verify-tag
+          } else {
+            gh release create $tag $assets --title "Cursor Bridge $tag" --notes "Cursor Bridge $tag" --latest --verify-tag
+          }
           if ($LASTEXITCODE -ne 0) { throw 'GitHub release publication failed.' }
 
       - name: Verify public release and assets

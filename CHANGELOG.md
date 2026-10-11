@@ -1,5 +1,18 @@
 ## 0.2.9 - Quick Apply and session reliability
 
+
+## 0.3.0 - Discord Cloud Workspace
+
+- Rebuilt the desktop shell with a Discord-inspired theme, rounded surfaces, activity rail, real session dashboard and a Quick Apply entry card.
+- Integrated native Windows caption controls into the workbench palette; sandbox and context isolation remain enabled.
+- Added left/right Explorer docking by drag handle or layout menu, keyboard resizing, persistent layout and reduced-motion controls.
+- Added side-by-side and stacked views of a script with independent cursors and view states. Both views share one Monaco model and one draft/synchronization pipeline.
+- Added tab-to-split drop targets, layout reset without touching code, and group-aware Ctrl+W / Ctrl+S shortcuts.
+- Added the matching Discord preset to the Studio plugin, roomier panels and rounded controls. Existing saved theme choices are preserved.
+- Added real-Monaco browser regressions plus layout/native-theme unit coverage; retained large-place, Quick Apply and recovery regression gates.
+- Locked dependencies and made a version change on main automatically validate, build, tag and publish a complete Windows release.
+
+
 - Resolve requested paths directly in Studio instead of requiring manually expanded Explorer pages.
 - Preserve read-only preview, exact source/identity checks and explicit ambiguous/missing-path errors.
 - Accept 16 MiB TXT bundles, 128 scripts and 2 MiB per script, with explicit byte limits.

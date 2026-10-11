@@ -20,12 +20,15 @@ def fixture_page():
     page = (PROJECT / "index.html").read_text(encoding="utf-8")
     page = re.sub(r'<meta http-equiv="Content-Security-Policy"[^>]+>', "", page)
     page = page.replace('<script type="module" src="./renderer/app.js"></script>', "")
-    css = (PROJECT / "renderer/styles.css").read_text(encoding="utf-8")
+    css = "\n".join((PROJECT / f"renderer/{name}").read_text(encoding="utf-8")
+                    for name in ("styles.css", "workspace.css"))
     return page.replace("</head>", f"<style>{css}</style></head>")
 
 
 def fixture_modules():
     files = {
+        "layout": PROJECT / "renderer/layout-state.mjs",
+        "workspace": PROJECT / "renderer/workspace-ui.mjs",
         "monaco": FIXTURES / "mock-monaco.mjs",
         "worker": FIXTURES / "mock-worker.mjs",
         "icons": PROJECT / "renderer/icons.js",
@@ -45,6 +48,7 @@ def fixture_modules():
 
 
 IMPORTS = {
+    "import { mountWorkspace } from './workspace-ui.mjs';": "workspace",
     "import limits from '../shared/limits.json';": "limits",
     "import * as monaco from 'monaco-editor';": "monaco",
     "import EditorWorker from 'monaco-editor/editor/editor.worker?worker';": "worker",
@@ -65,6 +69,9 @@ MOUNT_APP = """async ([modules, app, imports]) => {
   for (const [key, source] of Object.entries(modules)) {
     blobs[key] = URL.createObjectURL(new Blob([source], {type:'text/javascript'}));
   }
+  const workspace = modules.workspace.replace("from './layout-state.mjs'", "from '" + blobs.layout + "'");
+  URL.revokeObjectURL(blobs.workspace);
+  blobs.workspace = URL.createObjectURL(new Blob([workspace], {type:'text/javascript'}));
   // The selection module depends on the exact production Explorer model.
   const selection = modules.selection.replace(
     "from './explorer-model.mjs'", "from '" + blobs.model + "'");
@@ -78,7 +85,7 @@ MOUNT_APP = """async ([modules, app, imports]) => {
     if (!app.includes(snippet)) throw new Error('Missing renderer import: ' + snippet);
     app = app.replace(snippet, snippet.replace(/'[^']+';$/, "'" + blobs[key] + "';"));
   }
-  app = app.replace("import './styles.css';", '');
+  app = app.replace("import './styles.css';", '').replace("import './workspace.css';", '');
   await import(URL.createObjectURL(new Blob([app], {type:'text/javascript'})));
 }"""
 

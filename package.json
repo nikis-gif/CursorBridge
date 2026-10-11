@@ -1,6 +1,6 @@
 {
   "name": "cursor-bridge",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "description": "Local Roblox Studio-to-Windows Luau bridge with two-way synchronization and backups",
   "private": true,
   "author": "Cursor Bridge Contributors",
@@ -19,7 +19,8 @@
     "test:load": "node --test tests/large-place.test.cjs tests/virtual-window.test.cjs",
     "test:ui:load": "python tests/browser/large_place.py && python tests/browser/on_demand.py",
     "test:stability": "node --test tests/quick-apply-recovery.test.cjs",
-    "test:ui:stability": "python tests/browser/quick_apply_large.py"
+    "test:ui:stability": "python tests/browser/quick_apply_large.py",
+    "test:ui:workspace": "python tests/browser/workspace.py"
   },
   "dependencies": {
     "electron-updater": "6.8.10"

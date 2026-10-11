@@ -1,5 +1,13 @@
 # Cursor Bridge
 
+
+**0.3.0 - Discord Cloud Workspace.** The desktop now includes a session dashboard,
+Discord-inspired theme, dockable Explorer, native themed Windows caption controls,
+and shared-document split editors. See [workspace controls](docs/WORKSPACE.md)
+and [release notes](docs/RELEASE_0_3_0.md). Existing saved themes remain available;
+choose **Appearance > Discord** to switch an existing installation.
+
+
 **Cursor Bridge v0.2.9** is a Windows-first Luau workbench connected to the **currently paired Roblox Studio place**. It comprises a local Electron/Monaco application and a Roblox Studio plugin with the existing Cursor V2 floating window. Studio remains the source of truth for the DataModel; the workbench does not run games or replace Studio's compiler.
 
 All connection traffic stays on `127.0.0.1:38471`. Source history, recovery snapshots, and unsynced drafts are stored locally on the PC.
