@@ -56,3 +56,24 @@ jobs:
           path: test-results/
           if-no-files-found: ignore
           retention-days: 7
+  validate-windows-package:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run Node regression tests on Windows
+        run: npm test
+      - name: Package local Windows candidate without publishing
+        run: npm run package:win
+      - name: Verify installer and unpacked application
+        shell: pwsh
+        run: |
+          if (!(Test-Path 'release/Cursor-Bridge-Setup-0.4.0.exe')) { throw 'Windows installer missing' }
+          if (!(Test-Path 'release/win-unpacked/resources/app.asar')) { throw 'Packaged application missing' }
+

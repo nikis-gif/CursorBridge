@@ -14,6 +14,7 @@ export function projectKeyForPlace(status) {
 
 /** Never attach the live Studio script to an unrelated saved Place project. */
 export function canUseScriptContext(projectKey, status) {
-  return status?.ready === true && typeof projectKey === 'string' &&
+  return status?.connected === true && status?.ready === true && status?.protocolVersion !== 1 &&
+    typeof projectKey === 'string' &&
     projectKeyForPlace(status) === projectKey;
 }
