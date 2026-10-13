@@ -173,11 +173,34 @@ def test_save_active_script_without_ai_connection(page):
     assert snippet['code'] == 'print("hello")'
     expect(page.locator('#aiSnippetList')).to_contain_text('Script: Main')
 
+def test_save_full_luau_script_without_truncation(page):
+    """Saving a >48k script must not reuse truncated AI prompt context."""
+    mount_built(page, ai_fixture=True)
+    page.evaluate("""() => {
+      window.cursorBridge.aiAccountStatus = async () => ({
+        connected: false, available: false, secureStorage: false, reason: 'Not licensed'
+      });
+      const node = window.__mockNodes.find(item => item.id === 's1');
+      node.source = '--' + 'x'.repeat(52000);
+      node.revision = 2;
+      window.__emitServer({type:'upsert',origin:'studio',node:{...node}});
+    }""")
+    page.locator('.tree-row[data-id="s1"] .tree-name').click()
+    page.locator('#railAssistant').click()
+    page.locator('.ai-tabs button[data-view="snippets"]').click()
+    page.locator('#aiSaveActiveScript').click()
+    page.wait_for_function('window.__aiSnippets.length === 1')
+    data = page.evaluate('window.__aiSnippets[0]')
+    assert data['key'] == '100-200'
+    assert len(data['code']) == 52002
+    assert data['code'].startswith('--')
+    assert data['code'].endswith('x' * 32)
+
 def main():
     with sync_playwright() as pw:
         browser = pw.chromium.launch(**launch_options())
         try:
-            for test in (test_compact_chrome, test_theme_preference_migration, test_compact_split_and_layout, test_clamped_sidebar_resize, test_ai_panel_navigation, test_save_active_script_without_ai_connection, test_ai_chat_remains_scoped_when_user_switches_place):
+            for test in (test_compact_chrome, test_theme_preference_migration, test_compact_split_and_layout, test_clamped_sidebar_resize, test_ai_panel_navigation, test_save_active_script_without_ai_connection, test_save_full_luau_script_without_truncation, test_ai_chat_remains_scoped_when_user_switches_place):
                 page = browser.new_page(viewport={'width': 1080, 'height': 700})
                 errors = []
                 page.on('pageerror', lambda error: errors.append(str(error)))

@@ -2386,6 +2386,12 @@ assistant = mountAssistant({
     const model = models.get(selectedId);
     return model ? { path: pathForNode(nodes, selectedId), source: model.getValue().slice(0, 48000) } : null;
   },
+  // Never reuse the prompt-context preview for the full-code local library.
+  getSelectedScriptForSaving: () => {
+    if (!canMutate() || !selectedId) return null;
+    const model = models.get(selectedId);
+    return model ? { path: pathForNode(nodes, selectedId), source: model.getValue() } : null;
+  },
   toast,
 });
 window.addEventListener('pagehide', () => { workspace?.dispose(); assistant?.dispose(); }, { once: true });

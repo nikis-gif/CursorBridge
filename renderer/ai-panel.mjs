@@ -3,7 +3,7 @@ import { projectKeyForPlace, canUseScriptContext } from './place-project-key.mjs
 import './ai-panel.css';
 
 // Lightweight, isolated AI surface. No direct HTTP requests or credentials in renderer.
-export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
+export function mountAssistant({ api, getStatus, getSelectedContext, getSelectedScriptForSaving, toast }) {
   const rail = document.createElement('button');
   rail.type = 'button'; rail.id = 'railAssistant'; rail.className = 'rail-button';
   rail.title = 'AI projects (Ctrl+Shift+A)'; rail.setAttribute('aria-label', 'AI projects');
@@ -313,7 +313,7 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
   on($('aiSaveActiveScript'), 'click', async () => {
     const key = state.placeKey;
     if (!canUseScriptContext(key, getStatus())) { uiError(new Error('Connect to this Place before saving its script.')); return; }
-    const selected = getSelectedContext();
+    const selected = getSelectedScriptForSaving?.();
     if (!selected || typeof selected.source !== 'string') { uiError(new Error('Open a script in the editor first.')); return; }
     const name = String(selected.path || 'Script').split('/').at(-1).slice(0, 150);
     try {
