@@ -1,6 +1,6 @@
 # Cursor Bridge
 
-**v0.4.0 candidate:** Place-specific AI project conversations, persistent local memory and saved code, optional Sign in with ChatGPT, and improved split-editor tab ownership. See [AI projects](docs/AI_PROJECTS.md) and [release notes](docs/RELEASE_0_4_0.md). This feature is under regression and licensing review until the PR is merged.
+**v0.4.0:** Local Place-specific projects with persistent conversations, notes, saved Luau scripts, and improved split editor and shortcuts. The public installer does **not** enable ChatGPT sign-in or AI model inference yet: this repository remains `UNLICENSED`, and account-integration eligibility and native login QA are unresolved. No API key is required for the local project features. See [AI projects](docs/AI_PROJECTS.md) and [release notes](docs/RELEASE_0_4_0.md).
 
 ### v0.3.1 - Refined interface
 

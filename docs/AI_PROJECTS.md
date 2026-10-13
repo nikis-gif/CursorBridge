@@ -1,19 +1,19 @@
-# AI projects — v0.4.0 candidate
+# AI projects — v0.4.0 public local workspace
 
 An optional Electron panel for Place-specific coding conversations. AI projects are identified by the existing Roblox Studio `placeKey`, never by a script name or in-memory session ID. Opening a Place creates/opens its existing project. Previous Place histories remain accessible while disconnected.
 
 ## Features
 
 - `Ctrl+Shift+A` opens the AI panel. The panel inherits the existing workbench's theme and monochrome outline icon family. The Studio bridge and Quick Apply flows are unchanged.
-- Chats can be created, renamed and deleted. Chat messages, architecture notes, and saved Luau code snippets persist locally under Electron `userData/ai-projects/` (one atomic JSON file per Place).
+- Chats can be created, renamed and deleted. Chat messages, architecture notes, and saved Luau code snippets persist locally under Electron `userData/ai-projects/` (one atomic JSON file per Place). Use **Saved code > Save active script** to archive the open Luau script without a ChatGPT login.
 - Source context is **opt-in**: select a script and enable **Script context** before sending. No complete Place content is sent by default. The model never writes to Roblox Studio automatically; copy code or save a snippet, then use the existing editor or Quick Apply confirmation/backup path.
-- **Continue with ChatGPT** uses the official open-source Sign in with ChatGPT OAuth authorization-code + PKCE flow, with the system browser and a loopback callback. No private API key or client secret is required. Credentials are encrypted with Electron `safeStorage`, never exposed to the renderer or Roblox plugin. The model picker loads only server-advertised models. Request errors and entitlement limits are not bypassed.
+- **Account integration is unavailable in the public v0.4.0 installer.** Packaged releases hard-disable ChatGPT OAuth and model inference while this repository remains `UNLICENSED`, pending eligibility and native Windows login QA. The implementation is retained for a later eligible release and separate, explicitly opted-in unpackaged development testing. When enabled in a properly authorized release, OAuth/PKCE credentials remain in Electron `safeStorage`, never exposed to the renderer or Roblox plugin.
 - History/memory are **independent** of chatgpt.com projects, conversations, account Memory, and Voice sessions; signing in does not import them. Prompts/history/context for a request are sent to OpenAI only when explicitly submitted. `store:false` and `stream:true` are used for Responses requests.
 - **Dictation and read-aloud:** browser/OS speech facilities are used only if available. Speech recognition may rely on the platform's online service; the native ChatGPT voice experience is not embedded. No microphone data are sent to OpenAI by the AI text request code.
 
 ## Distribution eligibility
 
-The ChatGPT plan-sharing integration has open-source/local-hosting eligibility requirements. The present repository has `license: UNLICENSED` and is not automatically open-source merely because it is public. Resolve the license/eligibility before releasing this OAuth integration to end-users; do not change the project license silently. Commercial or otherwise ineligible distribution needs separate approval or a supported billing arrangement.
+The ChatGPT plan-sharing integration has open-source/local-hosting eligibility requirements. This repository is public but declares `license: UNLICENSED` and is not automatically open-source. Therefore, the v0.4.0 public Windows installer **blocks ChatGPT authorization and inference even through direct IPC**. The owner must explicitly choose licensing/distribution conditions, ensure a suitable privacy notice and complete native sign-in QA before enabling this functionality in a future release. Unpackaged developer builds may use `CURSOR_BRIDGE_DEV_SIWC=1` solely for deliberate local integration QA. Installed/packaged builds ignore this flag.
 
 The supplied **Vanilla 3 for Roblox Studio** icon ZIP forbids repackaging assets into third-party software. Do not include it in the CursorBridge distributable. The AI panel adds only original SVG outline shapes consistent with existing icons.
 
