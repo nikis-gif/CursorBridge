@@ -184,6 +184,7 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
         try { state.project = await api.aiDeleteChat(state.placeKey, chat.id); if (state.chatId === chat.id) state.chatId = state.project.chats[0]?.id || null; render(); }
         catch (error) { uiError(error); }
       });
+      if (state.sending && chat.id === state.requestChatId) remove.disabled = true;
       row.append(trigger, rename, remove); list.append(row);
     }
     if (!state.project?.chats.length) list.append(empty('No conversations yet.'));
@@ -249,7 +250,7 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
     renderThreads(); renderMessages(); renderEntries();
     updateScriptContextChoice();
     $('aiPrompt').disabled = !state.placeKey;
-    $('aiNewChat').disabled = !state.placeKey;
+    $('aiNewChat').disabled = !state.placeKey || state.sending;
     renderAccount();
     for (const button of pane.querySelectorAll('.ai-tabs button')) button.setAttribute('aria-pressed', String(button.dataset.view === state.view));
     $('aiChatsView').hidden = state.view !== 'chats';
@@ -262,23 +263,32 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
     const content = $('aiPrompt').value.trim();
     if (!content) return;
     if (!state.account?.connected || !state.selectedModel) { uiError(new Error('Connect ChatGPT and select a model.')); return; }
-    const startedPlace = state.placeKey;
+    // Freeze the destination before any IPC await: users can switch Place while a chat is created.
+    const placeKey = state.placeKey, placeName = state.placeName, model = state.selectedModel;
+    const scriptContext = $('aiIncludeScript').checked && canUseScriptContext(placeKey, getStatus())
+      ? getSelectedContext() : null;
+    let chatId = state.chatId;
+    state.sending = true; state.partial = ''; state.requestChatId = chatId;
+    $('aiPrompt').value = ''; $('aiRequestStatus').textContent = 'Preparing conversation…'; render();
     try {
-      if (!state.chatId) {
-        state.project = await api.aiNewChat(state.placeKey, state.placeName);
-        state.chatId = state.project.result;
+      if (!chatId) {
+        const created = await api.aiNewChat(placeKey, placeName);
+        chatId = created.result;
+        if (state.placeKey === placeKey) { state.project = created; state.chatId = chatId; }
       }
-      state.sending = true; state.partial = ''; state.requestChatId = state.chatId;
-      const chatId = state.chatId, placeKey = state.placeKey;
-      $('aiPrompt').value = ''; $('aiRequestStatus').textContent = 'Generating response…'; render();
-      const scriptContext = $('aiIncludeScript').checked && canUseScriptContext(placeKey, getStatus())
-        ? getSelectedContext() : null;
-      await api.aiSend({ placeKey, chatId, text: content, model: state.selectedModel, scriptContext });
-      $('aiRequestStatus').textContent = 'Saved locally. Ctrl+Enter to send.';
-    } catch (error) { uiError(error); }
-    finally {
-      state.sending = false; state.partial = '';
-      if (state.placeKey === startedPlace) { try { state.project = await api.aiEnsureProject(startedPlace, state.placeName); } catch (error) { uiError(error); } }
+      state.requestChatId = chatId;
+      if (state.placeKey === placeKey) { $('aiRequestStatus').textContent = 'Generating response…'; render(); }
+      await api.aiSend({ placeKey, chatId, text: content, model, scriptContext });
+      if (state.placeKey === placeKey) $('aiRequestStatus').textContent = 'Saved locally. Ctrl+Enter to send.';
+    } catch (error) {
+      if (state.placeKey === placeKey) uiError(error);
+      else toast(error?.message || String(error), true);
+    } finally {
+      state.sending = false; state.partial = ''; state.requestChatId = null;
+      try {
+        const refreshed = await api.aiEnsureProject(placeKey, placeName);
+        if (state.placeKey === placeKey) state.project = refreshed;
+      } catch (error) { uiError(error); }
       render();
     }
   }
@@ -298,7 +308,7 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
   on($('aiUsage'), 'click', () => api.aiOpenUsage().catch(uiError));
   on($('aiModel'), 'change', () => { state.selectedModel = $('aiModel').value; renderAccount(); });
   on($('aiNewChat'), 'click', async () => {
-    if (!state.placeKey) return;
+    if (!state.placeKey || state.sending) return;
     try { state.project = await api.aiNewChat(state.placeKey, state.placeName); state.chatId = state.project.result; render(); $('aiPrompt').focus(); }
     catch (error) { uiError(error); }
   });
