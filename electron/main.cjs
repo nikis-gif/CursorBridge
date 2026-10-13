@@ -94,7 +94,13 @@ function registerIpc() {
       mainWindow.setBackgroundColor(style.color);
       return { ok: true };
     },
-    'bridge:copy-text': (_event, value) => clipboard.writeText(String(value).slice(0, 256 * 1024)),
+    'bridge:copy-text': (_event, value) => {
+      if (typeof value !== 'string' || Buffer.byteLength(value, 'utf8') > 512 * 1024) {
+        throw new Error('Clipboard text must be at most 512 KiB.');
+      }
+      clipboard.writeText(value);
+      return { ok: true };
+    },
     'bridge:get-state': () => bridge.getState(),
     'bridge:request-source': (_event, id) => bridge.requestSource(id),
     'bridge:save-quick-apply-draft': (_event, text) => bridge.saveQuickApplyDraft(text),
@@ -130,7 +136,15 @@ function registerIpc() {
     },
     'bridge:ai-sign-out': () => chatgptAuth.signOut(),
     'bridge:ai-models': () => aiAssistant.models(true),
-    'bridge:ai-send': (_event, request) => aiAssistant.send(request),
+    'bridge:ai-send': async (_event, request) => {
+      if (request?.scriptContext) {
+        const { canUseScriptContext } = await import('../shared/place-project-key.mjs');
+        if (!canUseScriptContext(request.placeKey, bridge.getState().status)) {
+          throw new Error('Script context is available only for the currently connected Place.');
+        }
+      }
+      return aiAssistant.send(request);
+    },
     'bridge:ai-open-usage': () => shell.openExternal('https://chatgpt.com/#settings/Usage'),
   };
   for (const [name, action] of Object.entries(actions)) {
@@ -197,7 +211,11 @@ if (acquiredLock) {
     chatgptAuth = new ChatGPTAuth({
       userData: app.getPath('userData'), safeStorage: require('electron').safeStorage,
       openExternal: (url) => shell.openExternal(url),
-      onChange: (status) => { aiAssistant?.invalidateModels(); sendToRenderer({ type: 'ai:account', status }); },
+      onChange: (status) => {
+        aiAssistant?.invalidateModels();
+        if (!status.connected) aiAssistant?.abortAll();
+        sendToRenderer({ type: 'ai:account', status });
+      },
     });
     try { await chatgptAuth.init(); }
     catch (error) { aiInitError = error.message; console.error('ChatGPT sign-in disabled:', error.message); }

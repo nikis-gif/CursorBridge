@@ -58,17 +58,22 @@ class AIAssistant {
     this.fetchImpl = fetchImpl;
     this.onDelta = onDelta;
     this.inflight = new Set();
+    this.controllers = new Map();
+    this.modelEpoch = 0;
     this.modelsCache = null;
   }
-  invalidateModels() { this.modelsCache = null; }
+  invalidateModels() { this.modelsCache = null; ++this.modelEpoch; }
+  abortAll() { for (const controller of this.controllers.values()) controller.abort(); }
   async models(refresh = false) {
     if (!refresh && this.modelsCache && Date.now() - this.modelsCache.at < 60_000) return this.modelsCache.models;
+    const epoch = this.modelEpoch;
     const token = await this.auth.accessToken();
     const response = await this.fetchImpl(`${API}/models`, {
       headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(25000),
     });
     if (!response.ok) throw await responseError(response);
     const payload = await response.json();
+    if (epoch !== this.modelEpoch) throw new Error('ChatGPT account changed while loading models.');
     const models = (Array.isArray(payload.models) ? payload.models : []).filter(m => m.visibility === 'list' && typeof m.slug === 'string')
       .map(m => ({ id: m.slug, name: String(m.display_name || m.slug).slice(0, 90) })).slice(0, 100);
     this.modelsCache = { models, at: Date.now() };
@@ -81,6 +86,8 @@ class AIAssistant {
     const runKey = `${placeKey}\u0000${chatId}`;
     if (this.inflight.has(runKey)) throw new Error('A response is already in progress in this chat.');
     this.inflight.add(runKey);
+    const controller = new AbortController();
+    this.controllers.set(runKey, controller);
     try {
       const project = await this.projects.read(placeKey);
       const chat = project.chats.find(c => c.id === chatId);
@@ -102,17 +109,19 @@ class AIAssistant {
       // Save the request first. On a failed model turn it remains visible and can be retried by the user.
       await this.projects.addMessage(placeKey, chatId, 'user', userText);
       const token = await this.auth.accessToken();
+      if (controller.signal.aborted) throw new Error('ChatGPT request was cancelled.');
       const response = await this.fetchImpl(`${API}/responses`, {
         method: 'POST',
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
         body: JSON.stringify({ model, instructions, input, store: false, stream: true }),
-        signal: AbortSignal.timeout(300000),
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(300000)]),
       });
       if (!response.ok) throw await responseError(response);
       const output = await readEvents(response, delta => this.onDelta({ placeKey, chatId, delta }));
+      if (controller.signal.aborted) throw new Error('ChatGPT request was cancelled.');
       await this.projects.addMessage(placeKey, chatId, 'assistant', output, model);
       return { ok: true, reply: output };
-    } finally { this.inflight.delete(runKey); }
+    } finally { this.controllers.delete(runKey); this.inflight.delete(runKey); }
   }
 }
 

@@ -56,6 +56,8 @@ class ChatGPTAuth {
     this.pending = null;
     this.refreshPromise = null;
     this.hostId = null;
+    this.authEpoch = 0;
+    this.credentialWrite = Promise.resolve();
   }
   encryptionAvailable() { return Boolean(this.safeStorage?.isEncryptionAvailable()); }
   async init() {
@@ -78,13 +80,18 @@ class ChatGPTAuth {
   }
   async save() {
     if (!this.encryptionAvailable()) throw new Error('Secure credential storage is not available on this device.');
-    const file = path.join(this.root, 'credentials.bin');
-    const temp = `${file}.${crypto.randomBytes(6).toString('hex')}.tmp`;
-    try {
-      const payload = this.safeStorage.encryptString(JSON.stringify(this.credentials));
-      await fs.writeFile(temp, payload, { flag: 'wx', mode: 0o600 });
-      await fs.rename(temp, file);
-    } catch (error) { await fs.rm(temp, { force: true }).catch(() => {}); throw error; }
+    // Serialize credential writes so a late refresh cannot overwrite a sign-out.
+    const write = this.credentialWrite.catch(() => {}).then(async () => {
+      const file = path.join(this.root, 'credentials.bin');
+      const temp = `${file}.${crypto.randomBytes(6).toString('hex')}.tmp`;
+      try {
+        const payload = this.safeStorage.encryptString(JSON.stringify(this.credentials));
+        await fs.writeFile(temp, payload, { flag: 'wx', mode: 0o600 });
+        await fs.rename(temp, file);
+      } catch (error) { await fs.rm(temp, { force: true }).catch(() => {}); throw error; }
+    });
+    this.credentialWrite = write;
+    return write;
   }
   status() {
     const c = this.credentials;
@@ -101,6 +108,7 @@ class ChatGPTAuth {
   async startSignIn() {
     if (!this.encryptionAvailable()) throw new Error('Windows credential encryption is unavailable.');
     if (this.pending) throw new Error('A ChatGPT sign-in is already in progress.');
+    const authEpoch = ++this.authEpoch;
     const state = random(), nonce = random(), verifier = random();
     const challenge = base64url(crypto.createHash('sha256').update(verifier).digest());
     const previous = this.credentials;
@@ -133,7 +141,7 @@ class ChatGPTAuth {
         this.onChange({ ...this.status(), error: oauthError || 'Incomplete ChatGPT authorization.' });
         return;
       }
-      this.finishSignIn({ code, issuedId, verifier, redirect, nonce, previous })
+      this.finishSignIn({ code, issuedId, verifier, redirect, nonce, previous, authEpoch })
         .then(() => this.onChange(this.status()))
         .catch(error => this.onChange({ ...this.status(), error: error.message }));
     });
@@ -150,7 +158,7 @@ class ChatGPTAuth {
     this.onChange(this.status());
     return this.status();
   }
-  async finishSignIn({ code, issuedId, verifier, redirect, nonce, previous }) {
+  async finishSignIn({ code, issuedId, verifier, redirect, nonce, previous, authEpoch = this.authEpoch }) {
     if (!/^oaiapp_[\w-]+$/.test(issuedId)) throw new Error('Invalid issued ChatGPT client identifier.');
     const form = new URLSearchParams({ grant_type: 'authorization_code', client_id: issuedId,
       code, code_verifier: verifier, redirect_uri: redirect, resource: RESOURCE });
@@ -165,21 +173,25 @@ class ChatGPTAuth {
     if (previous?.subject && previous.subject !== identity.subject) throw new Error('The selected ChatGPT account does not match the saved account.');
     const scopes = String(tokens.scope || '').split(/\s+/).filter(Boolean);
     if (!scopes.includes(NEEDED_SCOPE)) throw new Error('ChatGPT plan usage permission was not granted.');
+    if (authEpoch !== this.authEpoch) throw new Error('ChatGPT authorization was cancelled.');
     const record = { ...identity, client_id: issuedId, access_token: tokens.access_token,
       refresh_token: tokens.refresh_token, scopes, expiresAt: Date.now() + (Number(tokens.expires_in) || 3600) * 1000 };
     const old = this.credentials;
     this.credentials = record;
-    try { await this.save(); } catch (error) { this.credentials = old; throw error; }
+    try { await this.save(); } catch (error) { if (this.credentials === record) this.credentials = old; throw error; }
+    if (authEpoch !== this.authEpoch || this.credentials !== record) throw new Error('ChatGPT authorization was cancelled.');
   }
   async accessToken() {
     if (!this.credentials?.access_token || !this.credentials.scopes.includes(NEEDED_SCOPE)) throw new Error('Connect a ChatGPT account before sending messages.');
     if (Date.now() + 90_000 < this.credentials.expiresAt) return this.credentials.access_token;
+    const epoch = this.authEpoch;
     if (!this.refreshPromise) this.refreshPromise = this.refresh().finally(() => { this.refreshPromise = null; });
     await this.refreshPromise;
+    if (epoch !== this.authEpoch || !this.credentials?.access_token) throw new Error('ChatGPT account changed during token renewal.');
     return this.credentials.access_token;
   }
   async refresh() {
-    const previous = this.credentials;
+    const previous = this.credentials, authEpoch = this.authEpoch;
     const body = new URLSearchParams({ grant_type: 'refresh_token', client_id: previous.client_id,
       refresh_token: previous.refresh_token, resource: RESOURCE });
     const response = await this.fetchImpl(`${AUTH_ORIGIN}/api/accounts/oauth/token`, {
@@ -189,16 +201,20 @@ class ChatGPTAuth {
     if (!data.access_token || !data.refresh_token) throw new Error('ChatGPT token renewal failed.');
     const newScopes = data.scope ? String(data.scope).split(/\s+/) : previous.scopes;
     if (!newScopes.includes(NEEDED_SCOPE)) throw new Error('ChatGPT plan access revoked.');
-    this.credentials = { ...previous, access_token: data.access_token, refresh_token: data.refresh_token,
+    if (authEpoch !== this.authEpoch || this.credentials !== previous) throw new Error('ChatGPT account changed during token renewal.');
+    const renewed = { ...previous, access_token: data.access_token, refresh_token: data.refresh_token,
       scopes: newScopes, expiresAt: Date.now() + (Number(data.expires_in) || 3600) * 1000 };
-    try { await this.save(); } catch (error) { this.credentials = previous; throw error; }
+    this.credentials = renewed;
+    try { await this.save(); } catch (error) { if (this.credentials === renewed) this.credentials = previous; throw error; }
+    if (authEpoch !== this.authEpoch || this.credentials !== renewed) throw new Error('ChatGPT account changed during token renewal.');
   }
   async signOut() {
+    ++this.authEpoch;
     this.pending?.close();
     const prior = this.credentials;
     this.credentials = prior ? { ...prior, access_token: '', refresh_token: '', id_token: '' } : null;
+    this.onChange(this.status()); // Cancel model streams before credential persistence.
     await this.save();
-    this.onChange(this.status());
     if (!prior?.refresh_token) return { ok: true };
     try {
       const conf = await this.discovery();
