@@ -153,11 +153,31 @@ def test_ai_chat_remains_scoped_when_user_switches_place(page):
     expect(page.locator('#aiPlace')).to_have_value('historic-place')
     expect(page.locator('#aiThreads')).to_contain_text('No conversations yet.')
 
+def test_save_active_script_without_ai_connection(page):
+    """Local code library remains useful with ChatGPT authorization disabled."""
+    mount_built(page, ai_fixture=True)
+    page.evaluate("""() => {
+      window.cursorBridge.aiAccountStatus = async () => ({
+        connected: false, available: false, secureStorage: false, reason: 'This build has no ChatGPT sign-in'
+      });
+    }""")
+    page.locator('.tree-row[data-id="s1"] .tree-name').click()
+    page.locator('#railAssistant').click()
+    expect(page.locator('#aiLogin')).to_be_disabled()
+    page.locator('.ai-tabs button[data-view="snippets"]').click()
+    expect(page.locator('#aiSaveActiveScript')).to_be_enabled()
+    page.locator('#aiSaveActiveScript').click()
+    page.wait_for_function('window.__aiSnippets.length === 1')
+    snippet = page.evaluate('window.__aiSnippets[0]')
+    assert snippet['key'] == '100-200'
+    assert snippet['code'] == 'print("hello")'
+    expect(page.locator('#aiSnippetList')).to_contain_text('Script: Main')
+
 def main():
     with sync_playwright() as pw:
         browser = pw.chromium.launch(**launch_options())
         try:
-            for test in (test_compact_chrome, test_theme_preference_migration, test_compact_split_and_layout, test_clamped_sidebar_resize, test_ai_panel_navigation, test_ai_chat_remains_scoped_when_user_switches_place):
+            for test in (test_compact_chrome, test_theme_preference_migration, test_compact_split_and_layout, test_clamped_sidebar_resize, test_ai_panel_navigation, test_save_active_script_without_ai_connection, test_ai_chat_remains_scoped_when_user_switches_place):
                 page = browser.new_page(viewport={'width': 1080, 'height': 700})
                 errors = []
                 page.on('pageerror', lambda error: errors.append(str(error)))

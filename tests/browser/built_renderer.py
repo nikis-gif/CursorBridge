@@ -64,6 +64,7 @@ def mount_built(page, *, offline=False, preferences=None, ai_fixture=False):
           const projects = new Map(initial.map(project => [project.placeKey, project]));
           const clone = value => structuredClone(value);
           window.__aiSent = [];
+          window.__aiSnippets = [];
           window.__aiCreateStarted = false;
           window.__releaseAiCreate = null;
           Object.assign(window.cursorBridge, {
@@ -76,6 +77,13 @@ def mount_built(page, *, offline=False, preferences=None, ai_fixture=False):
               const id = 'chat-' + key;
               project.chats.unshift({id,title:'New chat',messages:[],createdAt:new Date().toISOString()});
               return {...clone(project),result:id};
+            },
+            aiSaveSnippet: async (key,title,code) => {
+              const item = {id:'snippet-' + window.__aiSnippets.length,title,code,language:'luau'};
+              window.__aiSnippets.push({key,...item});
+              const project = projects.get(key);
+              project.snippets.unshift(item);
+              return clone(project);
             },
             aiAccountStatus: async () => ({connected:true,displayName:'Test account',secureStorage:true}),
             aiModels: async () => [{id:'allowed',name:'Authorized model'}],
