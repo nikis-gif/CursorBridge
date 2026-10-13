@@ -1,5 +1,5 @@
 import { icon } from './icons.js';
-import { projectKeyForPlace } from './place-project-key.mjs';
+import { projectKeyForPlace, canUseScriptContext } from './place-project-key.mjs';
 import './ai-panel.css';
 
 // Lightweight, isolated AI surface. No direct HTTP requests or credentials in renderer.
@@ -68,8 +68,19 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
     account: null, models: [], selectedModel: '', sending: false, partial: '', requestChatId: null, changeId: 0 };
   const cleanup = [];
   let streamFrame = 0;
+  let modelRefreshId = 0;
   const scheduleMessageRender = () => {
-    if (!streamFrame) streamFrame = requestAnimationFrame(() => { streamFrame = 0; renderMessages(); });
+    if (streamFrame) return;
+    streamFrame = requestAnimationFrame(() => {
+      streamFrame = 0;
+      if (!state.sending || state.chatId !== state.requestChatId) return;
+      const list = $('aiMessages');
+      const content = list.querySelector('.ai-message.pending .ai-text-block');
+      if (!content) return;
+      const pinnedToBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 120;
+      content.replaceWith(textBlock(state.partial || '…'));
+      if (pinnedToBottom) list.scrollTop = list.scrollHeight;
+    });
   };
   const on = (node, event, fn) => { node.addEventListener(event, fn); cleanup.push(() => node.removeEventListener(event, fn)); };
   const uiError = error => { $('aiRequestStatus').textContent = error?.message || String(error); toast(error?.message || String(error), true); };
@@ -102,14 +113,19 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
     if (state.models.some(m => m.id === state.selectedModel)) select.value = state.selectedModel;
   }
   async function refreshModels() {
+    const requestId = ++modelRefreshId;
     try {
-      state.account = await api.aiAccountStatus();
-      if (state.account.connected) {
-        state.models = await api.aiModels();
-        if (!state.models.some(m => m.id === state.selectedModel)) state.selectedModel = state.models[0]?.id || '';
-      } else { state.models = []; state.selectedModel = ''; }
+      const account = await api.aiAccountStatus();
+      const models = account.connected ? await api.aiModels() : [];
+      if (requestId !== modelRefreshId) return;
+      state.account = account;
+      state.models = models;
+      if (!models.some(m => m.id === state.selectedModel)) state.selectedModel = models[0]?.id || '';
       renderAccount();
-    } catch (error) { state.models = []; state.selectedModel = ''; renderAccount(); uiError(error); }
+    } catch (error) {
+      if (requestId !== modelRefreshId) return;
+      state.models = []; state.selectedModel = ''; renderAccount(); uiError(error);
+    }
   }
   async function refreshProjects() {
     state.projects = await api.aiListProjects();
@@ -222,8 +238,16 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
     }
     if (!state.project?.snippets.length) snippets.append(empty('Save Luau code blocks from a conversation.'));
   }
+  function updateScriptContextChoice() {
+    const input = $('aiIncludeScript');
+    const allowed = canUseScriptContext(state.placeKey, getStatus());
+    input.disabled = !allowed;
+    if (!allowed) input.checked = false;
+    input.title = allowed ? 'Include the selected script from this Place' : 'Connect to this Place to include live script context';
+  }
   function render() {
     renderThreads(); renderMessages(); renderEntries();
+    updateScriptContextChoice();
     $('aiPrompt').disabled = !state.placeKey;
     $('aiNewChat').disabled = !state.placeKey;
     renderAccount();
@@ -247,7 +271,8 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
       state.sending = true; state.partial = ''; state.requestChatId = state.chatId;
       const chatId = state.chatId, placeKey = state.placeKey;
       $('aiPrompt').value = ''; $('aiRequestStatus').textContent = 'Generating response…'; render();
-      const scriptContext = $('aiIncludeScript').checked ? getSelectedContext() : null;
+      const scriptContext = $('aiIncludeScript').checked && canUseScriptContext(placeKey, getStatus())
+        ? getSelectedContext() : null;
       await api.aiSend({ placeKey, chatId, text: content, model: state.selectedModel, scriptContext });
       $('aiRequestStatus').textContent = 'Saved locally. Ctrl+Enter to send.';
     } catch (error) { uiError(error); }
@@ -314,6 +339,7 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
     onStatus(status) {
       const key = status?.ready ? projectKeyForPlace(status) : null;
       if (supported && key && key !== state.placeKey) loadProject(key, status.placeName);
+      updateScriptContextChoice();
       $('aiPlace').title = status?.placeKey === '0-0' ? 'Unpublished Places use their name as a temporary project identifier' : 'Previously connected Places';
     },
     onEvent(event) {

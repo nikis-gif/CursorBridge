@@ -7,7 +7,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { AIProjectStore, resolveFile } = require('../electron/ai-project-store.cjs');
 const { readEvents, AIAssistant } = require('../electron/ai-assistant.cjs');
-const { verifyIdToken } = require('../electron/chatgpt-auth.cjs');
+const { ChatGPTAuth, verifyIdToken } = require('../electron/chatgpt-auth.cjs');
 
 async function withStore(operation) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'cursorbridge-ai-test-'));
@@ -147,5 +147,76 @@ test('interrupted inference retains user message but never fabricates a complete
     await assert.rejects(ai.send({ placeKey: 'place', chatId, text: 'Explain Lua tables', model: 'allowed' }), /ended before completion/);
     const p = await store.read('place');
     assert.deepEqual(p.chats[0].messages.map(m => m.role), ['user']);
+  });
+});
+
+test('late refresh cannot restore credentials after sign-out', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'cursorbridge-auth-race-'));
+  try {
+    let resolveStarted, releaseRefresh;
+    const started = new Promise(resolve => { resolveStarted = resolve; });
+    const wait = new Promise(resolve => { releaseRefresh = resolve; });
+    const safeStorage = {
+      isEncryptionAvailable: () => true,
+      encryptString: data => Buffer.from(data, 'utf8'),
+      decryptString: data => data.toString('utf8'),
+    };
+    const auth = new ChatGPTAuth({
+      userData: dir, safeStorage, openExternal: async () => {},
+      fetchImpl: async url => {
+        if (!url.endsWith('/api/accounts/oauth/token')) throw new Error('Unexpected endpoint');
+        resolveStarted();
+        await wait;
+        return { ok: true, text: async () => JSON.stringify({
+          access_token: 'renewed', refresh_token: 'renewed-refresh',
+          scope: 'chatgpt.tokens.use.direct', expires_in: 3600,
+        }) };
+      },
+    });
+    await auth.init();
+    auth.credentials = {
+      client_id: 'oaiapp_test', subject: 'user', scopes: ['chatgpt.tokens.use.direct'],
+      access_token: 'expired', refresh_token: 'old', expiresAt: Date.now() - 1000,
+    };
+    await auth.save();
+    auth.discovery = async () => ({});
+    const pending = auth.accessToken();
+    const expected = assert.rejects(pending, /account changed/i);
+    await started;
+    await auth.signOut();
+    releaseRefresh();
+    await expected;
+    assert.equal(auth.status().connected, false);
+    const stored = JSON.parse(safeStorage.decryptString(await fs.readFile(path.join(dir, 'chatgpt', 'credentials.bin'))));
+    assert.equal(stored.access_token, '');
+    assert.equal(stored.refresh_token, '');
+  } finally { await fs.rm(dir, { recursive: true, force: true }); }
+});
+
+test('disconnect cancels inference without saving an incomplete assistant message', async () => {
+  await withStore(async store => {
+    const chatId = (await store.createChat('place', 'Baseplate')).result;
+    let requestStarted;
+    const started = new Promise(resolve => { requestStarted = resolve; });
+    const ai = new AIAssistant({
+      auth: { accessToken: async () => 'token' }, projects: store,
+      fetchImpl: async (url, options) => {
+        if (url.endsWith('/models')) return { ok: true, json: async () => ({
+          models: [{ slug: 'allowed', visibility: 'list' }],
+        }) };
+        requestStarted();
+        return new Promise((resolve, reject) => {
+          if (options.signal.aborted) { reject(new Error('Request aborted')); return; }
+          options.signal.addEventListener('abort', () => reject(new Error('Request aborted')), { once: true });
+        });
+      },
+    });
+    const send = ai.send({ placeKey: 'place', chatId, text: 'Review this script', model: 'allowed' });
+    const rejected = assert.rejects(send, /aborted/i);
+    await started;
+    ai.abortAll();
+    await rejected;
+    assert.deepEqual((await store.read('place')).chats[0].messages.map(m => m.role), ['user']);
+    assert.equal(ai.inflight.size, 0);
   });
 });

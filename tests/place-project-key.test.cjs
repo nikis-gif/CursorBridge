@@ -21,3 +21,13 @@ test('offline or unknown Place never becomes a persistent project', async () => 
   assert.equal(projectKeyForPlace(null), null);
   assert.equal(projectKeyForPlace({ placeKey: '0-0', placeName: '' }), null);
 });
+
+test('script context is limited to the currently connected Place', async () => {
+  const { canUseScriptContext } = await modulePromise;
+  const live = { ready: true, placeKey: '123-456', placeName: 'Current' };
+  assert.equal(canUseScriptContext('123-456', live), true);
+  assert.equal(canUseScriptContext('789-456', live), false);
+  assert.equal(canUseScriptContext('123-456', { ...live, ready: false }), false);
+  assert.equal(canUseScriptContext('unsaved:baseplate1', { ready: true, placeKey: '0-0', placeName: 'Baseplate1' }), true);
+  assert.equal(canUseScriptContext('unsaved:baseplate2', { ready: true, placeKey: '0-0', placeName: 'Baseplate1' }), false);
+});
