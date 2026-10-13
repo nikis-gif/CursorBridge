@@ -4,8 +4,6 @@ on:
   push:
     branches: ['main']
     paths: ['package.json']
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 permissions:
@@ -92,6 +90,8 @@ jobs:
           if (-not $manifest.Contains("sha512: $base64Sha")) { throw 'latest.yml checksum does not match installer' }
           if (-not $manifest.Contains("size: $size")) { throw 'latest.yml size does not match installer' }
 
+      # Version-bump pushes and manual dispatch publish once; internally created
+      # tags must not trigger a second release workflow.
       - name: Create matching version tag for branch or manual release
         if: github.ref_type != 'tag'
         shell: pwsh

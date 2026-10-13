@@ -4,6 +4,8 @@ import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
 import './styles.css';
 import './workspace.css';
 import { mountWorkspace } from './workspace-ui.mjs';
+import { mountAssistant } from './ai-panel.mjs';
+import { primaryTabIds } from './tab-groups.mjs';
 import { icon } from './icons.js';
 import { findHierarchyCompletion, makeMonacoSuggestions } from './luau-completion.mjs';
 import { buildExplorerRows, uniqueRoots, isNodeInside, pathForNode } from './explorer-model.mjs';
@@ -27,6 +29,7 @@ const models = new Map();
 const modelDocumentIds = new WeakMap();
 const primaryViewStates = new Map();
 let workspace = null;
+let assistant = null;
 const localState = new Map();
 const activeTabs = [];
 const draftTimers = new Map();
@@ -677,7 +680,7 @@ function renderTabs() {
     placeholder.textContent = 'No scripts open'; $('tabs').append(placeholder);
     return;
   }
-  for (const id of activeTabs) {
+  for (const id of primaryTabIds(activeTabs, selectedId, workspace?.getSecondaryDocument?.())) {
     const node = nodes.get(id);
     if (!node) continue;
     const item = document.createElement('div'); item.className = `tab${selectedId === id ? ' active' : ''}`;
@@ -1095,6 +1098,7 @@ function updateStatus(status) {
   const previouslyConnected = currentStatus.connected === true;
   const previouslyReady = currentStatus.ready === true;
   currentStatus = status;
+  assistant?.onStatus(status);
   const connected = status.connected === true;
   const incompatiblePlugin = connected && status.protocolVersion === 1;
   const ready = connected && status.ready === true && !incompatiblePlugin;
@@ -1177,6 +1181,7 @@ function resetWorkspace() {
   renderTabs();scheduleRender();
 }
 function receiveServerEvent(event) {
+  assistant?.onEvent(event);
   if (event.type === 'batch') {
     receivingStudioBatch = true;
     try {for (const entry of event.events) receiveServerEvent(entry);} finally {receivingStudioBatch = false;}
@@ -1952,13 +1957,15 @@ window.addEventListener('keydown',(event)=>{
   if (mod && event.shiftKey && key === 't') {event.preventDefault();reopenLastTab();return;}
   if (mod && key === 'tab' && activeTabs.length) {
     event.preventDefault();
+    const tabIds = primaryTabIds(activeTabs, selectedId, workspace?.getSecondaryDocument?.());
+    if (!tabIds.length) return;
     const delta = event.shiftKey ? -1 : 1;
-    const next=(activeTabs.indexOf(selectedId) + delta + activeTabs.length) % activeTabs.length;
-    openScript(activeTabs[next]).catch(safeError);return;
+    const next = (tabIds.indexOf(selectedId) + delta + tabIds.length) % tabIds.length;
+    openScript(tabIds[next]).catch(safeError); return;
   }
   if (mod && !event.shiftKey && !event.altKey && /^[1-9]$/.test(key) && activeTabs.length) {
     event.preventDefault();
-    const id = activeTabs[Number(key) - 1];
+    const id = primaryTabIds(activeTabs, selectedId, workspace?.getSecondaryDocument?.())[Number(key) - 1];
     if (id) openScript(id).catch(safeError);
     return;
   }
@@ -2370,8 +2377,24 @@ workspace = mountWorkspace({
   getEditorPreferences: () => editorPreferences,
   openScript, openQuickOpen, openPlaceSearch, openQuickApply, setSidebarView,
   hidePopovers, toast, safeError, saveDocument: flushStudioWrite,
+  onSplitChange: () => renderTabs(),
 });
-window.addEventListener('pagehide', () => workspace?.dispose(), { once: true });
+assistant = mountAssistant({
+  api, getStatus: () => currentStatus,
+  getSelectedContext: () => {
+    if (!currentStatus.ready || !selectedId) return null;
+    const model = models.get(selectedId);
+    return model ? { path: pathForNode(nodes, selectedId), source: model.getValue().slice(0, 48000) } : null;
+  },
+  // Never reuse the prompt-context preview for the full-code local library.
+  getSelectedScriptForSaving: () => {
+    if (!canMutate() || !selectedId) return null;
+    const model = models.get(selectedId);
+    return model ? { path: pathForNode(nodes, selectedId), source: model.getValue() } : null;
+  },
+  toast,
+});
+window.addEventListener('pagehide', () => { workspace?.dispose(); assistant?.dispose(); }, { once: true });
 
 async function start() {
   if (!api) {setFooter('Launch Cursor Bridge through the Windows application.');return;}

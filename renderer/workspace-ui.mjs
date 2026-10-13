@@ -65,7 +65,9 @@ export function mountWorkspace(adapter) {
   function closeSplit({ focus = true } = {}) {
     if (secondaryId && secondary) secondaryViews.set(secondaryId, secondary.saveViewState());
     secondary?.setModel(null);
+    const hadSplit = secondaryId !== null;
     secondaryId = null;
+    if (hadSplit) adapter.onSplitChange?.();
     focusedGroup = 'primary';
     if (focus) adapter.editor.focus();
     refresh();
@@ -120,6 +122,7 @@ export function mountWorkspace(adapter) {
       view.restoreViewState(secondaryViews.get(id) || adapter.editor.saveViewState());
     }
     secondaryId = id;
+    adapter.onSplitChange?.();
     focusedGroup = 'secondary';
     render();
     requestAnimationFrame(() => { if (!disposed && secondaryId) { view.layout(); view.focus(); } });
@@ -356,6 +359,7 @@ export function mountWorkspace(adapter) {
   applyLayout(false);
   return {
     openSplit, closeSplit, removeDocument, resetSession, refresh, syncPreferences,
+    getSecondaryDocument: () => secondaryId,
     showEditor, showHome, revealExplorer,
     dispose() {
       if (disposed) return;

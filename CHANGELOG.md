@@ -58,6 +58,16 @@
 
 # Changelog
 
+## v0.4.0 — Place projects and editor reliability
+
+- Added persistent local Place projects, conversations, manual notes, saved Luau snippets and a **Save active script** action that works without ChatGPT.
+- Packaged public builds deliberately disable ChatGPT account sign-in and model inference pending open-source distribution eligibility and native Windows login QA. These are not available features of the v0.4.0 installer.
+- Refined AI workspace panel, protected selected-script context, and separated editor tab ownership to prevent duplicate primary tabs.
+- Preserved Monaco undo/redo, search, replace and developer shortcuts.
+- Passed automated regressions for Monaco, Quick Apply, large Places and Windows installer packaging.
+- Preserved the existing Cursor Bridge visual identity; proprietary Vanilla 3 icons were not redistributed.
+
+
 ## 0.2.2 — Quick Open & Find in Place
 
 - Enhanced Ctrl+P with intelligent name/path ranking, keyboard navigation, and `Name:line:column` navigation, preserving duplicate-name IDs and Studio hierarchy paths.

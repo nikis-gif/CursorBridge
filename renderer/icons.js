@@ -1,5 +1,6 @@
 // A single outline family. Navigation and instance icons share the same stroke and color.
 const glyphs = {
+  mic: '<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/>',
   home: '<path d="m3 10 9-7 9 7v10H3zM9 20v-7h6v7"/>',
   layout: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/>',
   'layout-right': '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/>',
