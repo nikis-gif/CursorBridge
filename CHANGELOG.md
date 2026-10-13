@@ -1,3 +1,12 @@
+## v0.4.2 — Embedded AI removal and focused workspace
+
+- Removed the entire ChatGPT account/authentication, AI inference, Place-specific chat/memory/code panels, their IPC surface, OAuth storage code, and obsolete assistant tests.
+- Removed the assistant activity rail button, Ctrl+Shift+A binding, and related shortcut guide entry, restoring a clear Explorer / Search / Quick Apply / Recovery / Shortcuts workbench.
+- Preserved **Quick Apply** implementation and UI byte-for-byte within their sections, including previews, safeguards, backups, TXT drafts, and Ctrl+L.
+- Kept Monaco editing, undo/redo, split editor, Studio sync, all recovery files, existing themes, and Roblox Studio plugin workflow.
+- No installer migration deletes user data; historical AI project files remain on disk as inert data.
+- Added absence/regression checks and refreshed documentation; kept the repository `UNLICENSED` and did not add third-party assets.
+
 ## v0.4.1 — Project chat UI reliability
 
 - Reworked the chat panel into a simpler Chat / Code / Notes workspace with project scope visible and collapsed History / Account controls.

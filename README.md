@@ -1,26 +1,22 @@
 # Cursor Bridge
 
-**v0.4.1 — Cleaner project chat:** The project panel now focuses on Chat, Code and Notes. History and account settings remain collapsed by default, and the public build clearly disables in-app ChatGPT sending instead of showing a misleading Send button. Existing Place histories, script libraries and Monaco editing are preserved. You can open ChatGPT in your browser using the explicit fallback; this does not sync the app's local chat history with ChatGPT.
+**v0.4.2 — Focused Luau editor for Roblox Studio.** Cursor Bridge combines the
+local two-way Studio connection, a professional Monaco editor, Explorer, code
+search, split editing, recovery snapshots, and **Quick Apply** for reviewing and
+importing complete script bundles.
 
-**ChatGPT integration status:** The repository remains `UNLICENSED`, so ChatGPT account login and model inference are intentionally disabled in the packaged Windows app pending an authorized distribution path and live sign-in testing. [AI project documentation](docs/AI_PROJECTS.md) · [Release notes](docs/RELEASE_0_4_1.md).
+The retired ChatGPT / AI project chat has been removed from the interface,
+Electron process and packaged application. There are **no embedded chat, login,
+model selector or cloud AI features**. Quick Apply is unchanged: it imports
+user-provided TXT bundles, checks destinations and preserves backups before
+applying edits. Existing recovery files and old local chat data are **not
+deleted** during the update.
 
-### v0.3.1 - Refined interface
+The repository remains proprietary (`UNLICENSED`). See the
+[0.4.2 release notes](docs/RELEASE_0_4_2.md) and
+[workspace controls](docs/WORKSPACE.md).
 
-A quieter English workbench with consistent outline icons, a compact default
-window (up to 1080 x 700), and Obsidian restored as the default Studio theme.
-Split editing, docking, shortcuts and draft protection are retained.
-Release notes: [PT-BR and English](docs/RELEASE_0_3_1.md).
-
-
-
-**0.3.0 - Discord Cloud Workspace.** The desktop now includes a session dashboard,
-Discord-inspired theme, dockable Explorer, native themed Windows caption controls,
-and shared-document split editors. See [workspace controls](docs/WORKSPACE.md)
-and [release notes](docs/RELEASE_0_3_0.md). Existing saved themes remain available;
-choose **Appearance > Discord** to switch an existing installation.
-
-
-**Cursor Bridge v0.2.9** is a Windows-first Luau workbench connected to the **currently paired Roblox Studio place**. It comprises a local Electron/Monaco application and a Roblox Studio plugin with the existing Cursor V2 floating window. Studio remains the source of truth for the DataModel; the workbench does not run games or replace Studio's compiler.
+**Cursor Bridge** is a Windows-first Luau workbench connected to the **currently paired Roblox Studio place**. It comprises a local Electron/Monaco application and a Roblox Studio plugin with the existing Cursor V2 floating window. Studio remains the source of truth for the DataModel; the workbench does not run games or replace Studio's compiler.
 
 All connection traffic stays on `127.0.0.1:38471`. Source history, recovery snapshots, and unsynced drafts are stored locally on the PC.
 
