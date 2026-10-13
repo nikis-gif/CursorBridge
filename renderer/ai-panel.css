@@ -6,7 +6,7 @@
   border-left: 1px solid var(--soft-border); font-family: inherit;
   box-shadow: -6px 0 22px rgba(0, 0, 0, .06);
 }
-.ai-panel [hidden] { display: none !important; }
+.ai-panel[hidden], .ai-panel [hidden] { display: none !important; }
 .ai-panel *, .ai-panel *::before, .ai-panel *::after { box-sizing: border-box; }
 .ai-panel button, .ai-panel select, .ai-panel textarea { font: inherit; }
 .ai-panel button { cursor: pointer; }
