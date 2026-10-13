@@ -1,6 +1,6 @@
 # Cursor Bridge v0.4.1 - Project chat refinement / Refinamento do painel de projetos
 
-## Português (Brasil)
+## PT-BR
 
 - A área de projetos agora prioriza três seções simples: **Chat**, **Código** e **Notas**.
 - Histórico, modelos e conexão com conta aparecem somente ao abrir seus controles. O seletor de Place continua acessível.
