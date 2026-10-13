@@ -45,15 +45,11 @@ def fixture_modules():
     }
     modules = {name: path.read_text(encoding="utf-8") for name, path in files.items()}
     modules["limits"] = "export default " + (PROJECT / "shared/limits.json").read_text() + ";"
-    # Legacy renderer fixture tests do not exercise the dedicated AI pane.
-    # Production bundle tests still execute the real assistant implementation.
-    modules["assistant"] = "export function mountAssistant() { return { onStatus() {}, onEvent() {}, dispose() {}, toggle() {} }; }"
     return modules
 
 
 IMPORTS = {
     "import { mountWorkspace } from './workspace-ui.mjs';": "workspace",
-    "import { mountAssistant } from './ai-panel.mjs';": "assistant",
     "import { primaryTabIds } from './tab-groups.mjs';": "tabgroups",
     "import limits from '../shared/limits.json';": "limits",
     "import * as monaco from 'monaco-editor';": "monaco",

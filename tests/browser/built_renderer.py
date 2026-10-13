@@ -16,7 +16,7 @@ def data_uri(path: Path) -> str:
     return f'data:{mime};base64,' + base64.b64encode(path.read_bytes()).decode('ascii')
 
 
-def mount_built(page, *, offline=False, preferences=None, ai_fixture=False):
+def mount_built(page, *, offline=False, preferences=None):
     dist = PROJECT / 'dist-renderer'
     if not (dist / 'index.html').exists():
         raise RuntimeError('Run npm run build before the real Monaco regression suite.')
@@ -55,50 +55,6 @@ def mount_built(page, *, offline=False, preferences=None, ai_fixture=False):
         return {status:'queued'};
       };
     }""", preferences or {})
-    if ai_fixture:
-        page.evaluate("""() => {
-          const initial = [
-            {placeKey:'100-200',name:'Sample Place',chats:[],memories:[],snippets:[]},
-            {placeKey:'historic-place',name:'Previous Place',chats:[],memories:[],snippets:[]},
-          ];
-          const projects = new Map(initial.map(project => [project.placeKey, project]));
-          const clone = value => structuredClone(value);
-          window.__aiSent = [];
-          window.__aiSnippets = [];
-          window.__aiOpened = [];
-          window.__aiCreateStarted = false;
-          window.__releaseAiCreate = null;
-          Object.assign(window.cursorBridge, {
-            aiListProjects: async () => [...projects.values()].map(p => ({placeKey:p.placeKey,name:p.name})),
-            aiEnsureProject: async (key,name) => clone(projects.get(key) || {placeKey:key,name,chats:[],memories:[],snippets:[]}),
-            aiNewChat: async (key) => {
-              window.__aiCreateStarted = true;
-              await new Promise(resolve => { window.__releaseAiCreate = resolve; });
-              const project = projects.get(key);
-              const id = 'chat-' + key;
-              project.chats.unshift({id,title:'New chat',messages:[],createdAt:new Date().toISOString()});
-              return {...clone(project),result:id};
-            },
-            aiSaveSnippet: async (key,title,code) => {
-              const item = {id:'snippet-' + window.__aiSnippets.length,title,code,language:'luau'};
-              window.__aiSnippets.push({key,...item});
-              const project = projects.get(key);
-              project.snippets.unshift(item);
-              return clone(project);
-            },
-            aiAccountStatus: async () => ({connected:true,displayName:'Test account',secureStorage:true}),
-            aiModels: async () => [{id:'allowed',name:'Authorized model'}],
-            aiSend: async (request) => {
-              window.__aiSent.push(clone(request));
-              const chat = projects.get(request.placeKey).chats.find(c => c.id === request.chatId);
-              chat.messages.push({role:'user',content:request.text,id:'user-1'});
-              chat.messages.push({role:'assistant',content:'Response',id:'assistant-1'});
-              return {ok:true,reply:'Response'};
-            },
-            aiOpenUsage: async () => {},
-            aiOpenChatGPT: async () => { window.__aiOpened.push('https://chatgpt.com/'); },
-          });
-        }""")
     page.evaluate("""async ([source, workers]) => {
       for (const [name, content] of Object.entries(workers)) {
         const url = URL.createObjectURL(new Blob([content], {type:'text/javascript'}));

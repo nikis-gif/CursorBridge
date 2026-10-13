@@ -66,7 +66,7 @@ def test_compact_split_and_layout(page):
     expect(page.locator('#dashboardScripts')).to_have_text('3')
     expect(page.locator('#tabs')).to_be_hidden()
     assert page.locator('#welcome .dashboard-action svg').count() == 0
-    assert page.locator('.activity-rail button').count() == 7
+    assert page.locator('.activity-rail button').count() == 6
     for node in page.locator('.tree-class svg').all():
         expect(node).to_have_attribute('stroke', 'currentColor')
     page.locator('.tree-row[data-id="s1"] .tree-name').click()
@@ -113,144 +113,27 @@ def test_clamped_sidebar_resize(page):
 
 
 
-def test_ai_panel_navigation(page):
-    """The AI project pane should be usable without an account or Studio connection."""
-    page.set_viewport_size({'width': 720, 'height': 504})
-    mount_built(page, offline=True)
-    expect(page.locator('#railAssistant')).to_be_visible()
-    page.keyboard.press('Control+Shift+a')
-    expect(page.locator('#aiPanel')).to_be_visible()
-    expect(page.locator('#aiPanel')).to_contain_text('Project chat')
-    inside_viewport(page, '#aiPanel')
-    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
-    page.locator('#aiClose').click()
-    expect(page.locator('#aiPanel')).to_be_hidden()
+def test_workspace_without_embedded_ai(page):
+    """No ghost ChatGPT entry points, even after using the former shortcut."""
+    for width, height in ((1080, 700), (840, 540), (720, 504)):
+        page.set_viewport_size({'width': width, 'height': height})
+        mount_built(page, offline=True)
+        assert page.locator('#railAssistant').count() == 0
+        assert page.locator('#aiPanel').count() == 0
+        assert page.locator('.activity-rail button').count() == 6
+        assert page.locator('#shortcutsDialog').count() <= 1
+        expect(page.locator('#quickApplyLauncher')).to_be_visible()
+        page.keyboard.press('Control+Shift+a')
+        assert page.locator('#aiPanel').count() == 0
+        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+        page.goto('about:blank')
 
-
-
-def test_ai_chat_remains_scoped_when_user_switches_place(page):
-    """A delayed new-chat request cannot send script context to the wrong project."""
-    mount_built(page, ai_fixture=True)
-    page.locator('.tree-row[data-id="s1"] .tree-name').click()
-    page.locator('#railAssistant').click()
-    expect(page.locator('#aiPlace')).to_have_value('100-200')
-    expect(page.locator('#aiIncludeScript')).to_be_enabled()
-    page.locator('#aiIncludeScript').check()
-    expect(page.locator('#aiSubmit')).to_be_enabled()
-    page.locator('#aiPrompt').fill('Review my Luau script')
-    page.locator('#aiPrompt').press('Control+Enter')
-    page.wait_for_function('window.__aiCreateStarted === true')
-    page.locator('#aiPlace').select_option('historic-place')
-    expect(page.locator('#aiPlace')).to_have_value('historic-place')
-    expect(page.locator('#aiIncludeScript')).to_be_disabled()
-    page.evaluate('window.__releaseAiCreate()')
-    page.wait_for_function('window.__aiSent.length === 1')
-    payload = page.evaluate('window.__aiSent[0]')
-    assert payload['placeKey'] == '100-200'
-    assert payload['chatId'] == 'chat-100-200'
-    assert payload['text'] == 'Review my Luau script'
-    assert 'Main' in payload['scriptContext']['path']
-    expect(page.locator('#aiPlace')).to_have_value('historic-place')
-    expect(page.locator('#aiThreads')).to_contain_text('No conversations yet.')
-
-def test_save_active_script_without_ai_connection(page):
-    """Local code library remains useful with ChatGPT authorization disabled."""
-    mount_built(page, ai_fixture=True)
-    page.evaluate("""() => {
-      window.cursorBridge.aiAccountStatus = async () => ({
-        connected: false, available: false, secureStorage: false, reason: 'This build has no ChatGPT sign-in'
-      });
-    }""")
-    page.locator('.tree-row[data-id="s1"] .tree-name').click()
-    page.locator('#railAssistant').click()
-    expect(page.locator('#aiLogin')).to_be_disabled()
-    page.locator('.ai-tabs button[data-view="snippets"]').click()
-    expect(page.locator('#aiSaveActiveScript')).to_be_enabled()
-    page.locator('#aiSaveActiveScript').click()
-    page.wait_for_function('window.__aiSnippets.length === 1')
-    snippet = page.evaluate('window.__aiSnippets[0]')
-    assert snippet['key'] == '100-200'
-    assert snippet['code'] == 'print("hello")'
-    expect(page.locator('#aiSnippetList')).to_contain_text('Script: Main')
-
-def test_save_full_luau_script_without_truncation(page):
-    """Saving a >48k script must not reuse truncated AI prompt context."""
-    mount_built(page, ai_fixture=True)
-    page.evaluate("""() => {
-      window.cursorBridge.aiAccountStatus = async () => ({
-        connected: false, available: false, secureStorage: false, reason: 'Not licensed'
-      });
-      const node = window.__mockNodes.find(item => item.id === 's1');
-      node.source = '--' + 'x'.repeat(52000);
-      node.revision = 2;
-      window.__emitServer({type:'upsert',origin:'studio',node:{...node}});
-    }""")
-    page.locator('.tree-row[data-id="s1"] .tree-name').click()
-    page.locator('#railAssistant').click()
-    page.locator('.ai-tabs button[data-view="snippets"]').click()
-    page.locator('#aiSaveActiveScript').click()
-    page.wait_for_function('window.__aiSnippets.length === 1')
-    data = page.evaluate('window.__aiSnippets[0]')
-    assert data['key'] == '100-200'
-    assert len(data['code']) == 52002
-    assert data['code'].startswith('--')
-    assert data['code'].endswith('x' * 32)
-
-
-def test_chat_clean_navigation(page):
-    """History and settings should be unobtrusive until specifically requested."""
-    page.set_viewport_size({'width': 720, 'height': 504})
-    mount_built(page, ai_fixture=True)
-    page.locator('#railAssistant').click()
-    expect(page.locator('#aiPanel')).to_be_visible()
-    expect(page.locator('#aiHistoryDrawer')).to_be_hidden()
-    expect(page.locator('#aiSettingsPanel')).to_be_hidden()
-    expect(page.locator('#aiCompose')).to_be_visible()
-    expect(page.locator('#aiModelRow')).to_be_hidden()
-    assert page.locator('.ai-tabs button').all_text_contents() == ['Chat', 'Code', 'Notes']
-    page.locator('#aiSettingsToggle').click()
-    expect(page.locator('#aiSettingsPanel')).to_be_visible()
-    expect(page.locator('#aiModelRow')).to_be_visible()
-    page.locator('#aiHistoryToggle').click()
-    expect(page.locator('#aiSettingsPanel')).to_be_hidden()
-    expect(page.locator('#aiHistoryDrawer')).to_be_visible()
-    expect(page.locator('#aiHistoryDrawer')).to_contain_text('No conversations yet.')
-    page.keyboard.press('Escape')
-    expect(page.locator('#aiHistoryDrawer')).to_be_hidden()
-    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
-    inside_viewport(page, '#aiPanel')
-
-
-def test_disabled_chat_is_explicit_without_clutter(page):
-    """Public builds cannot imply the Send button is functional."""
-    mount_built(page, offline=True, ai_fixture=True)
-    page.evaluate("""() => {
-      window.cursorBridge.aiAccountStatus = async () => ({
-        connected:false,available:false,secureStorage:false,reason:'Disabled in public release'
-      });
-    }""")
-    page.locator('#railAssistant').click()
-    expect(page.locator('#aiCompose')).to_be_hidden()
-    expect(page.locator('#aiAvailability')).to_be_visible()
-    expect(page.locator('#aiUnavailableTitle')).to_have_text('ChatGPT chat is unavailable')
-    expect(page.locator('#aiSettingsPanel')).to_be_hidden()
-    expect(page.locator('#aiNewChat')).to_be_disabled()
-    expect(page.locator('#aiUnavailableAction')).to_contain_text('browser')
-    page.locator('#aiUnavailableAction').click()
-    page.wait_for_function('window.__aiOpened.length === 1')
-    assert page.evaluate('window.__aiOpened[0]') == 'https://chatgpt.com/'
-    page.locator('.ai-tabs button[data-view="snippets"]').click()
-    expect(page.locator('#aiSnippetsView')).to_be_visible()
-    page.locator('.ai-tabs button[data-view="memories"]').click()
-    expect(page.locator('#aiMemoriesView')).to_be_visible()
-    page.locator('#aiSettingsToggle').click()
-    expect(page.locator('#aiLogin')).to_be_disabled()
 
 def main():
     with sync_playwright() as pw:
         browser = pw.chromium.launch(**launch_options())
         try:
-            for test in (test_compact_chrome, test_theme_preference_migration, test_compact_split_and_layout, test_clamped_sidebar_resize, test_ai_panel_navigation, test_chat_clean_navigation, test_disabled_chat_is_explicit_without_clutter, test_save_active_script_without_ai_connection, test_save_full_luau_script_without_truncation, test_ai_chat_remains_scoped_when_user_switches_place):
+            for test in (test_compact_chrome, test_theme_preference_migration, test_compact_split_and_layout, test_clamped_sidebar_resize, test_workspace_without_embedded_ai):
                 page = browser.new_page(viewport={'width': 1080, 'height': 700})
                 errors = []
                 page.on('pageerror', lambda error: errors.append(str(error)))
