@@ -159,6 +159,7 @@ function registerIpc() {
       return aiAssistant.send(request);
     },
     'bridge:ai-open-usage': () => shell.openExternal('https://chatgpt.com/#settings/Usage'),
+    'bridge:ai-open-chatgpt': () => shell.openExternal('https://chatgpt.com/'),
   };
   for (const [name, action] of Object.entries(actions)) {
     ipcMain.handle(name, action);
