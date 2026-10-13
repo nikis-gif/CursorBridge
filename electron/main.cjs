@@ -139,7 +139,7 @@ function registerIpc() {
     'bridge:ai-send': async (_event, request) => {
       if (request?.scriptContext) {
         const { canUseScriptContext } = await import('../shared/place-project-key.mjs');
-        if (!canUseScriptContext(request.placeKey, bridge.getState().status)) {
+        if (!canUseScriptContext(request.placeKey, bridge.getStatus())) {
           throw new Error('Script context is available only for the currently connected Place.');
         }
       }
