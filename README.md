@@ -1,6 +1,8 @@
 # Cursor Bridge
 
-**v0.4.0:** Local Place-specific projects with persistent conversations, notes, saved Luau scripts, and improved split editor and shortcuts. The public installer does **not** enable ChatGPT sign-in or AI model inference yet: this repository remains `UNLICENSED`, and account-integration eligibility and native login QA are unresolved. No API key is required for the local project features. See [AI projects](docs/AI_PROJECTS.md) and [release notes](docs/RELEASE_0_4_0.md).
+**v0.4.1 — Cleaner project chat:** The project panel now focuses on Chat, Code and Notes. History and account settings remain collapsed by default, and the public build clearly disables in-app ChatGPT sending instead of showing a misleading Send button. Existing Place histories, script libraries and Monaco editing are preserved. You can open ChatGPT in your browser using the explicit fallback; this does not sync the app's local chat history with ChatGPT.
+
+**ChatGPT integration status:** The repository remains `UNLICENSED`, so ChatGPT account login and model inference are intentionally disabled in the packaged Windows app pending an authorized distribution path and live sign-in testing. [AI project documentation](docs/AI_PROJECTS.md) · [Release notes](docs/RELEASE_0_4_1.md).
 
 ### v0.3.1 - Refined interface
 

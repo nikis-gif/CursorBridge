@@ -1,3 +1,12 @@
+## v0.4.1 — Project chat UI reliability
+
+- Reworked the chat panel into a simpler Chat / Code / Notes workspace with project scope visible and collapsed History / Account controls.
+- Removed misleading Send/Connect affordances when ChatGPT subscription sharing is not available in the installed build.
+- Added an explicit external-browser ChatGPT fallback; this does not sync chat history or emulate an authenticated in-app connection.
+- Preserved per-Place notes, full-Luau snippet saving, split editor and Monaco shortcuts.
+- Added real-browser tests for compact layouts, history and settings visibility, disabled-state clarity, and external navigation.
+- No new dependencies, no license changes, no third-party icon pack, and no Roblox Studio protocol changes.
+
 ## 0.2.9 - Quick Apply and session reliability
 
 ## 0.3.1 - Refined interface
