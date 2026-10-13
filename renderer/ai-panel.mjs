@@ -1,4 +1,5 @@
 import { icon } from './icons.js';
+import { projectKeyForPlace } from './place-project-key.mjs';
 import './ai-panel.css';
 
 // Lightweight, isolated AI surface. No direct HTTP requests or credentials in renderer.
@@ -62,6 +63,7 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
     </div>`;
   document.querySelector('.workbench').append(pane);
   const $ = id => pane.querySelector(`#${id}`);
+  const supported = typeof api?.aiListProjects === 'function' && typeof api?.aiAccountStatus === 'function';
   const state = { open: false, view: 'chats', placeKey: null, placeName: '', project: null, projects: [], chatId: null,
     account: null, models: [], selectedModel: '', sending: false, partial: '', requestChatId: null, changeId: 0 };
   const cleanup = [];
@@ -77,7 +79,7 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
   function toggle(force = !state.open) {
     state.open = Boolean(force); pane.hidden = !state.open;
     rail.setAttribute('aria-pressed', String(state.open));
-    if (state.open) { refreshModels(); $('aiPrompt').focus(); }
+    if (state.open) { if (supported) refreshModels(); $('aiPrompt').focus(); }
   }
   function renderPlaces() {
     const select = $('aiPlace'); select.replaceChildren();
@@ -91,7 +93,7 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
     $('aiAuthDetail').textContent = a?.connected ? (a.email || 'ChatGPT plan permission granted') :
       a?.error ? String(a.error).slice(0, 180) : a?.secureStorage === false ? 'Secure storage is unavailable' : 'Sign in with your ChatGPT account';
     $('aiLogin').textContent = a?.connected ? 'Sign out' : a?.pending ? 'Opening…' : 'Connect';
-    $('aiLogin').disabled = Boolean(a?.pending || (a && !a.secureStorage));
+    $('aiLogin').disabled = !supported || Boolean(a?.pending || (a && !a.secureStorage));
     $('aiSubmit').disabled = state.sending || !a?.connected || !state.selectedModel;
     const select = $('aiModel'); select.replaceChildren();
     if (!state.models.length) select.add(new Option(a?.connected ? 'No models available' : 'Sign in to load models', ''));
@@ -298,17 +300,21 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
     event.preventDefault(); toggle();
   });
   // Pre-existing projects remain available even if Roblox Studio is disconnected.
-  refreshProjects().then(() => {
+  if (supported) refreshProjects().then(() => {
     const status = getStatus();
-    if (status?.ready && status.placeKey) loadProject(status.placeKey, status.placeName);
+    const key = status?.ready ? projectKeyForPlace(status) : null;
+    if (key) loadProject(key, status.placeName);
     else if (state.projects.length) loadProject(state.projects[0].placeKey, state.projects[0].name);
   }).catch(uiError);
-  refreshModels();
+  if (supported) refreshModels();
+  else { state.account = { connected: false, secureStorage: false }; $('aiAuthDetail').textContent = 'Available in installed Windows app'; }
   render();
 
   return {
     onStatus(status) {
-      if (status?.ready && status.placeKey && status.placeKey !== state.placeKey) loadProject(status.placeKey, status.placeName);
+      const key = status?.ready ? projectKeyForPlace(status) : null;
+      if (supported && key && key !== state.placeKey) loadProject(key, status.placeName);
+      $('aiPlace').title = status?.placeKey === '0-0' ? 'Unpublished Places use their name as a temporary project identifier' : 'Previously connected Places';
     },
     onEvent(event) {
       if (supported && event.type === 'ai:account') {

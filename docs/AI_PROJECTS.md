@@ -34,3 +34,7 @@ Electron remains sandboxed, `contextIsolation` remains enabled, direct renderer 
 - `Ctrl+/`: toggle line comment
 - `Ctrl+\` and `Ctrl+Shift+\`: side-by-side / stacked Monaco split
 - `Ctrl+W` while the secondary group is focused: close the secondary view without closing the primary tab
+
+### Unpublished Roblox Places
+
+Roblox Studio reports `game.GameId = 0` and `game.PlaceId = 0` for new unpublished Places. Their bridge key is therefore `0-0`. The AI workspace scopes these temporary projects by the normalized Place name instead, so differently named local Baseplates do not accidentally share chat history. This cannot distinguish two unpublished files with the same name or track a renamed unpublished file; publishing the Place gives it a stable Roblox identifier.\n

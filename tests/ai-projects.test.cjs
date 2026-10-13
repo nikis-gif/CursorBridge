@@ -126,7 +126,7 @@ test('Place-controlled names and notes stay out of higher-priority model instruc
         return { ok: true, json: async () => ({ models: [ { visibility: 'list', slug: 'allowed', display_name: 'Allowed' } ] }) };
       }
       received.push(JSON.parse(options.body));
-      return { ok: true, body: ReadableStream.from([Buffer.from('data: {"type":"response.output_text.delta","delta":"Response"}\\n\\ndata: {"type":"response.completed"}\\n\\n')]) };
+      return { ok: true, body: ReadableStream.from([Buffer.from('data: {"type":"response.output_text.delta","delta":"Response"}\n\ndata: {"type":"response.completed"}\n\n')]) };
     } });
     await ai.send({ placeKey: key, chatId, text: 'Hello', model: 'allowed' });
     assert.equal(received.length, 1);
@@ -142,7 +142,7 @@ test('interrupted inference retains user message but never fabricates a complete
     const { result: chatId } = await store.createChat('place', 'Baseplate');
     const ai = new AIAssistant({ auth: { accessToken: async () => 'token' }, projects: store, fetchImpl: async url => {
       if (url.endsWith('/models')) return { ok: true, json: async () => ({ models: [{ slug: 'allowed', visibility: 'list' }] }) };
-      return { ok: true, body: ReadableStream.from([Buffer.from('data: {"type":"response.output_text.delta","delta":"partial"}\\n\\n')]) };
+      return { ok: true, body: ReadableStream.from([Buffer.from('data: {"type":"response.output_text.delta","delta":"partial"}\n\n')]) };
     }});
     await assert.rejects(ai.send({ placeKey: 'place', chatId, text: 'Explain Lua tables', model: 'allowed' }), /ended before completion/);
     const p = await store.read('place');

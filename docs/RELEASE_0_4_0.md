@@ -1,4 +1,4 @@
-# Cursor Bridge v0.4.0 — candidate / versão em validação
+# Cursor Bridge v0.4.0 - candidate / versão em validação
 
 ## PT-BR
 
