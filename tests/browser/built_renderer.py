@@ -65,6 +65,7 @@ def mount_built(page, *, offline=False, preferences=None, ai_fixture=False):
           const clone = value => structuredClone(value);
           window.__aiSent = [];
           window.__aiSnippets = [];
+          window.__aiOpened = [];
           window.__aiCreateStarted = false;
           window.__releaseAiCreate = null;
           Object.assign(window.cursorBridge, {
@@ -95,6 +96,7 @@ def mount_built(page, *, offline=False, preferences=None, ai_fixture=False):
               return {ok:true,reply:'Response'};
             },
             aiOpenUsage: async () => {},
+            aiOpenChatGPT: async () => { window.__aiOpened.push('https://chatgpt.com/'); },
           });
         }""")
     page.evaluate("""async ([source, workers]) => {

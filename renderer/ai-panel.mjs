@@ -16,52 +16,68 @@ export function mountAssistant({ api, getStatus, getSelectedContext, getSelected
   pane.setAttribute('aria-label', 'AI project conversations');
   pane.innerHTML = `
     <header class="ai-heading">
-      <div class="ai-heading-title"><span class="ai-eyebrow">WORKSPACE</span><strong>Project conversations</strong></div>
-      <button type="button" class="ai-icon" id="aiClose" title="Close (Ctrl+Shift+A)" aria-label="Close AI panel">${icon('close')}</button>
+      <div class="ai-heading-title"><strong>Project chat</strong><span id="aiProjectHint" class="ai-heading-subtitle">Choose a Place</span></div>
+      <div class="ai-heading-actions">
+        <button type="button" id="aiHistoryToggle" class="ai-icon" title="Conversation history" aria-label="Conversation history" aria-expanded="false" aria-controls="aiHistoryDrawer">${icon('history')}</button>
+        <button type="button" id="aiNewChat" class="ai-icon" title="New chat" aria-label="New chat">${icon('plus')}</button>
+        <button type="button" id="aiSettingsToggle" class="ai-icon" title="ChatGPT settings" aria-label="ChatGPT settings" aria-expanded="false" aria-controls="aiSettingsPanel">${icon('sliders')}</button>
+        <button type="button" id="aiClose" class="ai-icon" title="Close (Ctrl+Shift+A)" aria-label="Close chat panel">${icon('close')}</button>
+      </div>
     </header>
-    <div class="ai-project-row">
-      <label class="ai-field-label" for="aiPlace">PLACE PROJECT</label>
-      <select id="aiPlace" title="Previously connected Places"></select>
-    </div>
-    <div class="ai-auth-row">
-      <div class="ai-auth-status"><span id="aiLoginStatus">Account not connected</span><small id="aiAuthDetail">Account access depends on distribution eligibility</small></div>
-      <button class="ai-subtle-button" type="button" id="aiLogin">Connect</button>
-    </div>
-    <div class="ai-model-row"><label for="aiModel">Model</label><select id="aiModel" disabled><option value="">Sign in to load models</option></select>
-      <button type="button" class="ai-usage-link" id="aiUsage" title="Open ChatGPT usage settings">Usage</button>
-    </div>
+    <div class="ai-project-row"><label class="ai-sr-only" for="aiPlace">Place project</label>
+      <select id="aiPlace" aria-label="Choose a Place" title="Previously connected Places"></select></div>
+    <section class="ai-settings-panel" id="aiSettingsPanel" aria-label="ChatGPT account settings" hidden>
+      <div class="ai-auth-row">
+        <div class="ai-auth-status"><span id="aiLoginStatus">Checking account…</span><small id="aiAuthDetail"></small></div>
+        <button class="ai-subtle-button" type="button" id="aiLogin">Connect</button>
+      </div>
+      <div class="ai-model-row" id="aiModelRow" hidden><label for="aiModel">Model</label>
+        <select id="aiModel" disabled><option value="">No models</option></select>
+        <button type="button" class="ai-usage-link" id="aiUsage" title="Open ChatGPT usage settings">Usage</button>
+      </div>
+    </section>
     <nav class="ai-tabs" aria-label="Project views">
-      <button type="button" data-view="chats" aria-pressed="true">Chats</button>
-      <button type="button" data-view="memories" aria-pressed="false">Memory</button>
-      <button type="button" data-view="snippets" aria-pressed="false">Saved code</button>
+      <button type="button" data-view="chats" aria-pressed="true">Chat</button>
+      <button type="button" data-view="snippets" aria-pressed="false">Code</button>
+      <button type="button" data-view="memories" aria-pressed="false">Notes</button>
     </nav>
-    <div class="ai-view ai-chat-view" id="aiChatsView">
-      <div class="ai-thread-heading"><span>CONVERSATIONS</span><button type="button" id="aiNewChat" class="ai-text-action">${icon('plus', 13)} New chat</button></div>
+    <section class="ai-history-panel" id="aiHistoryDrawer" aria-label="Conversation history" hidden>
+      <div class="ai-history-header"><strong>History</strong><button type="button" id="aiHistoryClose" class="ai-icon" title="Close history" aria-label="Close history">${icon('close', 14)}</button></div>
       <div class="ai-threads" id="aiThreads" aria-label="Saved conversations"></div>
+    </section>
+    <div class="ai-view ai-chat-view" id="aiChatsView">
       <div class="ai-message-list" id="aiMessages" role="log" aria-live="polite" aria-label="Conversation"></div>
-      <form class="ai-compose" id="aiCompose">
-        <label class="ai-field-label" for="aiPrompt">MESSAGE</label>
-        <textarea id="aiPrompt" rows="3" placeholder="Ask about this Place or write Luau code…" maxlength="32000"></textarea>
+      <div id="aiAvailability" class="ai-availability" hidden>
+        <strong id="aiUnavailableTitle">Chat unavailable</strong>
+        <span id="aiUnavailableDetail">You can still use your saved code and notes.</span>
+        <button type="button" id="aiUnavailableAction" class="ai-subtle-button">Open ChatGPT in browser</button>
+      </div>
+      <form class="ai-compose" id="aiCompose" hidden>
+        <label class="ai-sr-only" for="aiPrompt">Message</label>
+        <textarea id="aiPrompt" rows="2" placeholder="Ask about this Place…" maxlength="32000"></textarea>
         <div class="ai-compose-footer">
-          <label class="ai-context-choice" title="Only include the selected script if you enable this option"><input type="checkbox" id="aiIncludeScript" /> Script context</label>
+          <label class="ai-context-choice" title="Only include the selected script with your permission"><input type="checkbox" id="aiIncludeScript" /> Include script</label>
           <div class="ai-compose-actions">
-            <button type="button" class="ai-icon" id="aiDictate" title="Dictate using the system speech service" aria-label="Dictate message">${icon('mic', 16)}</button>
-            <button type="submit" class="ai-primary" id="aiSubmit">Send ${icon('arrow-up', 14)}</button>
+            <button type="button" class="ai-icon" id="aiDictate" title="Dictate" aria-label="Dictate message">${icon('mic', 16)}</button>
+            <button type="submit" class="ai-primary" id="aiSubmit" title="Send (Ctrl+Enter)">Send ${icon('arrow-up', 14)}</button>
           </div>
         </div>
-        <small class="ai-footnote" id="aiRequestStatus">Ctrl+Enter to send. History is local; prompts go to OpenAI.</small>
+        <small class="ai-footnote" id="aiRequestStatus" role="status" aria-live="polite"></small>
       </form>
     </div>
     <div class="ai-view ai-settings-view" id="aiMemoriesView" hidden>
-      <p class="ai-descriptor">Project notes are saved locally and included in later conversations for this Place.</p>
-      <form class="ai-inline-form" id="aiMemoryForm"><textarea id="aiMemoryText" rows="3" placeholder="Architecture notes, conventions or decisions…" maxlength="5000"></textarea><button class="ai-primary" type="submit">Save note</button></form>
+      <form class="ai-inline-form" id="aiMemoryForm">
+        <label class="ai-sr-only" for="aiMemoryText">Project note</label>
+        <textarea id="aiMemoryText" rows="3" placeholder="Project conventions and decisions…" maxlength="5000"></textarea>
+        <button class="ai-primary" type="submit">Save note</button>
+      </form>
       <div id="aiMemoryList" class="ai-entries"></div>
     </div>
     <div class="ai-view ai-settings-view" id="aiSnippetsView" hidden>
-      <p class="ai-descriptor">Save your current Place script or copy existing snippets. Nothing is applied to Studio automatically.</p>
       <button type="button" class="ai-subtle-button ai-save-script" id="aiSaveActiveScript" disabled>Save active script</button>
       <div id="aiSnippetList" class="ai-entries"></div>
-    </div>`;
+    </div>
+  `;
   document.querySelector('.workbench').append(pane);
   const $ = id => pane.querySelector(`#${id}`);
   const supported = typeof api?.aiListProjects === 'function' && typeof api?.aiAccountStatus === 'function';
@@ -88,32 +104,76 @@ export function mountAssistant({ api, getStatus, getSelectedContext, getSelected
   const empty = (text) => { const el = document.createElement('p'); el.className = 'ai-empty'; el.textContent = text; return el; };
   const button = (label, action, title = label) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'ai-text-action'; b.textContent = label; b.title = title; b.addEventListener('click', action); return b; };
 
+  function setHistoryOpen(open) {
+    $('aiHistoryDrawer').hidden = !open;
+    $('aiHistoryToggle').setAttribute('aria-expanded', String(open));
+    if (open) { setSettingsOpen(false); $('aiHistoryClose').focus(); }
+  }
+  function setSettingsOpen(open) {
+    $('aiSettingsPanel').hidden = !open;
+    $('aiSettingsToggle').setAttribute('aria-expanded', String(open));
+    if (open) setHistoryOpen(false);
+  }
   function toggle(force = !state.open) {
     state.open = Boolean(force); pane.hidden = !state.open;
     rail.setAttribute('aria-pressed', String(state.open));
-    if (state.open) { if (supported) refreshModels(); $('aiPrompt').focus(); }
+    if (!state.open) { setHistoryOpen(false); setSettingsOpen(false); return; }
+    if (supported) refreshModels();
+    const target = $('aiCompose').hidden ? $('aiPlace') : $('aiPrompt');
+    target.focus();
   }
   function renderPlaces() {
     const select = $('aiPlace'); select.replaceChildren();
-    if (!state.projects.length) { const o = new Option('Connect a Place to start', ''); select.add(o); return; }
+    if (!state.projects.length) { const o = new Option('Connect a Place to start', ''); select.add(o); $('aiProjectHint').textContent = 'No Place connected'; return; }
     for (const p of state.projects) select.add(new Option(p.name || p.placeKey, p.placeKey));
     if (state.placeKey && state.projects.some(p => p.placeKey === state.placeKey)) select.value = state.placeKey;
+    $('aiProjectHint').textContent = state.placeName || 'Choose a Place';
   }
   function renderAccount() {
     const a = state.account;
-    $('aiLoginStatus').textContent = a?.available === false ? 'ChatGPT connection unavailable' :
-      a?.connected ? (a.displayName || a.email || 'ChatGPT connected') : 'ChatGPT not connected';
-    $('aiAuthDetail').textContent = a?.available === false ? String(a.reason || 'Not available in this release').slice(0, 260) :
-      a?.connected ? (a.email || 'ChatGPT plan permission granted') :
-      a?.error ? String(a.error).slice(0, 180) : a?.secureStorage === false ? 'Secure storage is unavailable' : 'Sign in with your ChatGPT account';
-    $('aiLogin').textContent = a?.available === false ? 'Unavailable' : a?.connected ? 'Sign out' : a?.pending ? 'Opening…' : 'Connect';
-    $('aiLogin').disabled = !supported || a?.available === false || Boolean(a?.pending || (a && !a.secureStorage));
-    $('aiSubmit').disabled = state.sending || !a?.connected || !state.selectedModel;
+    const connected = Boolean(a?.connected);
+    const available = a?.available !== false;
+    const usable = connected && Boolean(state.selectedModel);
+    $('aiLoginStatus').textContent = !available ? 'ChatGPT not available' :
+      connected ? (a.displayName || a.email || 'ChatGPT connected') : 'ChatGPT not connected';
+    $('aiAuthDetail').textContent = !available ? 'Account integration is disabled in this release.' :
+      connected ? (a.email || 'Using your connected ChatGPT plan') :
+      a?.error ? String(a.error).slice(0, 160) : 'Sign in with your ChatGPT account';
+    $('aiLogin').textContent = !available ? 'Unavailable' : connected ? 'Sign out' : a?.pending ? 'Opening…' : 'Connect';
+    $('aiLogin').disabled = !supported || !available || Boolean(a?.pending || (a && !a.secureStorage));
+    $('aiModelRow').hidden = !connected;
     const select = $('aiModel'); select.replaceChildren();
-    if (!state.models.length) select.add(new Option(a?.available === false ? 'Unavailable in this build' : a?.connected ? 'No models available' : 'Sign in to load models', ''));
+    if (!state.models.length) select.add(new Option('No models available', ''));
     else for (const m of state.models) select.add(new Option(m.name, m.id));
     select.disabled = !state.models.length;
     if (state.models.some(m => m.id === state.selectedModel)) select.value = state.selectedModel;
+    $('aiCompose').hidden = !usable;
+    $('aiAvailability').hidden = usable;
+    $('aiSubmit').disabled = state.sending || !state.placeKey || !usable;
+    $('aiNewChat').disabled = state.sending || !state.placeKey || !usable;
+    const title = $('aiUnavailableTitle');
+    const detail = $('aiUnavailableDetail');
+    const action = $('aiUnavailableAction');
+    if (a === null) {
+      title.textContent = 'Checking ChatGPT connection…';
+      detail.textContent = '';
+      action.hidden = true;
+    } else if (!available || !supported) {
+      title.textContent = 'ChatGPT chat is unavailable';
+      detail.textContent = 'Use Code and Notes here, or open ChatGPT in your browser.';
+      action.textContent = 'Open ChatGPT in browser';
+      action.hidden = false; action.disabled = !api?.aiOpenChatGPT;
+    } else if (!connected) {
+      title.textContent = 'Connect ChatGPT to start a chat';
+      detail.textContent = 'Your local projects remain separate from ChatGPT history.';
+      action.textContent = 'Continue with ChatGPT';
+      action.hidden = false; action.disabled = $('aiLogin').disabled;
+    } else {
+      title.textContent = 'No model available';
+      detail.textContent = 'Check your account permissions and usage.';
+      action.textContent = 'Account settings';
+      action.hidden = false; action.disabled = false;
+    }
   }
   async function refreshModels() {
     const requestId = ++modelRefreshId;
@@ -142,7 +202,7 @@ export function mountAssistant({ api, getStatus, getSelectedContext, getSelected
       if (serial !== state.changeId) return;
       state.project = project; state.placeKey = key; state.placeName = project.name;
       if (!project.chats.some(c => c.id === state.chatId)) state.chatId = project.chats[0]?.id || null;
-      await refreshProjects(); render();
+      setHistoryOpen(false); await refreshProjects(); render();
     } catch (error) { uiError(error); }
   }
   function textBlock(content) {
@@ -173,7 +233,7 @@ export function mountAssistant({ api, getStatus, getSelectedContext, getSelected
     const list = $('aiThreads'); list.replaceChildren();
     for (const chat of state.project?.chats || []) {
       const row = document.createElement('div'); row.className = `ai-thread${chat.id === state.chatId ? ' selected' : ''}`;
-      const trigger = button(chat.title, () => { state.chatId = chat.id; state.partial = ''; render(); });
+      const trigger = button(chat.title, () => { state.chatId = chat.id; state.partial = ''; setHistoryOpen(false); render(); });
       trigger.className = 'ai-thread-name'; trigger.title = chat.title;
       const rename = button('Rename', async () => {
         const value = window.prompt('Conversation name', chat.title);
@@ -181,13 +241,14 @@ export function mountAssistant({ api, getStatus, getSelectedContext, getSelected
         try { state.project = await api.aiRenameChat(state.placeKey, chat.id, value); render(); }
         catch (error) { uiError(error); }
       });
-      rename.title = 'Rename conversation';
+      rename.innerHTML = icon('edit', 13); rename.title = 'Rename conversation'; rename.setAttribute('aria-label', `Rename ${chat.title}`);
       const remove = button('Delete', async () => {
         if (!window.confirm(`Delete “${chat.title}” from this PC?`)) return;
         try { state.project = await api.aiDeleteChat(state.placeKey, chat.id); if (state.chatId === chat.id) state.chatId = state.project.chats[0]?.id || null; render(); }
         catch (error) { uiError(error); }
       });
       if (state.sending && chat.id === state.requestChatId) remove.disabled = true;
+      remove.innerHTML = icon('trash', 13); remove.title = 'Delete conversation'; remove.setAttribute('aria-label', `Delete ${chat.title}`);
       row.append(trigger, rename, remove); list.append(row);
     }
     if (!state.project?.chats.length) list.append(empty('No conversations yet.'));
@@ -195,7 +256,7 @@ export function mountAssistant({ api, getStatus, getSelectedContext, getSelected
   function renderMessages() {
     const list = $('aiMessages'); list.replaceChildren();
     const chat = state.project?.chats.find(c => c.id === state.chatId);
-    if (!chat) { list.append(empty('Start a conversation to keep a Place-specific development history.')); return; }
+    if (!chat) { list.append(empty('No conversations yet.')); return; }
     for (const msg of chat.messages) {
       const item = document.createElement('article'); item.className = `ai-message ${msg.role}`;
       const head = document.createElement('div'); head.className = 'ai-message-heading';
@@ -254,7 +315,6 @@ export function mountAssistant({ api, getStatus, getSelectedContext, getSelected
     renderThreads(); renderMessages(); renderEntries();
     updateScriptContextChoice();
     $('aiPrompt').disabled = !state.placeKey;
-    $('aiNewChat').disabled = !state.placeKey || state.sending;
     renderAccount();
     for (const button of pane.querySelectorAll('.ai-tabs button')) button.setAttribute('aria-pressed', String(button.dataset.view === state.view));
     $('aiChatsView').hidden = state.view !== 'chats';
@@ -297,6 +357,16 @@ export function mountAssistant({ api, getStatus, getSelectedContext, getSelected
     }
   }
   on(rail, 'click', () => toggle()); on($('aiClose'), 'click', () => toggle(false));
+  on($('aiHistoryToggle'), 'click', () => setHistoryOpen($('aiHistoryDrawer').hidden));
+  on($('aiHistoryClose'), 'click', () => { setHistoryOpen(false); $('aiHistoryToggle').focus(); });
+  on($('aiSettingsToggle'), 'click', () => setSettingsOpen($('aiSettingsPanel').hidden));
+  on($('aiUnavailableAction'), 'click', async () => {
+    try {
+      if (state.account?.available === false || !supported) await api.aiOpenChatGPT();
+      else if (!state.account?.connected) { await api.aiSignIn(); await refreshModels(); }
+      else setSettingsOpen(true);
+    } catch (error) { uiError(error); }
+  });
   on($('aiPlace'), 'change', () => {
     const key = $('aiPlace').value; const p = state.projects.find(p => p.placeKey === key);
     if (p) loadProject(key, p.name);
@@ -324,11 +394,13 @@ export function mountAssistant({ api, getStatus, getSelectedContext, getSelected
   });
   on($('aiModel'), 'change', () => { state.selectedModel = $('aiModel').value; renderAccount(); });
   on($('aiNewChat'), 'click', async () => {
-    if (!state.placeKey || state.sending) return;
+    if (!state.placeKey || state.sending || !state.account?.connected || !state.selectedModel) return;
     try { state.project = await api.aiNewChat(state.placeKey, state.placeName); state.chatId = state.project.result; render(); $('aiPrompt').focus(); }
     catch (error) { uiError(error); }
   });
-  for (const tab of pane.querySelectorAll('.ai-tabs button')) on(tab, 'click', () => { state.view = tab.dataset.view; render(); });
+  for (const tab of pane.querySelectorAll('.ai-tabs button')) on(tab, 'click', () => {
+    state.view = tab.dataset.view; setHistoryOpen(false); setSettingsOpen(false); render();
+  });
   on($('aiCompose'), 'submit', sendMessage);
   on($('aiPrompt'), 'keydown', event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) sendMessage(event); });
   on($('aiMemoryForm'), 'submit', async event => {
@@ -346,6 +418,7 @@ export function mountAssistant({ api, getStatus, getSelectedContext, getSelected
     recognition.start();
   });
   on(window, 'keydown', event => {
+    if (event.key === 'Escape' && state.open) { setHistoryOpen(false); setSettingsOpen(false); }
     if (!(event.ctrlKey || event.metaKey) || !event.shiftKey || event.altKey || event.key.toLowerCase() !== 'a') return;
     if (document.querySelector('dialog[open]')) return;
     event.preventDefault(); toggle();
@@ -358,7 +431,7 @@ export function mountAssistant({ api, getStatus, getSelectedContext, getSelected
     else if (state.projects.length) loadProject(state.projects[0].placeKey, state.projects[0].name);
   }).catch(uiError);
   if (supported) refreshModels();
-  else { state.account = { connected: false, secureStorage: false }; $('aiAuthDetail').textContent = 'Available in installed Windows app'; }
+  else { state.account = { connected: false, available: false, secureStorage: false }; }
   render();
 
   return {

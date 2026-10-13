@@ -120,7 +120,7 @@ def test_ai_panel_navigation(page):
     expect(page.locator('#railAssistant')).to_be_visible()
     page.keyboard.press('Control+Shift+a')
     expect(page.locator('#aiPanel')).to_be_visible()
-    expect(page.locator('#aiPanel')).to_contain_text('Project conversations')
+    expect(page.locator('#aiPanel')).to_contain_text('Project chat')
     inside_viewport(page, '#aiPanel')
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
     page.locator('#aiClose').click()
@@ -196,11 +196,61 @@ def test_save_full_luau_script_without_truncation(page):
     assert data['code'].startswith('--')
     assert data['code'].endswith('x' * 32)
 
+
+def test_chat_clean_navigation(page):
+    """History and settings should be unobtrusive until specifically requested."""
+    page.set_viewport_size({'width': 720, 'height': 504})
+    mount_built(page, ai_fixture=True)
+    page.locator('#railAssistant').click()
+    expect(page.locator('#aiPanel')).to_be_visible()
+    expect(page.locator('#aiHistoryDrawer')).to_be_hidden()
+    expect(page.locator('#aiSettingsPanel')).to_be_hidden()
+    expect(page.locator('#aiCompose')).to_be_visible()
+    expect(page.locator('#aiModelRow')).to_be_hidden()
+    assert page.locator('.ai-tabs button').all_text_contents() == ['Chat', 'Code', 'Notes']
+    page.locator('#aiSettingsToggle').click()
+    expect(page.locator('#aiSettingsPanel')).to_be_visible()
+    expect(page.locator('#aiModelRow')).to_be_visible()
+    page.locator('#aiHistoryToggle').click()
+    expect(page.locator('#aiSettingsPanel')).to_be_hidden()
+    expect(page.locator('#aiHistoryDrawer')).to_be_visible()
+    expect(page.locator('#aiHistoryDrawer')).to_contain_text('No conversations yet.')
+    page.keyboard.press('Escape')
+    expect(page.locator('#aiHistoryDrawer')).to_be_hidden()
+    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+    inside_viewport(page, '#aiPanel')
+
+
+def test_disabled_chat_is_explicit_without_clutter(page):
+    """Public builds cannot imply the Send button is functional."""
+    mount_built(page, offline=True, ai_fixture=True)
+    page.evaluate("""() => {
+      window.cursorBridge.aiAccountStatus = async () => ({
+        connected:false,available:false,secureStorage:false,reason:'Disabled in public release'
+      });
+    }""")
+    page.locator('#railAssistant').click()
+    expect(page.locator('#aiCompose')).to_be_hidden()
+    expect(page.locator('#aiAvailability')).to_be_visible()
+    expect(page.locator('#aiUnavailableTitle')).to_have_text('ChatGPT chat is unavailable')
+    expect(page.locator('#aiSettingsPanel')).to_be_hidden()
+    expect(page.locator('#aiNewChat')).to_be_disabled()
+    expect(page.locator('#aiUnavailableAction')).to_contain_text('browser')
+    page.locator('#aiUnavailableAction').click()
+    page.wait_for_function('window.__aiOpened.length === 1')
+    assert page.evaluate('window.__aiOpened[0]') == 'https://chatgpt.com/'
+    page.locator('.ai-tabs button[data-view="snippets"]').click()
+    expect(page.locator('#aiSnippetsView')).to_be_visible()
+    page.locator('.ai-tabs button[data-view="memories"]').click()
+    expect(page.locator('#aiMemoriesView')).to_be_visible()
+    page.locator('#aiSettingsToggle').click()
+    expect(page.locator('#aiLogin')).to_be_disabled()
+
 def main():
     with sync_playwright() as pw:
         browser = pw.chromium.launch(**launch_options())
         try:
-            for test in (test_compact_chrome, test_theme_preference_migration, test_compact_split_and_layout, test_clamped_sidebar_resize, test_ai_panel_navigation, test_save_active_script_without_ai_connection, test_save_full_luau_script_without_truncation, test_ai_chat_remains_scoped_when_user_switches_place):
+            for test in (test_compact_chrome, test_theme_preference_migration, test_compact_split_and_layout, test_clamped_sidebar_resize, test_ai_panel_navigation, test_chat_clean_navigation, test_disabled_chat_is_explicit_without_clutter, test_save_active_script_without_ai_connection, test_save_full_luau_script_without_truncation, test_ai_chat_remains_scoped_when_user_switches_place):
                 page = browser.new_page(viewport={'width': 1080, 'height': 700})
                 errors = []
                 page.on('pageerror', lambda error: errors.append(str(error)))

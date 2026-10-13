@@ -1,10 +1,10 @@
-# AI projects — v0.4.0 public local workspace
+# AI projects — v0.4.1 local Place workspace
 
 An optional Electron panel for Place-specific coding conversations. AI projects are identified by the existing Roblox Studio `placeKey`, never by a script name or in-memory session ID. Opening a Place creates/opens its existing project. Previous Place histories remain accessible while disconnected.
 
 ## Features
 
-- `Ctrl+Shift+A` opens the AI panel. The panel inherits the existing workbench's theme and monochrome outline icon family. The Studio bridge and Quick Apply flows are unchanged.
+- `Ctrl+Shift+A` opens the simplified Chat / Code / Notes panel. Account settings and saved chat history are accessible from separate header buttons and stay closed by default. In public releases without inference authorization the compose box is hidden, and an honest 'Open ChatGPT in browser' fallback is offered; browser conversations are not imported into this app. The Studio bridge and Quick Apply flows are unchanged.
 - Chats can be created, renamed and deleted. Chat messages, architecture notes, and saved Luau code snippets persist locally under Electron `userData/ai-projects/` (one atomic JSON file per Place). Use **Saved code > Save active script** to archive the open Luau script without a ChatGPT login.
 - Source context is **opt-in**: select a script and enable **Script context** before sending. No complete Place content is sent by default. The model never writes to Roblox Studio automatically; copy code or save a snippet, then use the existing editor or Quick Apply confirmation/backup path.
 - **Account integration is unavailable in the public v0.4.0 installer.** Packaged releases hard-disable ChatGPT OAuth and model inference while this repository remains `UNLICENSED`, pending eligibility and native Windows login QA. The implementation is retained for a later eligible release and separate, explicitly opted-in unpackaged development testing. When enabled in a properly authorized release, OAuth/PKCE credentials remain in Electron `safeStorage`, never exposed to the renderer or Roblox plugin.

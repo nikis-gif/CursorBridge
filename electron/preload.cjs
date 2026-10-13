@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('cursorBridge', {
   aiModels: () => ipcRenderer.invoke('bridge:ai-models'),
   aiSend: (request) => ipcRenderer.invoke('bridge:ai-send', request),
   aiOpenUsage: () => ipcRenderer.invoke('bridge:ai-open-usage'),
+  aiOpenChatGPT: () => ipcRenderer.invoke('bridge:ai-open-chatgpt'),
   onEvent(callback) {
     const listener = (_event, data) => callback(data);
     ipcRenderer.on('bridge:event', listener);
