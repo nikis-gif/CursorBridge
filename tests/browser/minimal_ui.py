@@ -66,7 +66,7 @@ def test_compact_split_and_layout(page):
     expect(page.locator('#dashboardScripts')).to_have_text('3')
     expect(page.locator('#tabs')).to_be_hidden()
     assert page.locator('#welcome .dashboard-action svg').count() == 0
-    assert page.locator('.activity-rail button').count() == 6
+    assert page.locator('.activity-rail button').count() == 7
     for node in page.locator('.tree-class svg').all():
         expect(node).to_have_attribute('stroke', 'currentColor')
     page.locator('.tree-row[data-id="s1"] .tree-name').click()
@@ -112,11 +112,26 @@ def test_clamped_sidebar_resize(page):
     assert page.locator('#explorerPane').bounding_box()['width'] < after - 10
 
 
+
+def test_ai_panel_navigation(page):
+    """The AI project pane should be usable without an account or Studio connection."""
+    page.set_viewport_size({'width': 720, 'height': 504})
+    mount_built(page, offline=True)
+    expect(page.locator('#railAssistant')).to_be_visible()
+    page.keyboard.press('Control+Shift+a')
+    expect(page.locator('#aiPanel')).to_be_visible()
+    expect(page.locator('#aiPanel')).to_contain_text('Project conversations')
+    inside_viewport(page, '#aiPanel')
+    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+    page.locator('#aiClose').click()
+    expect(page.locator('#aiPanel')).to_be_hidden()
+
+
 def main():
     with sync_playwright() as pw:
         browser = pw.chromium.launch(**launch_options())
         try:
-            for test in (test_compact_chrome, test_theme_preference_migration, test_compact_split_and_layout, test_clamped_sidebar_resize):
+            for test in (test_compact_chrome, test_theme_preference_migration, test_compact_split_and_layout, test_clamped_sidebar_resize, test_ai_panel_navigation):
                 page = browser.new_page(viewport={'width': 1080, 'height': 700})
                 errors = []
                 page.on('pageerror', lambda error: errors.append(str(error)))
