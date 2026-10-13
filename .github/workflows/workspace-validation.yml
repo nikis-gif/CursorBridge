@@ -45,7 +45,7 @@ jobs:
         run: npm run test:ui
       - name: Verify split workspace with real Monaco
         run: npm run test:ui:workspace
-      - name: Verify large places and large AI bundles
+      - name: Verify large places and script bundles
         run: |
           npm run test:ui:load
           npm run test:ui:stability

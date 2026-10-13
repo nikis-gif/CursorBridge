@@ -1,4 +1,4 @@
-# Workspace v0.3.1
+# Workspace
 
 The default desktop window is up to 1080 x 700 logical pixels, capped at 90% of
 the display work area. The initial Explorer width is 248 pixels. Saved layout
@@ -27,9 +27,9 @@ close and snap behavior use native caption controls, not simulated HTML buttons.
 The title bar follows the selected workbench theme.
 
 **Layout > Reduce animations** and the operating system reduced-motion preference
-disable interface transitions. No external fonts, remote chat service or cloud
-account is required. Quick Apply opens the existing bundle review; it does not
-send a prompt to an AI provider.
+disable interface transitions. No external fonts, cloud service or account is
+required. Quick Apply opens the existing bundle review and never generates
+code or sends prompts to an external provider.
 
 ## Explorer
 

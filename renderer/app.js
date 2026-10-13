@@ -4,7 +4,6 @@ import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
 import './styles.css';
 import './workspace.css';
 import { mountWorkspace } from './workspace-ui.mjs';
-import { mountAssistant } from './ai-panel.mjs';
 import { primaryTabIds } from './tab-groups.mjs';
 import { icon } from './icons.js';
 import { findHierarchyCompletion, makeMonacoSuggestions } from './luau-completion.mjs';
@@ -29,7 +28,6 @@ const models = new Map();
 const modelDocumentIds = new WeakMap();
 const primaryViewStates = new Map();
 let workspace = null;
-let assistant = null;
 const localState = new Map();
 const activeTabs = [];
 const draftTimers = new Map();
@@ -1098,7 +1096,6 @@ function updateStatus(status) {
   const previouslyConnected = currentStatus.connected === true;
   const previouslyReady = currentStatus.ready === true;
   currentStatus = status;
-  assistant?.onStatus(status);
   const connected = status.connected === true;
   const incompatiblePlugin = connected && status.protocolVersion === 1;
   const ready = connected && status.ready === true && !incompatiblePlugin;
@@ -1181,7 +1178,6 @@ function resetWorkspace() {
   renderTabs();scheduleRender();
 }
 function receiveServerEvent(event) {
-  assistant?.onEvent(event);
   if (event.type === 'batch') {
     receivingStudioBatch = true;
     try {for (const entry of event.events) receiveServerEvent(entry);} finally {receivingStudioBatch = false;}
@@ -2379,22 +2375,7 @@ workspace = mountWorkspace({
   hidePopovers, toast, safeError, saveDocument: flushStudioWrite,
   onSplitChange: () => renderTabs(),
 });
-assistant = mountAssistant({
-  api, getStatus: () => currentStatus,
-  getSelectedContext: () => {
-    if (!currentStatus.ready || !selectedId) return null;
-    const model = models.get(selectedId);
-    return model ? { path: pathForNode(nodes, selectedId), source: model.getValue().slice(0, 48000) } : null;
-  },
-  // Never reuse the prompt-context preview for the full-code local library.
-  getSelectedScriptForSaving: () => {
-    if (!canMutate() || !selectedId) return null;
-    const model = models.get(selectedId);
-    return model ? { path: pathForNode(nodes, selectedId), source: model.getValue() } : null;
-  },
-  toast,
-});
-window.addEventListener('pagehide', () => { workspace?.dispose(); assistant?.dispose(); }, { once: true });
+window.addEventListener('pagehide', () => { workspace?.dispose(); }, { once: true });
 
 async function start() {
   if (!api) {setFooter('Launch Cursor Bridge through the Windows application.');return;}
