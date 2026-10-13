@@ -127,11 +127,37 @@ def test_ai_panel_navigation(page):
     expect(page.locator('#aiPanel')).to_be_hidden()
 
 
+
+def test_ai_chat_remains_scoped_when_user_switches_place(page):
+    """A delayed new-chat request cannot send script context to the wrong project."""
+    mount_built(page, ai_fixture=True)
+    page.locator('.tree-row[data-id="s1"] .tree-name').click()
+    page.locator('#railAssistant').click()
+    expect(page.locator('#aiPlace')).to_have_value('100-200')
+    expect(page.locator('#aiIncludeScript')).to_be_enabled()
+    page.locator('#aiIncludeScript').check()
+    expect(page.locator('#aiSubmit')).to_be_enabled()
+    page.locator('#aiPrompt').fill('Review my Luau script')
+    page.locator('#aiPrompt').press('Control+Enter')
+    page.wait_for_function('window.__aiCreateStarted === true')
+    page.locator('#aiPlace').select_option('historic-place')
+    expect(page.locator('#aiPlace')).to_have_value('historic-place')
+    expect(page.locator('#aiIncludeScript')).to_be_disabled()
+    page.evaluate('window.__releaseAiCreate()')
+    page.wait_for_function('window.__aiSent.length === 1')
+    payload = page.evaluate('window.__aiSent[0]')
+    assert payload['placeKey'] == '100-200'
+    assert payload['chatId'] == 'chat-100-200'
+    assert payload['text'] == 'Review my Luau script'
+    assert 'Main' in payload['scriptContext']['path']
+    expect(page.locator('#aiPlace')).to_have_value('historic-place')
+    expect(page.locator('#aiThreads')).to_contain_text('No conversations yet.')
+
 def main():
     with sync_playwright() as pw:
         browser = pw.chromium.launch(**launch_options())
         try:
-            for test in (test_compact_chrome, test_theme_preference_migration, test_compact_split_and_layout, test_clamped_sidebar_resize, test_ai_panel_navigation):
+            for test in (test_compact_chrome, test_theme_preference_migration, test_compact_split_and_layout, test_clamped_sidebar_resize, test_ai_panel_navigation, test_ai_chat_remains_scoped_when_user_switches_place):
                 page = browser.new_page(viewport={'width': 1080, 'height': 700})
                 errors = []
                 page.on('pageerror', lambda error: errors.append(str(error)))
