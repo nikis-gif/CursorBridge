@@ -8,6 +8,7 @@ const { BridgeServer } = require('../bridge/bridge-server.cjs');
 const { AIProjectStore } = require('./ai-project-store.cjs');
 const { ChatGPTAuth } = require('./chatgpt-auth.cjs');
 const { AIAssistant } = require('./ai-assistant.cjs');
+const { isChatGPTSignInEnabled, CHATGPT_SIGN_IN_UNAVAILABLE } = require('./siwc-availability.cjs');
 const { windowStyleForTheme } = require('./window-theme.cjs');
 const { initialWindowBounds } = require('./window-bounds.cjs');
 
@@ -35,6 +36,13 @@ if (!acquiredLock) {
 }
 
 const ROOT = path.join(__dirname, '..');
+const CHATGPT_SIGN_IN_ENABLED = isChatGPTSignInEnabled({
+  packaged: app.isPackaged,
+  developerOptIn: process.env.CURSOR_BRIDGE_DEV_SIWC === '1',
+});
+function requireChatGPTSignIn() {
+  if (!CHATGPT_SIGN_IN_ENABLED) throw new Error(CHATGPT_SIGN_IN_UNAVAILABLE);
+}
 const DEV_URL = process.env.CURSOR_DEV_URL;
 
 function isPublishConfigured() {
@@ -129,14 +137,19 @@ function registerIpc() {
     'bridge:ai-delete-memory': (_event, key, id) => aiProjects.deleteMemory(key, id),
     'bridge:ai-save-snippet': (_event, key, title, code) => aiProjects.saveSnippet(key, title, code),
     'bridge:ai-delete-snippet': (_event, key, id) => aiProjects.deleteSnippet(key, id),
-    'bridge:ai-account-status': () => ({ ...chatgptAuth.status(), error: aiInitError }),
+    'bridge:ai-account-status': () => CHATGPT_SIGN_IN_ENABLED
+      ? { ...chatgptAuth.status(), available: true, error: aiInitError }
+      : { connected: false, pending: false, secureStorage: false,
+        available: false, reason: CHATGPT_SIGN_IN_UNAVAILABLE },
     'bridge:ai-sign-in': () => {
+      requireChatGPTSignIn();
       if (aiInitError) throw new Error(`ChatGPT sign-in unavailable: ${aiInitError}`);
       return chatgptAuth.startSignIn();
     },
-    'bridge:ai-sign-out': () => chatgptAuth.signOut(),
-    'bridge:ai-models': () => aiAssistant.models(true),
+    'bridge:ai-sign-out': () => CHATGPT_SIGN_IN_ENABLED ? chatgptAuth.signOut() : { ok: true },
+    'bridge:ai-models': () => { requireChatGPTSignIn(); return aiAssistant.models(true); },
     'bridge:ai-send': async (_event, request) => {
+      requireChatGPTSignIn();
       if (request?.scriptContext) {
         const { canUseScriptContext } = await import('../shared/place-project-key.mjs');
         if (!canUseScriptContext(request.placeKey, bridge.getStatus())) {
@@ -217,8 +230,10 @@ if (acquiredLock) {
         sendToRenderer({ type: 'ai:account', status });
       },
     });
-    try { await chatgptAuth.init(); }
-    catch (error) { aiInitError = error.message; console.error('ChatGPT sign-in disabled:', error.message); }
+    if (CHATGPT_SIGN_IN_ENABLED) {
+      try { await chatgptAuth.init(); }
+      catch (error) { aiInitError = error.message; console.error('ChatGPT sign-in disabled:', error.message); }
+    }
     aiAssistant = new AIAssistant({
       auth: chatgptAuth, projects: aiProjects,
       onDelta: (event) => sendToRenderer({ type: 'ai:delta', ...event }),

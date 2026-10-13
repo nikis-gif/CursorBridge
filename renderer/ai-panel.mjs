@@ -24,7 +24,7 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
       <select id="aiPlace" title="Previously connected Places"></select>
     </div>
     <div class="ai-auth-row">
-      <div class="ai-auth-status"><span id="aiLoginStatus">ChatGPT not connected</span><small id="aiAuthDetail">Use your own account and plan</small></div>
+      <div class="ai-auth-status"><span id="aiLoginStatus">Account not connected</span><small id="aiAuthDetail">Account access depends on distribution eligibility</small></div>
       <button class="ai-subtle-button" type="button" id="aiLogin">Connect</button>
     </div>
     <div class="ai-model-row"><label for="aiModel">Model</label><select id="aiModel" disabled><option value="">Sign in to load models</option></select>
@@ -58,7 +58,8 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
       <div id="aiMemoryList" class="ai-entries"></div>
     </div>
     <div class="ai-view ai-settings-view" id="aiSnippetsView" hidden>
-      <p class="ai-descriptor">Code saved from responses remains available when Studio is offline. Nothing is applied automatically.</p>
+      <p class="ai-descriptor">Save your current Place script or copy existing snippets. Nothing is applied to Studio automatically.</p>
+      <button type="button" class="ai-subtle-button ai-save-script" id="aiSaveActiveScript" disabled>Save active script</button>
       <div id="aiSnippetList" class="ai-entries"></div>
     </div>`;
   document.querySelector('.workbench').append(pane);
@@ -100,14 +101,16 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
   }
   function renderAccount() {
     const a = state.account;
-    $('aiLoginStatus').textContent = a?.connected ? (a.displayName || a.email || 'ChatGPT connected') : 'ChatGPT not connected';
-    $('aiAuthDetail').textContent = a?.connected ? (a.email || 'ChatGPT plan permission granted') :
+    $('aiLoginStatus').textContent = a?.available === false ? 'ChatGPT connection unavailable' :
+      a?.connected ? (a.displayName || a.email || 'ChatGPT connected') : 'ChatGPT not connected';
+    $('aiAuthDetail').textContent = a?.available === false ? String(a.reason || 'Not available in this release').slice(0, 260) :
+      a?.connected ? (a.email || 'ChatGPT plan permission granted') :
       a?.error ? String(a.error).slice(0, 180) : a?.secureStorage === false ? 'Secure storage is unavailable' : 'Sign in with your ChatGPT account';
-    $('aiLogin').textContent = a?.connected ? 'Sign out' : a?.pending ? 'Opening…' : 'Connect';
-    $('aiLogin').disabled = !supported || Boolean(a?.pending || (a && !a.secureStorage));
+    $('aiLogin').textContent = a?.available === false ? 'Unavailable' : a?.connected ? 'Sign out' : a?.pending ? 'Opening…' : 'Connect';
+    $('aiLogin').disabled = !supported || a?.available === false || Boolean(a?.pending || (a && !a.secureStorage));
     $('aiSubmit').disabled = state.sending || !a?.connected || !state.selectedModel;
     const select = $('aiModel'); select.replaceChildren();
-    if (!state.models.length) select.add(new Option(a?.connected ? 'No models available' : 'Sign in to load models', ''));
+    if (!state.models.length) select.add(new Option(a?.available === false ? 'Unavailable in this build' : a?.connected ? 'No models available' : 'Sign in to load models', ''));
     else for (const m of state.models) select.add(new Option(m.name, m.id));
     select.disabled = !state.models.length;
     if (state.models.some(m => m.id === state.selectedModel)) select.value = state.selectedModel;
@@ -245,6 +248,7 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
     input.disabled = !allowed;
     if (!allowed) input.checked = false;
     input.title = allowed ? 'Include the selected script from this Place' : 'Connect to this Place to include live script context';
+    $('aiSaveActiveScript').disabled = !allowed;
   }
   function render() {
     renderThreads(); renderMessages(); renderEntries();
@@ -306,6 +310,18 @@ export function mountAssistant({ api, getStatus, getSelectedContext, toast }) {
     } catch (error) { uiError(error); }
   });
   on($('aiUsage'), 'click', () => api.aiOpenUsage().catch(uiError));
+  on($('aiSaveActiveScript'), 'click', async () => {
+    const key = state.placeKey;
+    if (!canUseScriptContext(key, getStatus())) { uiError(new Error('Connect to this Place before saving its script.')); return; }
+    const selected = getSelectedContext();
+    if (!selected || typeof selected.source !== 'string') { uiError(new Error('Open a script in the editor first.')); return; }
+    const name = String(selected.path || 'Script').split('/').at(-1).slice(0, 150);
+    try {
+      const project = await api.aiSaveSnippet(key, `Script: ${name}`, selected.source);
+      if (state.placeKey === key) { state.project = project; render(); }
+      $('aiRequestStatus').textContent = 'Script saved locally.';
+    } catch (error) { uiError(error); }
+  });
   on($('aiModel'), 'change', () => { state.selectedModel = $('aiModel').value; renderAccount(); });
   on($('aiNewChat'), 'click', async () => {
     if (!state.placeKey || state.sending) return;
