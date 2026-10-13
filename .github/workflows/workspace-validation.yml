@@ -74,6 +74,7 @@ jobs:
       - name: Verify installer and unpacked application
         shell: pwsh
         run: |
-          if (!(Test-Path 'release/Cursor-Bridge-Setup-0.4.0.exe')) { throw 'Windows installer missing' }
+          $version = node -p "require('./package.json').version"
+          if (!(Test-Path "release/Cursor-Bridge-Setup-$version.exe")) { throw 'Windows installer missing' }
           if (!(Test-Path 'release/win-unpacked/resources/app.asar')) { throw 'Packaged application missing' }
 
