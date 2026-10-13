@@ -1,4 +1,4 @@
-# Cursor Bridge v0.4.1 — Project chat refinement / Refinamento do painel de projetos
+# Cursor Bridge v0.4.1 - Project chat refinement / Refinamento do painel de projetos
 
 ## Português (Brasil)
 
