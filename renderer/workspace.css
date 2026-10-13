@@ -98,6 +98,10 @@ body[data-explorer-hidden=true] #explorerPane,body[data-explorer-hidden=true] #r
 .tab-label {max-width:160px;}
 .tab-close {border-radius:3px;padding:3px;}
 .secondary-tab {flex:1;cursor:grab;}
+.secondary-pane .secondary-tabs {border-bottom: 1px solid var(--soft-border); background: var(--sidebar);}
+.secondary-pane.group-focused .secondary-tab {box-shadow: inset 0 -2px var(--accent);}
+.secondary-pane .editor-topline {border-bottom: 1px solid var(--soft-border);}
+.secondary-pane .split-view-badge {color: var(--muted); font-size: 10px; letter-spacing: .2px;}
 .secondary-tab .tab-close {opacity:1;}
 #secondaryTabName {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 .split-view-badge {font-size:9px;color:var(--muted);white-space:nowrap;}

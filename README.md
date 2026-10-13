@@ -1,5 +1,7 @@
 # Cursor Bridge
 
+**v0.4.0 candidate:** Place-specific AI project conversations, persistent local memory and saved code, optional Sign in with ChatGPT, and improved split-editor tab ownership. See [AI projects](docs/AI_PROJECTS.md) and [release notes](docs/RELEASE_0_4_0.md). This feature is under regression and licensing review until the PR is merged.
+
 ### v0.3.1 - Refined interface
 
 A quieter English workbench with consistent outline icons, a compact default

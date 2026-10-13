@@ -58,6 +58,15 @@
 
 # Changelog
 
+## v0.4.0 (candidate)
+
+- Optional ChatGPT sign-in (no API key) using account-authorized model catalog; independent local chat history, per-Place notes and code snippets.
+- Dedicated professional workspace panel, consent-driven script context and speech accessibility when supported by the OS/browser.
+- Split editor no longer duplicates a distinct secondary script in primary tab list; native Monaco undo/redo preserved and shortcut guide expanded.
+- No bundled third-party proprietary icon pack; only original in-repository outline glyphs.
+- Release blocked on full CI and open-source distribution eligibility.
+
+
 ## 0.2.2 — Quick Open & Find in Place
 
 - Enhanced Ctrl+P with intelligent name/path ranking, keyboard navigation, and `Name:line:column` navigation, preserving duplicate-name IDs and Studio hierarchy paths.

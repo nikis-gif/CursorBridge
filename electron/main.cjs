@@ -5,11 +5,18 @@ const fs = require('node:fs');
 const { app, BrowserWindow, ipcMain, shell, dialog, clipboard, powerMonitor, screen } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { BridgeServer } = require('../bridge/bridge-server.cjs');
+const { AIProjectStore } = require('./ai-project-store.cjs');
+const { ChatGPTAuth } = require('./chatgpt-auth.cjs');
+const { AIAssistant } = require('./ai-assistant.cjs');
 const { windowStyleForTheme } = require('./window-theme.cjs');
 const { initialWindowBounds } = require('./window-bounds.cjs');
 
 let mainWindow = null;
 let bridge = null;
+let aiProjects = null;
+let chatgptAuth = null;
+let aiAssistant = null;
+let aiInitError = null;
 let updateCheckActive = false;
 let updateDownloaded = false;
 let installingUpdate = false;
@@ -87,7 +94,7 @@ function registerIpc() {
       mainWindow.setBackgroundColor(style.color);
       return { ok: true };
     },
-    'bridge:copy-text': (_event, value) => clipboard.writeText(String(value).slice(0, 16 * 1024)),
+    'bridge:copy-text': (_event, value) => clipboard.writeText(String(value).slice(0, 256 * 1024)),
     'bridge:get-state': () => bridge.getState(),
     'bridge:request-source': (_event, id) => bridge.requestSource(id),
     'bridge:save-quick-apply-draft': (_event, text) => bridge.saveQuickApplyDraft(text),
@@ -107,6 +114,24 @@ function registerIpc() {
     'bridge:disconnect': () => bridge.disconnect('application-user-disconnected'),
     'bridge:check-updates': () => checkForUpdates(true),
     'bridge:get-version': () => app.getVersion(),
+    'bridge:ai-list-projects': () => aiProjects.list(),
+    'bridge:ai-ensure-project': (_event, key, name) => aiProjects.ensure(key, name),
+    'bridge:ai-new-chat': (_event, key, name) => aiProjects.createChat(key, name),
+    'bridge:ai-rename-chat': (_event, key, id, title) => aiProjects.renameChat(key, id, title),
+    'bridge:ai-delete-chat': (_event, key, id) => aiProjects.deleteChat(key, id),
+    'bridge:ai-save-memory': (_event, key, text) => aiProjects.saveMemory(key, text),
+    'bridge:ai-delete-memory': (_event, key, id) => aiProjects.deleteMemory(key, id),
+    'bridge:ai-save-snippet': (_event, key, title, code) => aiProjects.saveSnippet(key, title, code),
+    'bridge:ai-delete-snippet': (_event, key, id) => aiProjects.deleteSnippet(key, id),
+    'bridge:ai-account-status': () => ({ ...chatgptAuth.status(), error: aiInitError }),
+    'bridge:ai-sign-in': () => {
+      if (aiInitError) throw new Error(`ChatGPT sign-in unavailable: ${aiInitError}`);
+      return chatgptAuth.startSignIn();
+    },
+    'bridge:ai-sign-out': () => chatgptAuth.signOut(),
+    'bridge:ai-models': () => aiAssistant.models(true),
+    'bridge:ai-send': (_event, request) => aiAssistant.send(request),
+    'bridge:ai-open-usage': () => shell.openExternal('https://chatgpt.com/#settings/Usage'),
   };
   for (const [name, action] of Object.entries(actions)) {
     ipcMain.handle(name, action);
@@ -167,6 +192,19 @@ function configureUpdater() {
 
 if (acquiredLock) {
   app.whenReady().then(async () => {
+    // All project data stays in Electron userData. Tokens stay encrypted in the main process.
+    aiProjects = new AIProjectStore(app.getPath('userData'));
+    chatgptAuth = new ChatGPTAuth({
+      userData: app.getPath('userData'), safeStorage: require('electron').safeStorage,
+      openExternal: (url) => shell.openExternal(url),
+      onChange: (status) => { aiAssistant?.invalidateModels(); sendToRenderer({ type: 'ai:account', status }); },
+    });
+    try { await chatgptAuth.init(); }
+    catch (error) { aiInitError = error.message; console.error('ChatGPT sign-in disabled:', error.message); }
+    aiAssistant = new AIAssistant({
+      auth: chatgptAuth, projects: aiProjects,
+      onDelta: (event) => sendToRenderer({ type: 'ai:delta', ...event }),
+    });
     bridge = new BridgeServer({ storageDir: app.getPath('userData') });
     bridge.on('event', sendToRenderer);
     try {
@@ -195,6 +233,7 @@ if (acquiredLock) {
     if (installingUpdate || shutdownStarted || !bridge) return;
     event.preventDefault();
     shutdownStarted = true;
+    chatgptAuth?.close();
     bridge.close().catch((error) => console.error(error)).finally(() => app.quit());
   });
 }
