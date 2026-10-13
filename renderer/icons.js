@@ -1,13 +1,11 @@
 // A single outline family. Navigation and instance icons share the same stroke and color.
 const glyphs = {
-  mic: '<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/>',
   home: '<path d="m3 10 9-7 9 7v10H3zM9 20v-7h6v7"/>',
   layout: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/>',
   'layout-right': '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/>',
   split: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M12 4v16"/>',
   'split-horizontal': '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 12h18"/>',
   'code-brackets': '<path d="m8 6-6 6 6 6m8-12 6 6-6 6M14 4l-4 16"/>',
-  'arrow-up': '<path d="M12 20V4m-7 7 7-7 7 7"/>',
   shield: '<path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6"/>',
   folder:'<path d="M3 6h7l2 2h9v11H3z"/>',
   Workspace:'<path d="M12 2 21 7 12 12 3 7zM3 7v10l9 5 9-5V7M12 12v10"/>',
