@@ -10,7 +10,7 @@ For the recommended, up-to-date publishing steps, see [GitHub Release guide](GIT
 
 ## 1. Install prerequisites
 
-Install [Node.js 22 LTS or newer](https://nodejs.org/), [Git](https://git-scm.com/), [Python 3](https://www.python.org/) (for rebuilding the Studio plugin), and Roblox Studio. Optionally install [GitHub CLI](https://cli.github.com/).
+Install [Node.js](https://nodejs.org/) **22.23.4–22.x, 24.22.1–24.x, or 26.12.1–26.x** with **npm 10.9.0+**, [Git](https://git-scm.com/), [Python 3](https://www.python.org/) (for rebuilding the Studio plugin), and Roblox Studio. Optionally install [GitHub CLI](https://cli.github.com/).
 
 After extracting the project ZIP, open the directory in Visual Studio Code and run:
 
@@ -18,7 +18,7 @@ After extracting the project ZIP, open the directory in Visual Studio Code and r
 node --version
 npm --version
 git --version
-npm install
+npm ci
 npm test
 npm run dev
 ```
@@ -30,6 +30,64 @@ PowerShell -ExecutionPolicy Bypass -File .\scripts\install-studio-plugin.ps1
 ```
 
 The installation script rejects corrupt Roblox XML files before copying them. Restart Studio after installing. The plugin appears on Studio's **Plugins** toolbar as **Cursor Bridge V2**. Enable its first-time network access request to `127.0.0.1:38471` if prompted. The desktop process must be running before pairing.
+
+### Runtime requirements and verification
+
+The host Node.js and Electron's embedded Node.js are separate runtimes:
+
+| Use | Runtime |
+| --- | --- |
+| `npm ci`, `npm test`, Vite, `scripts/dev.cjs`, and electron-builder | Node.js installed on the development/build machine |
+| GitHub validation and Windows release builds | Node.js 22.23.4, selected from `.nvmrc` |
+| Desktop main process, local bridge, and installed Windows application | Electron 44.10.0 with embedded Node.js 24.22.1 |
+| Renderer / Monaco | Electron's Chromium; Node integration stays disabled |
+| Roblox plugin and Luau execution | Roblox Studio, independent of Node.js |
+
+The host range is `>=22.23.4 <23 || >=24.22.1 <25 || >=26.12.1 <27`.
+Each supported major has its own security floor. Older patches, odd-numbered
+majors, prereleases, and unreviewed future majors are not accepted. `.npmrc`
+enforces `engines` during npm installation; `devEngines` rejects unsupported
+Node.js/npm versions before npm install, ci, and run commands. Use npm 10.9.0+
+and do not bypass these checks with `--force` or configuration overrides.
+These are tooling safeguards, not a restriction on which binaries a machine
+owner can execute directly.
+
+The [v0.4.2 release build](https://github.com/nikis-gif/CursorBridge/actions/runs/38346923233)
+used host Node.js 22.23.3 and packaged Electron 44.7.0. That Electron release
+[bundles Node.js 24.21.0](https://releases.electronjs.org/release/v44.7.0).
+The patch updates the dependency and lockfile to
+[Electron 44.10.0 / Node.js 24.22.1](https://releases.electronjs.org/release/v44.10.0),
+within the same Electron major. The Windows validation and publishing workflows
+execute the unpacked binary with `ELECTRON_RUN_AS_NODE=1` and fail unless it
+reports the pinned Electron version and Node.js 24.22.1. Keep that expected Node.js
+version in both workflows aligned with the official release metadata when
+upgrading Electron again.
+
+These floors address the [October 21, 2026 Node.js security release](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases),
+including the applicable TLS, DNS, and Brotli fixes. No application exploit was
+demonstrated. The backup store uses gzip/gunzip, not Brotli; the presence of a
+vulnerable runtime alone does not establish a reachable exploitation path.
+
+`node --version` only reports the host runtime. After `npm run package:win`,
+inspect the actual unpacked Windows binary separately:
+
+```powershell
+node --version
+$env:ELECTRON_RUN_AS_NODE = '1'
+try {
+  & '.\release\win-unpacked\Cursor Bridge.exe' -p 'JSON.stringify(process.versions)'
+} finally {
+  Remove-Item Env:ELECTRON_RUN_AS_NODE
+}
+```
+
+For an installed copy, substitute its actual executable path. Existing v0.4.2
+installers are not changed by editing the repository or updating system Node.js.
+Publish a new application version after validation, then install that new Windows
+build. The Studio plugin does not need a runtime-related change.
+Windows verification must still cover launching the GUI, pairing with Studio,
+two-way edits, Quick Apply, backup recovery, and the installer/updater flow;
+reading runtime versions is not a replacement for those checks.
 
 ## 2. Configure the repository
 
@@ -46,62 +104,36 @@ Replace this value inside `package.json` before publishing:
 
 The `owner` **must match** your actual GitHub account or organization, and the repository **must be public** for standard unauthenticated GitHub Release update checks.
 
-## 3. Push to GitHub using GitHub CLI
+## 3. Prepare an update through a pull request
 
-```powershell
-gh auth login
-git init -b main
-git add .
-git commit -m "Release Cursor Bridge v0.2.4"
-gh repo create CursorBridge --public --source . --remote origin --push
-```
+Use the existing repository and a PR branch. Update the package and lockfile
+version together, match the plugin product version, rebuild its XML and add
+bilingual release notes. Run the automated checks, then test the Windows candidate
+with real Roblox Studio before merging. Keep backups of test data when validating
+an upgrade from an installed release.
 
-**Alternative: without GitHub CLI.** Create an empty *public* repository named `CursorBridge` in GitHub's website first. Then:
+The [release guide](GITHUB_RELEASE.md) contains the exact automated commands,
+manual checks, approval gate and candidate artifact download instructions.
 
-```powershell
-git init -b main
-git add .
-git commit -m "Release Cursor Bridge v0.2.4"
-git remote add origin https://github.com/nikis-gif/CursorBridge.git
-git push -u origin main
-```
+## 4. Publish after validation and review
 
-In both cases, make sure `package-lock.json` was generated and included by `npm install`.
+A `package.json` change merged into `main` automatically triggers
+**Build and publish Windows release**. Manual dispatch is supported on `main`;
+tag pushes do not trigger publication. The workflow creates the matching tag
+only after regression tests, builds and packaged runtime checks pass.
 
-## 4. Enable GitHub Actions and publish your first installer
+The workflow requests `contents: write` for the built-in `GITHUB_TOKEN`, subject
+to repository and organization policy. Never reuse a version/tag for another
+commit or bypass review requirements.
 
-Open your GitHub repository -> **Settings** -> **Actions** -> **General**. Ensure workflows are enabled and **Workflow permissions** permit reading and writing the repository contents (the workflow itself also requests `contents: write`).
+A complete release contains the versioned Windows `.exe`, its `.blockmap`,
+`latest.yml` and `CursorBridgeV2.rbxmx`. Verify the release job and those assets
+before reporting a successful launch. Installed desktop clients can check for a
+new public release, ask before downloading and offer to restart/install; this
+production update path needs a post-publication Windows smoke test. Developer
+builds do not auto-update. The Studio plugin is installed separately.
 
-From PowerShell:
-
-```powershell
-git tag v0.2.4
-git push origin v0.2.4
-```
-
-Open the repository's **Actions** tab, select **Build and publish Windows release**, and wait for the `windows-release` job. Its artifacts are published on **Releases** as an `.exe` installer, `latest.yml` and `CursorBridgeV2.rbxmx`. The first build can take several minutes.
-
-> If publishing fails, verify that `package.json` has the correct GitHub owner/repo, the repository is public, and the workflow has write permission. Keep your `package-lock.json` in Git for repeatable installation.
-
-## 5. Publish subsequent updates
-
-Change code, build and test the plugin/app, and increment the semver version (example: `0.2.5`):
-
-```powershell
-npm version patch --no-git-tag-version
-# Also update Version in plugin/source/Config/Defaults.lua.
-python .\scripts\build_plugin.py
-npm test
-git add .
-git commit -m "Release 0.2.5"
-git push origin main
-git tag v0.2.5
-git push origin v0.2.5
-```
-
-Every tagged release rebuilds the Windows installer and plugin. Installed Cursor Bridge Windows clients detect new public GitHub Releases, ask before downloading, then offer to restart and install. These updates are unavailable in `npm run dev` mode. **A plugin `.rbxmx` file is a separate install**; rebuild and reinstall the Studio plugin as needed.
-
-## 6. Build an unsigned installer locally
+## 5. Build an unsigned installer locally
 
 ```powershell
 npm run package:win

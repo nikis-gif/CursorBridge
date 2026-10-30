@@ -16,13 +16,13 @@ concurrency:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
           cache: npm
       - uses: actions/setup-python@v5
         with:
@@ -63,12 +63,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
           cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Run Node regression tests on Windows
         run: npm test
+      - name: Build and validate candidate Studio plugin
+        run: |
+          python scripts/build_plugin.py
+          python -m unittest discover -s tests -p test_plugin_build.py -v
       - name: Package local Windows candidate without publishing
         run: npm run package:win
       - name: Verify installer and unpacked application
@@ -76,5 +83,31 @@ jobs:
         run: |
           $version = node -p "require('./package.json').version"
           if (!(Test-Path "release/Cursor-Bridge-Setup-$version.exe")) { throw 'Windows installer missing' }
+          if (!(Test-Path "release/Cursor-Bridge-Setup-$version.exe.blockmap")) { throw 'Installer blockmap missing' }
+          if (!(Test-Path 'release/latest.yml')) { throw 'Updater metadata missing' }
+          if (!(Test-Path 'CursorBridgeV2.rbxmx')) { throw 'Studio plugin missing' }
           if (!(Test-Path 'release/win-unpacked/resources/app.asar')) { throw 'Packaged application missing' }
+          $expectedElectron = node -p "require('./package.json').devDependencies.electron"
+          $env:ELECTRON_RUN_AS_NODE = '1'
+          try {
+            $runtime = & '.\release\win-unpacked\Cursor Bridge.exe' -p 'JSON.stringify(process.versions)' | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw 'Packaged runtime inspection failed.' }
+            if ($runtime.electron -ne $expectedElectron -or $runtime.node -ne '24.22.1') {
+              throw "Unexpected packaged runtime: Electron $($runtime.electron), Node.js $($runtime.node)."
+            }
+            Write-Host "Packaged runtime verified: Electron $($runtime.electron), Node.js $($runtime.node)."
+          } finally {
+            Remove-Item Env:ELECTRON_RUN_AS_NODE
+          }
+      - name: Upload candidate for manual Windows and Studio validation
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-candidate-${{ github.sha }}
+          path: |
+            release/Cursor-Bridge-Setup-*.exe
+            release/Cursor-Bridge-Setup-*.exe.blockmap
+            release/latest.yml
+            CursorBridgeV2.rbxmx
+          if-no-files-found: error
+          retention-days: 14
 

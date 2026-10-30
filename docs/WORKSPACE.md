@@ -82,6 +82,8 @@ Changing `package.json` on main triggers the release workflow. The workflow firs
 runs the reusable regression suite, then builds the Windows installer and plugin,
 verifies updater metadata and creates the matching version tag. A complete release
 contains the installer, blockmap, `latest.yml` and `CursorBridgeV2.rbxmx`.
-Tag pushes and manual dispatch remain supported. Increment the version for each
-new release; an existing tag pointing at another commit is rejected rather than
-rewritten. Previous releases are not deleted.
+Manual dispatch is supported on `main` only; tag pushes do not trigger the workflow.
+Complete PR checks, Windows/Studio manual validation and maintainer review before
+merging the version bump. Increment the version for each new release; an existing
+tag pointing at another commit is rejected rather than rewritten. Previous
+releases are not deleted. See [the release guide](GITHUB_RELEASE.md).
