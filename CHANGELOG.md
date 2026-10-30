@@ -1,3 +1,11 @@
+## v0.4.3 — Node.js and Electron security update
+
+- Require patched host Node.js versions: `>=22.23.4 <23 || >=24.22.1 <25 || >=26.12.1 <27`, with npm 10.9.0+ and enforced engine checks.
+- Pin build Node.js to 22.23.4 and upgrade Electron 44.7.0 to 44.10.0, bundling Node.js 24.22.1. Verify the packaged runtime on Windows.
+- Align package, lockfile and Studio plugin product versions at 0.4.3. Keep the plugin protocol, settings schema, editor, synchronization, Quick Apply and recovery behavior unchanged.
+- Provide a complete Windows validation artifact and correct the documented main-branch release flow, with versioned notes and exact release asset checks.
+- Browser regression tests simulate the bridge. Real Windows installation/update and Roblox Studio integration require manual validation before publication; see [the release checklist](docs/GITHUB_RELEASE.md#manual-windows-and-roblox-studio-validation).
+
 ## v0.4.2 — Embedded AI removal and focused workspace
 
 - Removed the entire ChatGPT account/authentication, AI inference, Place-specific chat/memory/code panels, their IPC surface, OAuth storage code, and obsolete assistant tests.

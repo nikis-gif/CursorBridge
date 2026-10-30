@@ -104,62 +104,36 @@ Replace this value inside `package.json` before publishing:
 
 The `owner` **must match** your actual GitHub account or organization, and the repository **must be public** for standard unauthenticated GitHub Release update checks.
 
-## 3. Push to GitHub using GitHub CLI
+## 3. Prepare an update through a pull request
 
-```powershell
-gh auth login
-git init -b main
-git add .
-git commit -m "Release Cursor Bridge v0.2.4"
-gh repo create CursorBridge --public --source . --remote origin --push
-```
+Use the existing repository and a PR branch. Update the package and lockfile
+version together, match the plugin product version, rebuild its XML and add
+bilingual release notes. Run the automated checks, then test the Windows candidate
+with real Roblox Studio before merging. Keep backups of test data when validating
+an upgrade from an installed release.
 
-**Alternative: without GitHub CLI.** Create an empty *public* repository named `CursorBridge` in GitHub's website first. Then:
+The [release guide](GITHUB_RELEASE.md) contains the exact automated commands,
+manual checks, approval gate and candidate artifact download instructions.
 
-```powershell
-git init -b main
-git add .
-git commit -m "Release Cursor Bridge v0.2.4"
-git remote add origin https://github.com/nikis-gif/CursorBridge.git
-git push -u origin main
-```
+## 4. Publish after validation and review
 
-In both cases, make sure `package-lock.json` was generated and included by `npm install`.
+A `package.json` change merged into `main` automatically triggers
+**Build and publish Windows release**. Manual dispatch is supported on `main`;
+tag pushes do not trigger publication. The workflow creates the matching tag
+only after regression tests, builds and packaged runtime checks pass.
 
-## 4. Enable GitHub Actions and publish your first installer
+The workflow requests `contents: write` for the built-in `GITHUB_TOKEN`, subject
+to repository and organization policy. Never reuse a version/tag for another
+commit or bypass review requirements.
 
-Open your GitHub repository -> **Settings** -> **Actions** -> **General**. Ensure workflows are enabled and **Workflow permissions** permit reading and writing the repository contents (the workflow itself also requests `contents: write`).
+A complete release contains the versioned Windows `.exe`, its `.blockmap`,
+`latest.yml` and `CursorBridgeV2.rbxmx`. Verify the release job and those assets
+before reporting a successful launch. Installed desktop clients can check for a
+new public release, ask before downloading and offer to restart/install; this
+production update path needs a post-publication Windows smoke test. Developer
+builds do not auto-update. The Studio plugin is installed separately.
 
-From PowerShell:
-
-```powershell
-git tag v0.2.4
-git push origin v0.2.4
-```
-
-Open the repository's **Actions** tab, select **Build and publish Windows release**, and wait for the `windows-release` job. Its artifacts are published on **Releases** as an `.exe` installer, `latest.yml` and `CursorBridgeV2.rbxmx`. The first build can take several minutes.
-
-> If publishing fails, verify that `package.json` has the correct GitHub owner/repo, the repository is public, and the workflow has write permission. Keep your `package-lock.json` in Git for repeatable installation.
-
-## 5. Publish subsequent updates
-
-Change code, build and test the plugin/app, and increment the semver version (example: `0.2.5`):
-
-```powershell
-npm version patch --no-git-tag-version
-# Also update Version in plugin/source/Config/Defaults.lua.
-python .\scripts\build_plugin.py
-npm test
-git add .
-git commit -m "Release 0.2.5"
-git push origin main
-git tag v0.2.5
-git push origin v0.2.5
-```
-
-Every tagged release rebuilds the Windows installer and plugin. Installed Cursor Bridge Windows clients detect new public GitHub Releases, ask before downloading, then offer to restart and install. These updates are unavailable in `npm run dev` mode. **A plugin `.rbxmx` file is a separate install**; rebuild and reinstall the Studio plugin as needed.
-
-## 6. Build an unsigned installer locally
+## 5. Build an unsigned installer locally
 
 ```powershell
 npm run package:win

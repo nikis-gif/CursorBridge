@@ -1,6 +1,6 @@
 # Cursor Bridge
 
-**v0.4.2 — Focused Luau editor for Roblox Studio.** Cursor Bridge combines the
+**v0.4.3 — Focused Luau editor for Roblox Studio.** Cursor Bridge combines the
 local two-way Studio connection, a professional Monaco editor, Explorer, code
 search, split editing, recovery snapshots, and **Quick Apply** for reviewing and
 importing complete script bundles.
@@ -13,7 +13,7 @@ applying edits. Existing recovery files and old local chat data are **not
 deleted** during the update.
 
 The repository remains proprietary (`UNLICENSED`). See the
-[0.4.2 release notes](docs/RELEASE_0_4_2.md) and
+[0.4.3 release notes](docs/RELEASE_0_4_3.md) and
 [workspace controls](docs/WORKSPACE.md).
 
 **Cursor Bridge** is a Windows-first Luau workbench connected to the **currently paired Roblox Studio place**. It comprises a local Electron/Monaco application and a Roblox Studio plugin with the existing Cursor V2 floating window. Studio remains the source of truth for the DataModel; the workbench does not run games or replace Studio's compiler.
@@ -101,7 +101,7 @@ npm run package:win
 Optional browser interaction tests require Playwright and its Chromium binary:
 
 ```powershell
-python -m pip install playwright
+python -m pip install -r tests/browser/requirements.txt
 python -m playwright install chromium
 npm run test:ui
 ```
@@ -110,7 +110,7 @@ Browser tests simulate Studio responses; they do not validate live Roblox Studio
 
 ## Publishing and updates
 
-Read [docs/SETUP.md](docs/SETUP.md) before uploading to GitHub. Configure your actual GitHub repository in `package.json` (`build.publish[0]`); push source, `package-lock.json`, and a `v0.2.3` tag. The included GitHub Actions workflow compiles the installer and validates/uploads `CursorBridgeV2.rbxmx`. The installed desktop app can prompt for updates from GitHub Releases; Studio plugin upgrades are **not** currently automatic.
+Follow the [release guide](docs/GITHUB_RELEASE.md). Keep the package, lockfile and plugin product version consistent, add versioned release notes, and complete CI, Windows/Studio manual validation and PR review before merging. A `package.json` change on `main` automatically runs the release workflow; manual dispatch is restricted to `main`. Tag pushes do not trigger publication. The workflow builds the Windows installer and uploads it with `latest.yml`, its blockmap and `CursorBridgeV2.rbxmx`. The installed desktop app can prompt for updates from GitHub Releases; Studio plugin upgrades are **not** currently automatic.
 
 For architecture, security, and scope see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). For interface research and exact shortcut semantics see [docs/ENGINE_REFERENCE.md](docs/ENGINE_REFERENCE.md).
 

@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   regression:
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/workspace-validation.yml
     permissions:
       contents: read
@@ -41,6 +42,12 @@ jobs:
         shell: pwsh
         run: |
           $version = node -p "require('./package.json').version"
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Release version must be a stable MAJOR.MINOR.PATCH version.' }
+          $lockVersion = node -p "require('./package-lock.json').version"
+          $lockRootVersion = node -p "require('./package-lock.json').packages[''].version"
+          if ($version -ne $lockVersion -or $version -ne $lockRootVersion) { throw 'Package and lockfile versions must match.' }
+          $notesFile = Join-Path 'docs' "RELEASE_$($version.Replace('.', '_')).md"
+          if (-not (Test-Path -LiteralPath $notesFile)) { throw "Release notes are missing: $notesFile" }
           $tag = if ('${{ github.ref_type }}' -eq 'tag') { '${{ github.ref_name }}' } else { "v$version" }
           $repository = '${{ github.repository }}'
           $owner = node -p "require('./package.json').build.publish[0].owner"
@@ -54,9 +61,7 @@ jobs:
 
       - name: Install dependencies
         shell: pwsh
-        run: |
-          if (Test-Path package-lock.json) { npm ci --no-audit --no-fund }
-          else { npm install --no-audit --no-fund }
+        run: npm ci --no-audit --no-fund
 
       - name: Run application regression tests
         run: npm test
@@ -100,6 +105,7 @@ jobs:
           if (-not (Test-Path -LiteralPath $installerPath)) { throw "Expected installer missing: $expected" }
           if (-not (Test-Path -LiteralPath $manifestPath)) { throw 'Missing latest.yml' }
           $manifest = Get-Content -LiteralPath $manifestPath -Raw
+          if ($manifest -notmatch ("(?m)^version:\s*" + [regex]::Escape($version) + "\s*$")) { throw 'latest.yml version does not match package.json' }
           $base64Sha = [Convert]::ToBase64String([System.Security.Cryptography.SHA512]::HashData([IO.File]::ReadAllBytes((Resolve-Path $installerPath).Path)))
           $size = (Get-Item -LiteralPath $installerPath).Length
           if (-not $manifest.Contains("path: $expected")) { throw 'latest.yml path does not match installer name' }
@@ -141,14 +147,10 @@ jobs:
           if (-not (Test-Path -LiteralPath $studioPlugin)) { throw 'Roblox plugin is missing.' }
           $assets = @($installer.FullName, $blockmap.FullName, $metadata, $studioPlugin)
           $notesFile = Join-Path 'docs' "RELEASE_$($version.Replace('.', '_')).md"
-          if (Test-Path -LiteralPath $notesFile) {
-            $title = "Cursor Bridge $tag"
-            $heading = Get-Content -LiteralPath $notesFile -TotalCount 1 -Encoding utf8
-            if ($heading -match '^#\s+(.+)$') { $title = $Matches[1].Trim() }
-            gh release create $tag $assets --title $title --notes-file $notesFile --latest --verify-tag
-          } else {
-            gh release create $tag $assets --title "Cursor Bridge $tag" --notes "Cursor Bridge $tag" --latest --verify-tag
-          }
+          $title = "Cursor Bridge $tag"
+          $heading = Get-Content -LiteralPath $notesFile -TotalCount 1 -Encoding utf8
+          if ($heading -match '^#\s+(.+)$') { $title = $Matches[1].Trim() }
+          gh release create $tag $assets --title $title --notes-file $notesFile --latest --verify-tag
           if ($LASTEXITCODE -ne 0) { throw 'GitHub release publication failed.' }
 
       - name: Verify public release and assets
@@ -161,6 +163,8 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or $isDraft -ne 'false') { throw 'Release is not public.' }
           $assetNames = @(gh release view $tag --json assets --jq '.assets[].name')
           if ($LASTEXITCODE -ne 0) { throw 'Could not verify release assets.' }
-          if (-not ($assetNames -contains 'CursorBridgeV2.rbxmx')) { throw 'Studio plugin missing from release.' }
-          if (-not ($assetNames -contains 'latest.yml')) { throw 'Update metadata missing from release.' }
-          if (-not ($assetNames | Where-Object { $_ -like '*.exe' })) { throw 'Windows installer missing from release.' }
+          $version = node -p "require('./package.json').version"
+          $expectedAssets = @("Cursor-Bridge-Setup-$version.exe", "Cursor-Bridge-Setup-$version.exe.blockmap", 'latest.yml', 'CursorBridgeV2.rbxmx')
+          foreach ($asset in $expectedAssets) {
+            if (-not ($assetNames -contains $asset)) { throw "Release asset missing: $asset" }
+          }

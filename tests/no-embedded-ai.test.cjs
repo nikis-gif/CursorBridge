@@ -52,6 +52,5 @@ test('Quick Apply IPC and safety pathway remain present', () => {
 test('future releases must not reintroduce assistant content into the packaged bundle', () => {
   const pkg = JSON.parse(source('package.json'));
   assert.equal(pkg.license, 'UNLICENSED');
-  assert.equal(pkg.version, '0.4.2');
   assert.equal(pkg.build.files.some(x => x.includes('renderer/ai-panel')), false);
 });
