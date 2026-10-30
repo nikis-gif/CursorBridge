@@ -26,10 +26,10 @@ jobs:
       - name: Check out release source
         uses: actions/checkout@v4
 
-      - name: Use Node.js 22
+      - name: Use the pinned patched Node.js runtime
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
 
       - name: Set up Python for Studio plugin validation
         uses: actions/setup-python@v5
@@ -73,6 +73,22 @@ jobs:
       - name: Build Windows installer without publishing
         shell: pwsh
         run: npx electron-builder --win nsis --publish never
+
+      - name: Verify packaged Electron and Node.js versions
+        shell: pwsh
+        run: |
+          $expectedElectron = node -p "require('./package.json').devDependencies.electron"
+          $env:ELECTRON_RUN_AS_NODE = '1'
+          try {
+            $runtime = & '.\release\win-unpacked\Cursor Bridge.exe' -p 'JSON.stringify(process.versions)' | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw 'Packaged runtime inspection failed.' }
+            if ($runtime.electron -ne $expectedElectron -or $runtime.node -ne '24.22.1') {
+              throw "Unexpected packaged runtime: Electron $($runtime.electron), Node.js $($runtime.node)."
+            }
+            Write-Host "Packaged runtime verified: Electron $($runtime.electron), Node.js $($runtime.node)."
+          } finally {
+            Remove-Item Env:ELECTRON_RUN_AS_NODE
+          }
 
       - name: Verify updater manifest matches installer
         shell: pwsh

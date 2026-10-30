@@ -32,14 +32,14 @@ This guide publishes the **Windows NSIS installer** to a public GitHub Release. 
 
 ## 1. Windows prerequisites
 
-Install Node.js 22+, Git, and GitHub CLI. Open the `CursorBridge` folder (the folder containing `package.json`) in Visual Studio Code and run the following commands in PowerShell:
+Install Node.js **22.23.4–22.x, 24.22.1–24.x, or 26.12.1–26.x** with **npm 10.9.0+**, Git, and GitHub CLI. CI reads Node.js **22.23.4** from `.nvmrc`; the packaged Electron runtime is checked separately. See [runtime requirements](SETUP.md#runtime-requirements-and-verification). Open the `CursorBridge` folder (the folder containing `package.json`) in Visual Studio Code and run the following commands in PowerShell:
 
 ```powershell
 node --version
 npm --version
 git --version
 gh --version
-npm install
+npm ci
 npm test
 npm run build
 ```

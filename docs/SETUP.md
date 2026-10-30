@@ -10,7 +10,7 @@ For the recommended, up-to-date publishing steps, see [GitHub Release guide](GIT
 
 ## 1. Install prerequisites
 
-Install [Node.js 22 LTS or newer](https://nodejs.org/), [Git](https://git-scm.com/), [Python 3](https://www.python.org/) (for rebuilding the Studio plugin), and Roblox Studio. Optionally install [GitHub CLI](https://cli.github.com/).
+Install [Node.js](https://nodejs.org/) **22.23.4–22.x, 24.22.1–24.x, or 26.12.1–26.x** with **npm 10.9.0+**, [Git](https://git-scm.com/), [Python 3](https://www.python.org/) (for rebuilding the Studio plugin), and Roblox Studio. Optionally install [GitHub CLI](https://cli.github.com/).
 
 After extracting the project ZIP, open the directory in Visual Studio Code and run:
 
@@ -18,7 +18,7 @@ After extracting the project ZIP, open the directory in Visual Studio Code and r
 node --version
 npm --version
 git --version
-npm install
+npm ci
 npm test
 npm run dev
 ```
@@ -30,6 +30,64 @@ PowerShell -ExecutionPolicy Bypass -File .\scripts\install-studio-plugin.ps1
 ```
 
 The installation script rejects corrupt Roblox XML files before copying them. Restart Studio after installing. The plugin appears on Studio's **Plugins** toolbar as **Cursor Bridge V2**. Enable its first-time network access request to `127.0.0.1:38471` if prompted. The desktop process must be running before pairing.
+
+### Runtime requirements and verification
+
+The host Node.js and Electron's embedded Node.js are separate runtimes:
+
+| Use | Runtime |
+| --- | --- |
+| `npm ci`, `npm test`, Vite, `scripts/dev.cjs`, and electron-builder | Node.js installed on the development/build machine |
+| GitHub validation and Windows release builds | Node.js 22.23.4, selected from `.nvmrc` |
+| Desktop main process, local bridge, and installed Windows application | Electron 44.10.0 with embedded Node.js 24.22.1 |
+| Renderer / Monaco | Electron's Chromium; Node integration stays disabled |
+| Roblox plugin and Luau execution | Roblox Studio, independent of Node.js |
+
+The host range is `>=22.23.4 <23 || >=24.22.1 <25 || >=26.12.1 <27`.
+Each supported major has its own security floor. Older patches, odd-numbered
+majors, prereleases, and unreviewed future majors are not accepted. `.npmrc`
+enforces `engines` during npm installation; `devEngines` rejects unsupported
+Node.js/npm versions before npm install, ci, and run commands. Use npm 10.9.0+
+and do not bypass these checks with `--force` or configuration overrides.
+These are tooling safeguards, not a restriction on which binaries a machine
+owner can execute directly.
+
+The [v0.4.2 release build](https://github.com/nikis-gif/CursorBridge/actions/runs/38346923233)
+used host Node.js 22.23.3 and packaged Electron 44.7.0. That Electron release
+[bundles Node.js 24.21.0](https://releases.electronjs.org/release/v44.7.0).
+The patch updates the dependency and lockfile to
+[Electron 44.10.0 / Node.js 24.22.1](https://releases.electronjs.org/release/v44.10.0),
+within the same Electron major. The Windows validation and publishing workflows
+execute the unpacked binary with `ELECTRON_RUN_AS_NODE=1` and fail unless it
+reports the pinned Electron version and Node.js 24.22.1. Keep that expected Node.js
+version in both workflows aligned with the official release metadata when
+upgrading Electron again.
+
+These floors address the [October 21, 2026 Node.js security release](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases),
+including the applicable TLS, DNS, and Brotli fixes. No application exploit was
+demonstrated. The backup store uses gzip/gunzip, not Brotli; the presence of a
+vulnerable runtime alone does not establish a reachable exploitation path.
+
+`node --version` only reports the host runtime. After `npm run package:win`,
+inspect the actual unpacked Windows binary separately:
+
+```powershell
+node --version
+$env:ELECTRON_RUN_AS_NODE = '1'
+try {
+  & '.\release\win-unpacked\Cursor Bridge.exe' -p 'JSON.stringify(process.versions)'
+} finally {
+  Remove-Item Env:ELECTRON_RUN_AS_NODE
+}
+```
+
+For an installed copy, substitute its actual executable path. Existing v0.4.2
+installers are not changed by editing the repository or updating system Node.js.
+Publish a new application version after validation, then install that new Windows
+build. The Studio plugin does not need a runtime-related change.
+Windows verification must still cover launching the GUI, pairing with Studio,
+two-way edits, Quick Apply, backup recovery, and the installer/updater flow;
+reading runtime versions is not a replacement for those checks.
 
 ## 2. Configure the repository
 

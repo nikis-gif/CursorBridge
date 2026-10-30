@@ -30,10 +30,12 @@ Read [STABILITY.md](docs/STABILITY.md) for details and [UPDATE_0_2_9.md](docs/UP
 
 ## Install and run (Windows)
 
-Requirements: **Node.js 22+**, Roblox Studio and, only for rebuilding the `.rbxmx`, Python 3.10+.
+Source development/build requirements: **Node.js 22.23.4–22.x, 24.22.1–24.x, or 26.12.1–26.x**, **npm 10.9.0+**, Roblox Studio and, only for rebuilding the `.rbxmx`, Python 3.10+. CI uses Node.js **22.23.4** from `.nvmrc`. Installed Windows builds use their bundled runtime and do not require a system Node.js installation.
+
+Electron is pinned to **44.10.0**, which bundles **Node.js 24.22.1**. Updating the system Node.js alone does not update Electron or an existing installer. See [runtime requirements and verification](docs/SETUP.md#runtime-requirements-and-verification).
 
 ```powershell
-npm install
+npm ci
 npm test
 npm run dev
 ```
